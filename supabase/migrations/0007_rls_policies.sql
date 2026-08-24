@@ -42,7 +42,12 @@ create policy profiles_update on profiles for update
   using (id = auth.uid() or is_admin_or_general_coordinator())
   with check (id = auth.uid() or is_admin_or_general_coordinator());
 
--- (Insert happens via the security-definer handle_new_user() trigger, 0002.)
+-- A signed-in user may create their own profile row (and only their own) --
+-- this is how lazy, environment-aware profile provisioning (0002's comment,
+-- web/src/lib/supabase/ensure-profile.ts) is allowed to work under RLS,
+-- since it runs as the authenticated user rather than a privileged role.
+create policy profiles_insert on profiles for insert
+  with check (id = auth.uid());
 
 -- ── user_roles ───────────────────────────────────────────────────────────────
 alter table user_roles enable row level security;

@@ -1,0 +1,159 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getAppSettings } from "@/lib/app-settings";
+import { createClient } from "@/lib/supabase/server";
+import { signInWithGoogle, signInWithPassword, signUpWithPassword } from "./actions";
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; message?: string; mode?: string }>;
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) redirect("/");
+
+  const settings = await getAppSettings();
+  const { error, message, mode } = await searchParams;
+  const isSignUp = mode === "signup";
+
+  return (
+    <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] px-4 py-12">
+      <div className="w-full max-w-sm">
+        <div className="flex flex-col items-center mb-6">
+          <div className="h-[60px] w-[60px] rounded-full bg-[#1e3a5f] flex items-center justify-center text-white font-bold text-xl shadow-[0_2px_10px_rgba(0,0,0,0.2)]">
+            {settings.app_title_short
+              .split(" ")
+              .map((w) => w[0])
+              .slice(0, 2)
+              .join("")}
+          </div>
+          <h1 className="mt-4 text-2xl font-bold text-[#1e3a5f] text-center">
+            {settings.app_title_long}
+          </h1>
+          <p className="mt-1 text-sm text-[#666] text-center">{settings.app_subtitle}</p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-6">
+          {error && (
+            <div className="mb-4 rounded-md bg-[#f8d7da] text-[#721c24] text-sm px-3 py-2">
+              {error}
+            </div>
+          )}
+          {message && (
+            <div className="mb-4 rounded-md bg-[#d4edda] text-[#155724] text-sm px-3 py-2">
+              {message}
+            </div>
+          )}
+
+          <form action={signInWithGoogle}>
+            <button
+              type="submit"
+              className="w-full flex items-center justify-center gap-2 rounded-md border border-[#ddd] bg-white py-3 text-sm font-semibold text-[#333] transition-colors hover:bg-[#f9f9f9]"
+            >
+              <GoogleIcon />
+              Continue with Google
+            </button>
+          </form>
+
+          <div className="my-5 flex items-center gap-3 text-xs text-[#999]">
+            <div className="h-px flex-1 bg-[#eee]" />
+            or
+            <div className="h-px flex-1 bg-[#eee]" />
+          </div>
+
+          <form action={isSignUp ? signUpWithPassword : signInWithPassword} className="space-y-3">
+            {isSignUp && (
+              <div>
+                <label className="block text-sm font-semibold mb-1" htmlFor="full_name">
+                  Full name
+                </label>
+                <input
+                  id="full_name"
+                  name="full_name"
+                  type="text"
+                  required
+                  className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
+                />
+              </div>
+            )}
+            <div>
+              <label className="block text-sm font-semibold mb-1" htmlFor="email">
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-1" htmlFor="password">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                minLength={6}
+                className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
+              />
+            </div>
+            <button
+              type="submit"
+              className="w-full rounded-md bg-[#1e3a5f] py-3 text-sm font-semibold text-white transition-colors hover:bg-[#152a45]"
+            >
+              {isSignUp ? "Create account" : "Sign in"}
+            </button>
+          </form>
+
+          <p className="mt-4 text-center text-sm text-[#666]">
+            {isSignUp ? (
+              <>
+                Already have an account?{" "}
+                <Link href="/login" className="font-semibold text-[#1e3a5f]">
+                  Sign in
+                </Link>
+              </>
+            ) : (
+              <>
+                New here?{" "}
+                <Link href="/login?mode=signup" className="font-semibold text-[#1e3a5f]">
+                  Create an account
+                </Link>
+              </>
+            )}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.88 2.7-6.62Z"
+      />
+      <path
+        fill="#34A853"
+        d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.83.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.9v2.33A9 9 0 0 0 9 18Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.9A9 9 0 0 0 0 9c0 1.45.35 2.83.9 4.03l3.05-2.33Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .9 4.97L3.95 7.3C4.66 5.17 6.65 3.58 9 3.58Z"
+      />
+    </svg>
+  );
+}
