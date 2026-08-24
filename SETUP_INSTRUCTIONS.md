@@ -14,11 +14,23 @@ These are the account-level steps only you can do (they're tied to your own logi
 
 ## 2. Create the `qa` schema and apply the migrations
 
-Follow `supabase/README.md` in this repo — it has the exact SQL steps. Short version:
-1. Open the Supabase **SQL Editor**.
-2. Run `create schema if not exists qa;` then `set search_path to qa;`.
-3. Paste and run each file in `supabase/migrations/` **in order** (0001 through 0008).
-4. Go to **Project Settings → API → Exposed schemas** and add `qa` to the list (it's not exposed by default — only `public` is).
+(Not `README.md` at the repo root — that one's just the folder map. The actual database steps live in **`supabase/README.md`**, a separate file inside the `supabase` folder.)
+
+1. In your Supabase project dashboard, click **SQL Editor** in the left sidebar, then **New query**.
+2. Paste this and click **Run** — creates the schema:
+   ```sql
+   create schema if not exists qa;
+   ```
+3. Open `supabase/migrations/0001_extensions_and_types.sql` in this repo. Copy its entire contents. In the SQL Editor, start a **new query**, and paste in this order: first the line `set search_path to qa;`, then the file's contents underneath it. Click **Run**.
+4. Repeat step 3 for each remaining file, **in order**: `0002_core_tables.sql`, `0003_roles_and_access.sql`, `0004_operational_tables.sql`, `0005_config_tables.sql`, `0006_functions.sql`, `0007_rls_policies.sql`, `0008_grants.sql`. Each time: new query, `set search_path to qa;` first, then that file's contents, then Run. (The `set search_path` line has to be included every time, in every new query — it doesn't automatically carry over from one Run to the next.)
+5. If any file gives an error, **stop there** and send me the exact error message plus which file number — don't continue past it or try to guess a fix, since later files depend on earlier ones having succeeded.
+6. Once all 8 have run without error, verify everything landed in the right place — new query:
+   ```sql
+   set search_path to qa;
+   select table_name from information_schema.tables where table_schema = 'qa' order by table_name;
+   ```
+   You should see 14 tables listed (`app_settings`, `attendance_records`, `audit_config`, `audit_log`, `groups`, `members`, `outreach_entries`, `profiles`, `qr_codes`, `service_calendar_events`, `universities`, `user_roles`, `verses`, plus `actions_needed_config`).
+7. Go to **Project Settings → API → Exposed schemas** and add `qa` to the list (it's not exposed by default — only `public` is).
 
 (We'll repeat this for a `prod` schema later, once QA is verified — no need to do that yet.)
 
