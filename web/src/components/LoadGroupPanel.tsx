@@ -7,9 +7,11 @@ import type { GroupSummary } from "@/lib/groups";
 
 export function LoadGroupPanel({
   groups,
+  groupLabel,
   memberLabel,
 }: {
   groups: GroupSummary[];
+  groupLabel: string;
   memberLabel: string;
 }) {
   const router = useRouter();
@@ -38,18 +40,24 @@ export function LoadGroupPanel({
 
   return (
     <div className="space-y-3">
-      <select
-        value={selectedId}
-        onChange={(e) => setSelectedId(e.target.value)}
-        disabled={loading}
-        className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
-      >
-        {groups.map((g) => (
-          <option key={g.id} value={g.id}>
-            {g.name}
-          </option>
-        ))}
-      </select>
+      <div className="flex items-center gap-2">
+        <label htmlFor="group-select" className="text-sm font-semibold text-[#333] whitespace-nowrap">
+          Select {groupLabel}
+        </label>
+        <select
+          id="group-select"
+          value={selectedId}
+          onChange={(e) => setSelectedId(e.target.value)}
+          disabled={loading}
+          className="flex-1 min-w-0 rounded-md border border-[#ddd] px-2 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
+        >
+          {groups.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <button
         onClick={handleLoad}
