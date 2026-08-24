@@ -144,7 +144,7 @@ create table universities (
 
 ## 5. `profiles` (extends Supabase `auth.users` — Admins, Coordinators, Servants; never Members)
 
-Supabase Auth owns `auth.users` (id, email, auth metadata). `profiles` holds the app-specific fields, one row per authenticated user, created via a trigger on signup.
+Supabase Auth owns `auth.users` (id, email, auth metadata) — a single table shared by the whole Supabase project, not per-schema. `profiles` holds the app-specific fields, one row per authenticated user **per schema**. Rows are provisioned lazily by the application (not a database trigger) right after sign-in, using `NEXT_PUBLIC_APP_ENV` to know which schema's `profiles` table to insert into — a trigger on the shared `auth.users` table can't reliably distinguish which environment a given signup came from (this was tried and reverted; see `supabase/migrations/0002_core_tables.sql`).
 
 ```sql
 create table profiles (

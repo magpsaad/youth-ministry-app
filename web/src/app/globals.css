@@ -1,26 +1,28 @@
 @import "tailwindcss";
 
+/* REQUIREMENTS.md §8 -- the app's visual design system. Primary navy palette,
+   Inter typeface (accepted visual enhancement, §8.1, replacing the legacy
+   Segoe UI stack -- same sizes/weights, just crisper rendering). */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-navy: #1e3a5f;
+  --color-navy-dark: #152a45;
+  --color-navy-light: #2d5a7b;
+  --color-filtered-pink: #c2185b;
+  --color-filtered-pink-dark: #d81b60;
+
+  --background: #f5f5f5;
+  --foreground: #333333;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-inter);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }

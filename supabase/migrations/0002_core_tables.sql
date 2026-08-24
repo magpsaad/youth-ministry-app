@@ -82,38 +82,21 @@ create table profiles (
 create unique index uq_profiles_legacy_ref on profiles (legacy_source_ref)
   where legacy_source_ref is not null;
 
--- Auto-create a profile row whenever a new Supabase Auth user signs up.
+-- Profile provisioning is deliberately NOT a database trigger on auth.users.
 --
--- KNOWN LIMITATION, to resolve before the `prod` schema is set up: auth.users
--- is a single table shared by the whole Supabase project (not per-schema), so
--- this trigger is too. Applying this file a second time (for `prod`) will
--- fail with "trigger already exists" on the same auth.users table, and even
--- if renamed, a single shared trigger can only route a signup into ONE
--- schema's `profiles` table. Before wiring up `prod`, this needs to become
--- an environment-aware version that reads which app the signup came from
--- (e.g. from auth metadata set at sign-up time) and inserts into the right
--- schema's `profiles` via dynamic SQL. Tracked for Phase A (auth) — do not
--- copy this trigger as-is into a second schema without that fix.
-create or replace function handle_new_user()
-returns trigger
-language plpgsql
-security definer
-as $$
-begin
-  insert into profiles (id, full_name, email)
-  values (
-    new.id,
-    coalesce(new.raw_user_meta_data ->> 'full_name', new.email),
-    new.email
-  )
-  on conflict (id) do nothing;
-  return new;
-end;
-$$;
-
-create trigger trg_on_auth_user_created
-  after insert on auth.users
-  for each row execute function handle_new_user();
+-- auth.users is a single table shared by the whole Supabase project (not
+-- per-schema) -- a trigger created here would collide the moment this file
+-- is applied a second time for `prod` ("trigger already exists" on the same
+-- shared table), and even renamed, one trigger firing at signup time has no
+-- reliable way to know whether that signup came from the qa app or the prod
+-- app (this matters especially for Google sign-in, where Supabase inserts
+-- the auth.users row as part of the OAuth exchange, before the app gets a
+-- chance to tag it with anything).
+--
+-- Instead, each app deployment provisions its own environment's `profiles`
+-- row lazily, right after a successful sign-in, using NEXT_PUBLIC_APP_ENV --
+-- which unambiguously identifies qa vs prod, unlike anything available to a
+-- database trigger. See web/src/lib/supabase/ensure-profile.ts (Phase A).
 
 -- ── members (replaces "Youth" / per-year "Master List") ─────────────────────
 create table members (
