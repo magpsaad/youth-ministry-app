@@ -21,7 +21,7 @@ For each environment (`qa` first, then `prod` once verified):
    set search_path to qa;   -- or: set search_path to prod;
    ```
 3. Run each file in this folder **in order** (`0001_...` through `0008_...`), pasting its contents into the SQL Editor and executing it.
-4. In **Project Settings → API → Exposed schemas**, add `qa` (and later `prod`) to the list of schemas PostgREST is allowed to serve — `public` is exposed by default, but a custom schema is not, and the app's Supabase client won't be able to reach it until this is done.
+4. In **Project Settings → Data API** (a separate tab from "API Keys"), find **Exposed schemas** under Settings, and add `qa` (and later `prod`) to the list of schemas PostgREST is allowed to serve — `public` is exposed by default, but a custom schema is not, and the app's Supabase client won't be able to reach it until this is done.
 5. In the app's `.env.local` (see `web/.env.local.example`), set `NEXT_PUBLIC_APP_ENV=qa` (or `prod`) so the app talks to the matching schema.
 
 ## File order and contents

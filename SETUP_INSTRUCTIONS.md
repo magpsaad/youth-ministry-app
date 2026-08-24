@@ -30,7 +30,7 @@ These are the account-level steps only you can do (they're tied to your own logi
    select table_name from information_schema.tables where table_schema = 'qa' order by table_name;
    ```
    You should see 14 tables listed (`app_settings`, `attendance_records`, `audit_config`, `audit_log`, `groups`, `members`, `outreach_entries`, `profiles`, `qr_codes`, `service_calendar_events`, `universities`, `user_roles`, `verses`, plus `actions_needed_config`).
-7. Go to **Project Settings → API → Exposed schemas** and add `qa` to the list (it's not exposed by default — only `public` is).
+7. Go to **Project Settings → Data API** (not "API Keys" — that's a separate tab), find **Exposed schemas** under Settings there, and add `qa` to the list (it's not exposed by default — only `public` is).
 
 (We'll repeat this for a `prod` schema later, once QA is verified — no need to do that yet.)
 
