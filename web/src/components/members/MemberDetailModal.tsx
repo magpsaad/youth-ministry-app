@@ -1,0 +1,298 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import type { MemberDetail } from "@/lib/members";
+import type { University } from "@/lib/universities";
+import type { ServantOption } from "@/lib/servants";
+import {
+  updateMemberAction,
+  deleteMemberAction,
+  assignServantAction,
+  type UpdateMemberInput,
+} from "@/app/g/[groupId]/members/actions";
+
+const inputClass = (editing: boolean) =>
+  `w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
+    editing
+      ? "border-[#ffc107] bg-[#fffacd] focus:ring-2 focus:ring-[#ffc107]/40"
+      : "border-[#ddd] bg-[#f5f5f5] text-[#333] cursor-not-allowed"
+  }`;
+
+export function MemberDetailModal({
+  member,
+  groupId,
+  universities,
+  servants,
+  memberLabel,
+  canDelete,
+  onClose,
+  onSaved,
+}: {
+  member: MemberDetail;
+  groupId: string;
+  universities: University[];
+  servants: ServantOption[];
+  memberLabel: string;
+  canDelete: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState<UpdateMemberInput>({
+    phone: member.phone,
+    email: member.email,
+    university_id: member.university_id,
+    program_of_study: member.program_of_study,
+    date_of_birth: member.date_of_birth,
+    father_of_confession: member.father_of_confession,
+    home_address: member.home_address,
+    gender: member.gender,
+    servant_comments: member.servant_comments,
+  });
+  const [assignedServantId, setAssignedServantId] = useState(member.assigned_servant_id);
+
+  // Soft suggestion (REQUIREMENTS.md §6.4/§4.1): matching-gender servants
+  // first, everyone else after -- never hard-blocked.
+  const sortedServants = [...servants].sort((a, b) => {
+    const aMatch = a.gender === member.gender ? 0 : 1;
+    const bMatch = b.gender === member.gender ? 0 : 1;
+    return aMatch - bMatch || a.full_name.localeCompare(b.full_name);
+  });
+
+  function field<K extends keyof UpdateMemberInput>(key: K, value: UpdateMemberInput[K]) {
+    setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function handleSave() {
+    setError(null);
+    startTransition(async () => {
+      const result = await updateMemberAction(member.id, groupId, form);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      if (assignedServantId !== member.assigned_servant_id) {
+        await assignServantAction(member.id, groupId, assignedServantId);
+      }
+      setEditing(false);
+      onSaved();
+    });
+  }
+
+  function handleDelete() {
+    if (!confirm(`Permanently delete ${member.full_name}'s record? This cannot be undone.`)) return;
+    startTransition(async () => {
+      const result = await deleteMemberAction(member.id, groupId);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      onSaved();
+      onClose();
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.2)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b-2 border-[#f0f0f0] pb-3 mb-4">
+          <h2 className="text-lg font-bold text-[#1e3a5f]">{member.full_name}</h2>
+          <button onClick={onClose} className="text-[#999] hover:text-[#333] text-xl leading-none">
+            ×
+          </button>
+        </div>
+
+        <div className="mx-auto mb-4 h-[100px] w-[100px] rounded-full bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] flex items-center justify-center text-white text-2xl font-bold">
+          {member.full_name
+            .split(" ")
+            .map((w) => w[0])
+            .slice(0, 2)
+            .join("")}
+        </div>
+
+        {error && (
+          <div className="mb-3 rounded-md bg-[#f8d7da] text-[#721c24] text-sm px-3 py-2">{error}</div>
+        )}
+
+        <div className="space-y-3">
+          <FieldRow label="Full Name">
+            <input value={member.full_name} readOnly className={inputClass(false)} />
+          </FieldRow>
+          <FieldRow label="Phone">
+            <input
+              value={form.phone ?? ""}
+              onChange={(e) => field("phone", e.target.value)}
+              readOnly={!editing}
+              className={inputClass(editing)}
+            />
+          </FieldRow>
+          <FieldRow label="Email">
+            <input
+              value={form.email ?? ""}
+              onChange={(e) => field("email", e.target.value)}
+              readOnly={!editing}
+              className={inputClass(editing)}
+            />
+          </FieldRow>
+          <FieldRow label="University/College">
+            <select
+              value={form.university_id ?? ""}
+              onChange={(e) => field("university_id", e.target.value || null)}
+              disabled={!editing}
+              className={inputClass(editing)}
+            >
+              <option value="">—</option>
+              {universities.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+          </FieldRow>
+          <FieldRow label="Program of Study">
+            <input
+              value={form.program_of_study ?? ""}
+              onChange={(e) => field("program_of_study", e.target.value)}
+              readOnly={!editing}
+              className={inputClass(editing)}
+            />
+          </FieldRow>
+          <FieldRow label="Date of Birth">
+            <input
+              type="date"
+              value={form.date_of_birth ?? ""}
+              onChange={(e) => field("date_of_birth", e.target.value)}
+              readOnly={!editing}
+              disabled={!editing}
+              className={inputClass(editing)}
+            />
+          </FieldRow>
+          <FieldRow label="Gender">
+            <select
+              value={form.gender ?? ""}
+              onChange={(e) => field("gender", e.target.value || null)}
+              disabled={!editing}
+              className={inputClass(editing)}
+            >
+              <option value="">—</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </FieldRow>
+          <FieldRow label="Father of Confession">
+            <input
+              value={form.father_of_confession ?? ""}
+              onChange={(e) => field("father_of_confession", e.target.value)}
+              readOnly={!editing}
+              className={inputClass(editing)}
+            />
+          </FieldRow>
+          <FieldRow label="Home Address">
+            <input
+              value={form.home_address ?? ""}
+              onChange={(e) => field("home_address", e.target.value)}
+              readOnly={!editing}
+              className={inputClass(editing)}
+            />
+          </FieldRow>
+          <FieldRow label={`Registration Comments`}>
+            <textarea value={member.registration_comments ?? ""} readOnly className={inputClass(false)} rows={2} />
+          </FieldRow>
+          <FieldRow label="Assigned Servant">
+            <select
+              value={assignedServantId ?? ""}
+              onChange={(e) => setAssignedServantId(e.target.value || null)}
+              disabled={!editing}
+              className={inputClass(editing)}
+            >
+              <option value="">Unassigned</option>
+              {sortedServants.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.full_name} (has {s.caseload})
+                </option>
+              ))}
+            </select>
+          </FieldRow>
+          <FieldRow label="Servant Comments">
+            <textarea
+              value={form.servant_comments ?? ""}
+              onChange={(e) => field("servant_comments", e.target.value)}
+              readOnly={!editing}
+              className={inputClass(editing)}
+              rows={2}
+            />
+          </FieldRow>
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-2 justify-between items-center border-t border-[#f0f0f0] pt-4">
+          <div className="flex gap-2">
+            {!editing ? (
+              <button
+                onClick={() => setEditing(true)}
+                className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45]"
+              >
+                Edit
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={handleSave}
+                  disabled={pending}
+                  className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60"
+                >
+                  {pending ? "Saving…" : "Save"}
+                </button>
+                <button
+                  onClick={() => {
+                    setEditing(false);
+                    setForm({
+                      phone: member.phone,
+                      email: member.email,
+                      university_id: member.university_id,
+                      program_of_study: member.program_of_study,
+                      date_of_birth: member.date_of_birth,
+                      father_of_confession: member.father_of_confession,
+                      home_address: member.home_address,
+                      gender: member.gender,
+                      servant_comments: member.servant_comments,
+                    });
+                    setAssignedServantId(member.assigned_servant_id);
+                  }}
+                  className="rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0]"
+                >
+                  Cancel
+                </button>
+              </>
+            )}
+            <button onClick={onClose} className="rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0]">
+              Close
+            </button>
+          </div>
+          {canDelete && (
+            <button
+              onClick={handleDelete}
+              disabled={pending}
+              className="rounded-md bg-[#dc3545] px-4 py-2 text-sm font-semibold text-white hover:bg-[#c82333] disabled:opacity-60"
+            >
+              Delete {memberLabel}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-[#333] mb-1">{label}</label>
+      {children}
+    </div>
+  );
+}
