@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { signOut } from "@/app/login/actions";
+import { AppLogo } from "@/components/AppLogo";
+import { HomeIcon, LogOutIcon } from "@/components/icons";
 
 const TABS = (memberLabel: string) => [
   { slug: "dashboard", label: "Dashboard" },
@@ -20,12 +22,16 @@ export function GroupNavShell({
   groupName,
   appTitleShort,
   memberLabel,
+  logoUrl,
+  appVersion,
   children,
 }: {
   groupId: string;
   groupName: string;
   appTitleShort: string;
   memberLabel: string;
+  logoUrl: string | null;
+  appVersion: string;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -56,22 +62,32 @@ export function GroupNavShell({
             : "bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b]"
         }`}
       >
-        <Link href="/" className="inline-block">
-          <h1 className="text-2xl font-bold hover:opacity-90 transition-opacity">
-            {appTitleShort}
-          </h1>
+        <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+          <AppLogo logoUrl={logoUrl} title={appTitleShort} size={32} circular={false} />
+          <h1 className="text-2xl font-bold">{appTitleShort}</h1>
         </Link>
         <p className="mt-1 text-sm opacity-90">{groupName} Servant Dashboard</p>
-        <form action={signOut} className="absolute top-2.5 right-4">
-          <button className="text-[11px] text-white/70 hover:text-white transition-colors">
-            Sign out
-          </button>
-        </form>
+
+        <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">
+          <form action={signOut}>
+            <button
+              title="Sign out"
+              aria-label="Sign out"
+              className="text-white/70 hover:text-white transition-colors"
+            >
+              <LogOutIcon className="h-4 w-4" />
+            </button>
+          </form>
+          <span className="text-[10px] text-white/60">Version {appVersion}</span>
+        </div>
+
         <Link
           href="/"
-          className="absolute top-2.5 left-4 text-[11px] text-white/70 hover:text-white transition-colors"
+          title="Home"
+          aria-label="Home"
+          className="absolute top-2.5 left-4 text-white/70 hover:text-white transition-colors"
         >
-          ← Home
+          <HomeIcon className="h-4 w-4" />
         </Link>
       </header>
 

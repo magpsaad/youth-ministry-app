@@ -33,6 +33,8 @@ export default async function GroupLayout({
       groupName={group.name}
       appTitleShort={settings.app_title_short}
       memberLabel={settings.member_label}
+      logoUrl={settings.logo_url}
+      appVersion={settings.app_version}
     >
       {children}
     </GroupNavShell>
