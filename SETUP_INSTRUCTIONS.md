@@ -10,7 +10,7 @@ These are the account-level steps only you can do (they're tied to your own logi
 2. Click **New Project**.
 3. Pick your organization, name it something like `youth-ministry-app`, and set a **strong database password** — save that password somewhere safe (a password manager). You won't need to give it to me; the app connects using separate API keys, not this password.
 4. Pick a region close to your users, and create the project (takes about 2 minutes to provision).
-5. Once it's ready, go to **Project Settings → API**. You'll see a **Project URL** and an **anon/public key** — leave this tab open, you'll need both in step 2 below.
+5. Once it's ready, go to **Project Settings → API Keys**. You'll see a **Project URL** and a **Publishable Key** (Supabase's current name for what used to be called the "anon/public key" — same thing, safe to expose in browser code) — leave this tab open, you'll need both in step 3 below. Don't use the **Secret Key** (formerly "service_role") for anything in this app — that one must stay private.
 
 ## 2. Create the `qa` schema and apply the migrations
 
@@ -27,10 +27,10 @@ Follow `supabase/README.md` in this repo — it has the exact SQL steps. Short v
 Once steps 1–2 are done, create a file at `web/.env.local` (copy `web/.env.local.example` as a starting point) with:
 ```
 NEXT_PUBLIC_SUPABASE_URL=<your project URL>
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<your anon key>
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<your Publishable Key>
 NEXT_PUBLIC_APP_ENV=qa
 ```
-That file is already gitignored, so it's safe to fill in locally — just let me know it's done and I'll pick up from there. (If you'd rather I fill it in directly, you can paste the URL and anon key to me — the anon key is meant to be public-safe, not a secret — but never share the database password or the "service_role" key with anyone, including me, in chat.)
+That file is already gitignored, so it's safe to fill in locally — just let me know it's done and I'll pick up from there. (If you'd rather I fill it in directly, you can paste the URL and Publishable Key to me — that key is meant to be public-safe, not a secret — but never share the database password or the Secret Key with anyone, including me, in chat.)
 
 ## 4. Set up Google Sign-In (Google OAuth)
 
@@ -55,7 +55,7 @@ That file is already gitignored, so it's safe to fill in locally — just let me
 
 1. Go to [vercel.com](https://vercel.com) and sign up/log in — **"Continue with GitHub"** is the easiest option, since it auto-connects your account.
 2. Once the GitHub repo from step 5 exists and has code pushed to it (I'll let you know when that's ready), come back and click **Add New → Project**, then import that repo — **twice**, as two separate Vercel projects:
-   - **Project 1 — Production**: name it e.g. `youth-ministry-app`. Set **Root Directory** to `web`. Set it to track the `main` branch. Add environment variables: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (same values as QA — same Supabase project), and `NEXT_PUBLIC_APP_ENV=prod`.
+   - **Project 1 — Production**: name it e.g. `youth-ministry-app`. Set **Root Directory** to `web`. Set it to track the `main` branch. Add environment variables: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (same values as QA — same Supabase project), and `NEXT_PUBLIC_APP_ENV=prod`.
    - **Project 2 — QA**: name it e.g. `youth-ministry-app-qa`. Set **Root Directory** to `web`. Set it to track a `qa` branch (I'll create that branch once we're actively building). Same Supabase URL/key, but `NEXT_PUBLIC_APP_ENV=qa`.
 3. Each project gets its own free `*.vercel.app` URL automatically — no custom domain needed yet.
 
@@ -65,7 +65,7 @@ That file is already gitignored, so it's safe to fill in locally — just let me
 
 - [ ] Supabase project created (step 1)
 - [ ] `qa` schema created and migrations applied (step 2)
-- [ ] QA Supabase URL + anon key available (for `.env.local`, step 3)
+- [ ] QA Supabase URL + Publishable Key available (for `.env.local`, step 3)
 - [ ] Google OAuth client set up and pasted into Supabase (step 4)
 - [ ] GitHub repo URL (step 5)
 - [ ] Two Vercel projects created and env vars set (step 6)
