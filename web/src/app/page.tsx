@@ -80,6 +80,7 @@ export default async function LandingPage() {
               <StubButton label="Calendar Maintenance" />
               <StubButton label="Actions Needed Config" />
               <StubButton label="Verses Maintenance" />
+              <StubButton label="Pre-Entry (Yr 0) Intake" />
               <StubButton label="Audit Logs" />
               <StubButton label="Audit Report" />
               <StubButton label="Group Transition" />
