@@ -56,7 +56,7 @@ That file is already gitignored, so it's safe to fill in locally — just let me
    ```
    (`<your-project-ref>` is the subdomain in your Supabase Project URL from step 1 — e.g. if your URL is `https://abcdefgh.supabase.co`, the ref is `abcdefgh`.)
 6. Create it, then copy the **Client ID** and **Client Secret**.
-7. In the Supabase Dashboard, go to **Authentication → Providers → Google**, enable it, and paste in the Client ID and Client Secret.
+7. In the Supabase Dashboard, go to **Authentication → Sign In / Up → Auth Providers**, find **Google** in the list, enable it, and paste in the Client ID and Client Secret. (Supabase has reorganized this screen before — if this exact path doesn't match what you see, look for "Providers" or "Auth Providers" somewhere under the Authentication section.)
 
 ## 5. Create a GitHub repository
 
