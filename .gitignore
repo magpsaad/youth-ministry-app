@@ -1,0 +1,10 @@
+# Claude Code local session/tool settings — machine-specific, not project source.
+.claude/
+
+# Superseded document snapshots kept locally by the owner, not project history
+# (git tracks REQUIREMENTS.md/DATABASE_SCHEMA.md's real history via commits).
+Archives/
+
+# OS junk
+.DS_Store
+Thumbs.db
