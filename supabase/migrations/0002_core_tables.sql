@@ -83,11 +83,21 @@ create unique index uq_profiles_legacy_ref on profiles (legacy_source_ref)
   where legacy_source_ref is not null;
 
 -- Auto-create a profile row whenever a new Supabase Auth user signs up.
+--
+-- KNOWN LIMITATION, to resolve before the `prod` schema is set up: auth.users
+-- is a single table shared by the whole Supabase project (not per-schema), so
+-- this trigger is too. Applying this file a second time (for `prod`) will
+-- fail with "trigger already exists" on the same auth.users table, and even
+-- if renamed, a single shared trigger can only route a signup into ONE
+-- schema's `profiles` table. Before wiring up `prod`, this needs to become
+-- an environment-aware version that reads which app the signup came from
+-- (e.g. from auth metadata set at sign-up time) and inserts into the right
+-- schema's `profiles` via dynamic SQL. Tracked for Phase A (auth) — do not
+-- copy this trigger as-is into a second schema without that fix.
 create or replace function handle_new_user()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
 as $$
 begin
   insert into profiles (id, full_name, email)

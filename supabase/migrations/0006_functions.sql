@@ -11,6 +11,13 @@
 --     granted to the `anon` role. RLS on the underlying tables (0007) stays
 --     locked down for direct access; these functions are the one sanctioned
 --     side door, and each does its own validation rather than trusting input.
+--     None of these functions pin `search_path` — they resolve unqualified
+--     names using whatever schema is active in the calling context (`qa` or
+--     `prod`), which is what keeps this one file usable for both environments.
+--     Supabase's PostgREST layer controls that context for RPC calls; an
+--     external caller cannot manipulate it, so the usual "security definer
+--     without a pinned search_path" hijacking risk doesn't apply here the way
+--     it would for a function reachable via raw SQL.
 
 -- ── Group Transition (§5) ───────────────────────────────────────────────────
 create or replace function run_group_transition(new_pre_entry_cohort_year integer)
@@ -76,7 +83,6 @@ create or replace function checkin_list_members(p_token uuid)
 returns table (member_id uuid, full_name text)
 language plpgsql
 security definer
-set search_path = public
 as $$
 declare
   v_group_id uuid;
@@ -108,7 +114,6 @@ create or replace function checkin_mark_attendance(p_token uuid, p_member_id uui
 returns void
 language plpgsql
 security definer
-set search_path = public
 as $$
 declare
   v_group_id uuid;
@@ -162,7 +167,6 @@ create or replace function checkin_submit_new_member(
 returns uuid
 language plpgsql
 security definer
-set search_path = public
 as $$
 declare
   v_group_id uuid;
