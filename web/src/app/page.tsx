@@ -34,7 +34,7 @@ export default async function LandingPage() {
   return (
     <div className="min-h-full flex flex-col bg-[#f5f5f5]">
       <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-6 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative">
-        <div className="mx-auto">
+        <div className="flex justify-center">
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={60} />
         </div>
         <h1 className="mt-3 text-[28px] font-bold">{settings.app_title_long}</h1>
