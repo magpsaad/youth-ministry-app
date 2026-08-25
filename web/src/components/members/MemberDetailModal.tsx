@@ -133,7 +133,7 @@ export function MemberDetailModal({
         setError(result.error);
         return;
       }
-      setPhotoPath(`${member.id}.${file.name.split(".").pop() || "jpg"}`);
+      if (result.photoPath) setPhotoPath(result.photoPath);
       onSaved();
     });
   }
