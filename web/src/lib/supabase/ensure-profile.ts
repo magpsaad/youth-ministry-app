@@ -36,4 +36,14 @@ export async function ensureProfile(user: User): Promise<void> {
     email: user.email,
     photo_path: (user.user_metadata?.avatar_url as string | undefined) ?? null,
   });
+
+  // Phase C servant self-registration: a no-op unless an Admin/General
+  // Coordinator has approved a pending_servants row matching this email
+  // (see 0014_servant_self_registration.sql's link_approved_pending_servant
+  // for the full linking logic -- security definer, since this runs under
+  // the newly-signed-in user's own session, which has no RLS access to
+  // pending_servants or to insert into user_roles on its own).
+  if (user.email) {
+    await supabase.rpc("link_approved_pending_servant", { p_email: user.email });
+  }
 }
