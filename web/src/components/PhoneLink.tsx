@@ -1,3 +1,5 @@
+"use client";
+
 import { PhoneIcon } from "@/components/icons";
 
 /** Clickable tel: link, used wherever a phone number is shown (member cards,
