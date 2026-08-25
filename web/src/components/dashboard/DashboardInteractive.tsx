@@ -139,7 +139,7 @@ export function DashboardInteractive({
                     memberName={m.full_name}
                     groupId={groupId}
                     currentUserName={currentUserName}
-                    className="shrink-0 text-sm font-semibold text-[#1e3a5f] hover:underline"
+                    className="shrink-0 rounded-md bg-[#1e3a5f] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#152a45]"
                   />
                 </div>
               );
