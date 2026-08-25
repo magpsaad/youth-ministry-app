@@ -1,15 +1,22 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import type { MemberDetail } from "@/lib/members";
 import type { University } from "@/lib/universities";
 import type { ServantOption } from "@/lib/servants";
+import { memberPhotoUrl } from "@/lib/storage";
 import {
   updateMemberAction,
   deleteMemberAction,
   assignServantAction,
+  uploadMemberPhotoAction,
+  removeMemberPhotoAction,
   type UpdateMemberInput,
 } from "@/app/g/[groupId]/members/actions";
+import { CameraIcon, TrashIcon } from "@/components/icons";
+import { PhoneLink } from "@/components/PhoneLink";
+import { AddOutreachModal } from "@/components/outreach/AddOutreachModal";
+import { PrevOutreachModal } from "@/components/outreach/PrevOutreachModal";
 
 const inputClass = (editing: boolean) =>
   `w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
@@ -25,6 +32,7 @@ export function MemberDetailModal({
   servants,
   memberLabel,
   canDelete,
+  currentUserName,
   onClose,
   onSaved,
 }: {
@@ -34,12 +42,17 @@ export function MemberDetailModal({
   servants: ServantOption[];
   memberLabel: string;
   canDelete: boolean;
+  currentUserName: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [photoPath, setPhotoPath] = useState(member.photo_path);
+  const [showAddOutreach, setShowAddOutreach] = useState(false);
+  const [showPrevOutreach, setShowPrevOutreach] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState<UpdateMemberInput>({
     phone: member.phone,
     email: member.email,
@@ -50,11 +63,10 @@ export function MemberDetailModal({
     home_address: member.home_address,
     gender: member.gender,
     servant_comments: member.servant_comments,
+    is_visitor: member.is_visitor,
   });
   const [assignedServantId, setAssignedServantId] = useState(member.assigned_servant_id);
 
-  // Soft suggestion (REQUIREMENTS.md §6.4/§4.1): matching-gender servants
-  // first, everyone else after -- never hard-blocked.
   const sortedServants = [...servants].sort((a, b) => {
     const aMatch = a.gender === member.gender ? 0 : 1;
     const bMatch = b.gender === member.gender ? 0 : 1;
@@ -63,6 +75,22 @@ export function MemberDetailModal({
 
   function field<K extends keyof UpdateMemberInput>(key: K, value: UpdateMemberInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function resetForm() {
+    setForm({
+      phone: member.phone,
+      email: member.email,
+      university_id: member.university_id,
+      program_of_study: member.program_of_study,
+      date_of_birth: member.date_of_birth,
+      father_of_confession: member.father_of_confession,
+      home_address: member.home_address,
+      gender: member.gender,
+      servant_comments: member.servant_comments,
+      is_visitor: member.is_visitor,
+    });
+    setAssignedServantId(member.assigned_servant_id);
   }
 
   function handleSave() {
@@ -94,6 +122,37 @@ export function MemberDetailModal({
     });
   }
 
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.set("photo", file);
+    startTransition(async () => {
+      const result = await uploadMemberPhotoAction(member.id, groupId, formData);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setPhotoPath(`${member.id}.${file.name.split(".").pop() || "jpg"}`);
+      onSaved();
+    });
+  }
+
+  function handleRemovePhoto() {
+    if (!photoPath) return;
+    startTransition(async () => {
+      const result = await removeMemberPhotoAction(member.id, groupId, photoPath);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setPhotoPath(null);
+      onSaved();
+    });
+  }
+
+  const photoUrl = memberPhotoUrl(photoPath);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div
@@ -107,12 +166,62 @@ export function MemberDetailModal({
           </button>
         </div>
 
-        <div className="mx-auto mb-4 h-[100px] w-[100px] rounded-full bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] flex items-center justify-center text-white text-2xl font-bold">
-          {member.full_name
-            .split(" ")
-            .map((w) => w[0])
-            .slice(0, 2)
-            .join("")}
+        <label className="flex items-center gap-2 text-sm font-semibold text-[#333] mb-4">
+          <input
+            type="checkbox"
+            checked={form.is_visitor}
+            onChange={(e) => field("is_visitor", e.target.checked)}
+            disabled={!editing}
+            className="accent-[#1e3a5f]"
+          />
+          Visitor
+        </label>
+
+        <div className="flex flex-col items-center mb-2">
+          {photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photoUrl} alt={member.full_name} className="h-[100px] w-[100px] rounded-full object-cover" />
+          ) : (
+            <div className="h-[100px] w-[100px] rounded-full bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] flex items-center justify-center text-white text-2xl font-bold">
+              {member.full_name
+                .split(" ")
+                .map((w) => w[0])
+                .slice(0, 2)
+                .join("")}
+            </div>
+          )}
+          <div className="flex gap-3 mt-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handlePhotoChange}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={pending}
+              title={photoUrl ? "Replace photo" : "Add photo"}
+              className="flex items-center gap-1 text-xs font-semibold text-[#1e3a5f] hover:underline"
+            >
+              <CameraIcon className="h-3.5 w-3.5" />
+              {photoUrl ? "Replace" : "Add"} Photo
+            </button>
+            {photoUrl && (
+              <button
+                type="button"
+                onClick={handleRemovePhoto}
+                disabled={pending}
+                title="Delete photo"
+                className="flex items-center gap-1 text-xs font-semibold text-[#dc3545] hover:underline"
+              >
+                <TrashIcon className="h-3.5 w-3.5" />
+                Delete Photo
+              </button>
+            )}
+          </div>
         </div>
 
         {error && (
@@ -120,9 +229,6 @@ export function MemberDetailModal({
         )}
 
         <div className="space-y-3">
-          <FieldRow label="Full Name">
-            <input value={member.full_name} readOnly className={inputClass(false)} />
-          </FieldRow>
           <FieldRow label="Phone">
             <input
               value={form.phone ?? ""}
@@ -130,6 +236,11 @@ export function MemberDetailModal({
               readOnly={!editing}
               className={inputClass(editing)}
             />
+            {!editing && form.phone && (
+              <div className="mt-1">
+                <PhoneLink phone={form.phone} />
+              </div>
+            )}
           </FieldRow>
           <FieldRow label="Email">
             <input
@@ -200,7 +311,7 @@ export function MemberDetailModal({
               className={inputClass(editing)}
             />
           </FieldRow>
-          <FieldRow label={`Registration Comments`}>
+          <FieldRow label="Registration Comments">
             <textarea value={member.registration_comments ?? ""} readOnly className={inputClass(false)} rows={2} />
           </FieldRow>
           <FieldRow label="Assigned Servant">
@@ -230,7 +341,7 @@ export function MemberDetailModal({
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2 justify-between items-center border-t border-[#f0f0f0] pt-4">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {!editing ? (
               <button
                 onClick={() => setEditing(true)}
@@ -250,18 +361,7 @@ export function MemberDetailModal({
                 <button
                   onClick={() => {
                     setEditing(false);
-                    setForm({
-                      phone: member.phone,
-                      email: member.email,
-                      university_id: member.university_id,
-                      program_of_study: member.program_of_study,
-                      date_of_birth: member.date_of_birth,
-                      father_of_confession: member.father_of_confession,
-                      home_address: member.home_address,
-                      gender: member.gender,
-                      servant_comments: member.servant_comments,
-                    });
-                    setAssignedServantId(member.assigned_servant_id);
+                    resetForm();
                   }}
                   className="rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0]"
                 >
@@ -271,6 +371,18 @@ export function MemberDetailModal({
             )}
             <button onClick={onClose} className="rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0]">
               Close
+            </button>
+            <button
+              onClick={() => setShowPrevOutreach(true)}
+              className="rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0]"
+            >
+              Prev. Outreach
+            </button>
+            <button
+              onClick={() => setShowAddOutreach(true)}
+              className="rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0]"
+            >
+              New Outreach
             </button>
           </div>
           {canDelete && (
@@ -284,6 +396,20 @@ export function MemberDetailModal({
           )}
         </div>
       </div>
+
+      {showAddOutreach && (
+        <AddOutreachModal
+          memberId={member.id}
+          memberName={member.full_name}
+          groupId={groupId}
+          currentUserName={currentUserName}
+          onClose={() => setShowAddOutreach(false)}
+          onSaved={onSaved}
+        />
+      )}
+      {showPrevOutreach && (
+        <PrevOutreachModal memberId={member.id} memberName={member.full_name} onClose={() => setShowPrevOutreach(false)} />
+      )}
     </div>
   );
 }

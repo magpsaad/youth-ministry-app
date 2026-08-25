@@ -10,7 +10,7 @@ export function CollapsibleSection({
   children,
 }: {
   id: string;
-  title: string;
+  title: React.ReactNode;
   children: React.ReactNode;
 }) {
   const key = `collapsed:${id}`;

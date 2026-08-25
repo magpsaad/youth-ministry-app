@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import { signOut } from "@/app/login/actions";
 import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon, LogOutIcon } from "@/components/icons";
+import { useMyAssigned } from "@/components/MyAssignedContext";
 
 const TABS = (memberLabel: string) => [
   { slug: "dashboard", label: "Dashboard" },
@@ -15,8 +15,6 @@ const TABS = (memberLabel: string) => [
   { slug: "reports", label: "Analytics" },
 ];
 
-const STORAGE_KEY = "myAssignedOnly";
-
 export function GroupNavShell({
   groupId,
   groupName,
@@ -24,6 +22,7 @@ export function GroupNavShell({
   memberLabel,
   logoUrl,
   appVersion,
+  lastServiceDate,
   children,
 }: {
   groupId: string;
@@ -32,25 +31,11 @@ export function GroupNavShell({
   memberLabel: string;
   logoUrl: string | null;
   appVersion: string;
+  lastServiceDate: string | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const [myAssignedOnly, setMyAssignedOnly] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
-
-  // REQUIREMENTS.md §6.2 -- persists for the browser session, resets on a
-  // new session (sessionStorage, not localStorage).
-  useEffect(() => {
-    setMyAssignedOnly(sessionStorage.getItem(STORAGE_KEY) === "true");
-    setHydrated(true);
-  }, []);
-
-  function toggle() {
-    const next = !myAssignedOnly;
-    setMyAssignedOnly(next);
-    sessionStorage.setItem(STORAGE_KEY, String(next));
-  }
-
+  const { myAssignedOnly, toggle, hydrated } = useMyAssigned();
   const filtered = hydrated && myAssignedOnly;
 
   return (
@@ -111,11 +96,21 @@ export function GroupNavShell({
         })}
       </nav>
 
-      <div className="max-w-5xl w-full mx-auto px-4 py-3">
+      <div className="max-w-5xl w-full mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-2">
         <label className="inline-flex items-center gap-2 text-sm text-[#333]">
           <input type="checkbox" checked={filtered} onChange={toggle} className="accent-[#1e3a5f]" />
           My Assigned List
         </label>
+        <span className="text-sm text-[#666]">
+          Last Service Date:{" "}
+          {lastServiceDate
+            ? new Date(lastServiceDate + "T00:00:00").toLocaleDateString("en-US", {
+                month: "2-digit",
+                day: "2-digit",
+                year: "numeric",
+              })
+            : "N/A"}
+        </span>
       </div>
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 pb-8">{children}</main>

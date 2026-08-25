@@ -17,8 +17,12 @@ create policy members_update on members for update
 create policy members_insert on members for insert
   with check (has_group_access(group_id));
 
+-- Widened from Admin-only to Admin/General Coordinator per owner request
+-- (REQUIREMENTS.md §3.3.1, see 0011_widen_member_delete.sql for the qa
+-- patch history -- this base file is kept in sync so a fresh prod setup
+-- gets it right immediately without needing that follow-up file too).
 create policy members_delete on members for delete
-  using (is_admin());
+  using (is_admin_or_general_coordinator());
 
 -- ── groups ───────────────────────────────────────────────────────────────────
 alter table groups enable row level security;
