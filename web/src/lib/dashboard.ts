@@ -1,13 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
 
-export type DashboardStats = {
-  totalMembers: number;
-  neverAttended: number;
-  presentLastServiceDate: number | null; // null = no tracked service date exists yet
-  absentLastServiceDate: number | null;
+export type MemberStatRow = {
+  id: string;
+  assigned_servant_id: string | null;
+  proximity: "Local" | "Regional" | "Abroad" | "Unknown";
+  everAttended: boolean;
+  presentLastService: boolean;
+};
+
+export type DashboardStatsData = {
+  rows: MemberStatRow[];
   lastServiceDate: string | null;
   visitorCount: number;
-  proximity: { Local: number; Regional: number; Abroad: number; Unknown: number };
 };
 
 export type BirthdayMember = {
@@ -15,6 +19,7 @@ export type BirthdayMember = {
   full_name: string;
   photo_path: string | null;
   date_of_birth: string;
+  assigned_servant_id: string | null;
   assigned_servant: { full_name: string } | null;
 };
 
@@ -42,34 +47,31 @@ export async function getLastServiceDate(): Promise<string | null> {
 }
 
 /**
- * REQUIREMENTS.md §6.3/§7.2. "Tracked" service dates are whichever dates
- * actually have at least one attendance row -- there are none yet, since
- * the Attendance tab (Phase C) hasn't been built, so presence/absence here
- * correctly comes back as "no tracked date yet" rather than a misleading 0.
+ * REQUIREMENTS.md §6.3/§7.2/§6.2. Returns per-member raw rows rather than
+ * pre-aggregated counts, so the Dashboard's client-side "My Assigned List"
+ * toggle can recompute Overview/Proximity from the same fetch instead of
+ * round-tripping to the server -- same client-side-filter architecture as
+ * the Member List. "Tracked" service dates are whichever dates actually have
+ * at least one attendance row -- there are none yet, since the Attendance tab
+ * (Phase C) hasn't been built, so `lastServiceDate` correctly comes back null
+ * rather than a misleading 0 for present/absent counts.
  */
-export async function getDashboardStats(groupId: string): Promise<DashboardStats> {
+export async function getDashboardStatsData(groupId: string): Promise<DashboardStatsData> {
   const supabase = await createClient();
 
   const { data: members } = await supabase
     .from("members")
-    .select("id, is_visitor, university:universities(proximity)")
+    .select("id, is_visitor, assigned_servant_id, university:universities(proximity)")
     .eq("group_id", groupId)
     .eq("status", "active");
 
   const active = members ?? [];
   const nonVisitors = active.filter((m) => !m.is_visitor);
-
-  const proximity = { Local: 0, Regional: 0, Abroad: 0, Unknown: 0 };
-  for (const m of nonVisitors) {
-    const p = ((m.university as unknown as { proximity?: string } | null)?.proximity ?? "Unknown") as keyof typeof proximity;
-    proximity[p] = (proximity[p] ?? 0) + 1;
-  }
-
   const memberIds = nonVisitors.map((m) => m.id);
-  let neverAttended = nonVisitors.length;
+
   let lastServiceDate: string | null = null;
-  let presentLastServiceDate: number | null = null;
-  let absentLastServiceDate: number | null = null;
+  let everAttendedSet = new Set<string>();
+  let presentLastServiceSet = new Set<string>();
 
   if (memberIds.length > 0) {
     const { data: latestDateRow } = await supabase
@@ -88,9 +90,7 @@ export async function getDashboardStats(groupId: string): Promise<DashboardStats
         .select("member_id")
         .eq("attendee_type", "member")
         .in("member_id", memberIds);
-
-      const everAttendedSet = new Set((attendedIds ?? []).map((r) => r.member_id));
-      neverAttended = memberIds.filter((id) => !everAttendedSet.has(id)).length;
+      everAttendedSet = new Set((attendedIds ?? []).map((r) => r.member_id));
 
       const { data: presentRows } = await supabase
         .from("attendance_records")
@@ -98,21 +98,19 @@ export async function getDashboardStats(groupId: string): Promise<DashboardStats
         .eq("attendee_type", "member")
         .eq("service_date", lastServiceDate)
         .in("member_id", memberIds);
-
-      presentLastServiceDate = presentRows?.length ?? 0;
-      absentLastServiceDate = memberIds.length - presentLastServiceDate;
+      presentLastServiceSet = new Set((presentRows ?? []).map((r) => r.member_id));
     }
   }
 
-  return {
-    totalMembers: nonVisitors.length,
-    neverAttended,
-    presentLastServiceDate,
-    absentLastServiceDate,
-    lastServiceDate,
-    visitorCount: active.length - nonVisitors.length,
-    proximity,
-  };
+  const rows: MemberStatRow[] = nonVisitors.map((m) => ({
+    id: m.id,
+    assigned_servant_id: m.assigned_servant_id,
+    proximity: ((m.university as unknown as { proximity?: string } | null)?.proximity ?? "Unknown") as MemberStatRow["proximity"],
+    everAttended: everAttendedSet.has(m.id),
+    presentLastService: presentLastServiceSet.has(m.id),
+  }));
+
+  return { rows, lastServiceDate, visitorCount: active.length - nonVisitors.length };
 }
 
 /** REQUIREMENTS.md §6.3 -- 7 days ago through 14 days ahead, wrapping the year boundary. */
@@ -120,7 +118,7 @@ export async function getUpcomingBirthdays(groupId: string): Promise<BirthdayMem
   const supabase = await createClient();
   const { data } = await supabase
     .from("members")
-    .select("id, full_name, photo_path, date_of_birth, assigned_servant:profiles(full_name)")
+    .select("id, full_name, photo_path, date_of_birth, assigned_servant_id, assigned_servant:profiles(full_name)")
     .eq("group_id", groupId)
     .eq("status", "active")
     .not("date_of_birth", "is", null);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import type { MemberDetail } from "@/lib/members";
 import type { University } from "@/lib/universities";
 import type { ServantOption } from "@/lib/servants";
@@ -14,7 +15,6 @@ import {
   type UpdateMemberInput,
 } from "@/app/g/[groupId]/members/actions";
 import { CameraIcon, TrashIcon } from "@/components/icons";
-import { PhoneLink } from "@/components/PhoneLink";
 import { AddOutreachModal } from "@/components/outreach/AddOutreachModal";
 import { PrevOutreachModal } from "@/components/outreach/PrevOutreachModal";
 
@@ -153,7 +153,7 @@ export function MemberDetailModal({
 
   const photoUrl = memberPhotoUrl(photoPath);
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div
         className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.2)]"
@@ -236,11 +236,6 @@ export function MemberDetailModal({
               readOnly={!editing}
               className={inputClass(editing)}
             />
-            {!editing && form.phone && (
-              <div className="mt-1">
-                <PhoneLink phone={form.phone} />
-              </div>
-            )}
           </FieldRow>
           <FieldRow label="Email">
             <input
@@ -369,9 +364,6 @@ export function MemberDetailModal({
                 </button>
               </>
             )}
-            <button onClick={onClose} className="rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0]">
-              Close
-            </button>
             <button
               onClick={() => setShowPrevOutreach(true)}
               className="rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0]"
@@ -383,6 +375,9 @@ export function MemberDetailModal({
               className="rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0]"
             >
               New Outreach
+            </button>
+            <button onClick={onClose} className="rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0]">
+              Close
             </button>
           </div>
           {canDelete && (
@@ -410,7 +405,8 @@ export function MemberDetailModal({
       {showPrevOutreach && (
         <PrevOutreachModal memberId={member.id} memberName={member.full_name} onClose={() => setShowPrevOutreach(false)} />
       )}
-    </div>
+    </div>,
+    document.body,
   );
 }
 
