@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAppSettings } from "@/lib/app-settings";
 import { getAccessibleGroups } from "@/lib/groups";
@@ -77,6 +78,14 @@ export default async function LandingPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <StubButton label="Servant Profiles &amp; Assignments" />
               <StubButton label="Servants Attendance" />
+              {(access.isAdmin || access.isGeneralCoordinator) && (
+                <Link
+                  href="/admin/pending-servants"
+                  className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45] sm:col-span-2"
+                >
+                  Pending Servants
+                </Link>
+              )}
             </div>
           </section>
         )}
