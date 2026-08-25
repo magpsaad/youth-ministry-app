@@ -99,7 +99,7 @@ export function DashboardInteractive({
             </span>
           }
         >
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {filteredBirthdays.map((m) => {
               const photoUrl = memberPhotoUrl(m.photo_path);
               return (
@@ -113,34 +113,34 @@ export function DashboardInteractive({
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <MemberDetailLink
-                      memberId={m.id}
-                      groupId={groupId}
-                      universities={universities}
-                      servants={servants}
-                      memberLabel={memberLabel}
-                      canDelete={canDelete}
-                      currentUserName={currentUserName}
-                      className="font-semibold text-[#1e3a5f] hover:underline text-left truncate block"
-                    >
-                      {m.full_name}
-                    </MemberDetailLink>
+                    <div className="flex items-center gap-2">
+                      <MemberDetailLink
+                        memberId={m.id}
+                        groupId={groupId}
+                        universities={universities}
+                        servants={servants}
+                        memberLabel={memberLabel}
+                        canDelete={canDelete}
+                        currentUserName={currentUserName}
+                        className="font-semibold text-[#1e3a5f] hover:underline text-left truncate"
+                      >
+                        {m.full_name}
+                      </MemberDetailLink>
+                      <span className="text-[#28a745] font-medium text-sm shrink-0">
+                        {new Date(m.date_of_birth).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                      </span>
+                    </div>
                     <p className="text-xs text-[#666]">
                       Assigned Servant: {m.assigned_servant?.full_name ?? "No assigned servant"}
                     </p>
                   </div>
-                  <div className="text-right shrink-0 flex items-center gap-3">
-                    <span className="text-[#28a745] font-medium text-sm">
-                      {new Date(m.date_of_birth).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                    </span>
-                    <OutreachQuickLink
-                      memberId={m.id}
-                      memberName={m.full_name}
-                      groupId={groupId}
-                      currentUserName={currentUserName}
-                      className="text-sm font-semibold text-[#1e3a5f] hover:underline"
-                    />
-                  </div>
+                  <OutreachQuickLink
+                    memberId={m.id}
+                    memberName={m.full_name}
+                    groupId={groupId}
+                    currentUserName={currentUserName}
+                    className="shrink-0 text-sm font-semibold text-[#1e3a5f] hover:underline"
+                  />
                 </div>
               );
             })}
@@ -163,7 +163,7 @@ export function DashboardInteractive({
               : "Everyone in this group has an assigned servant."}
           </p>
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {filteredUnassigned.map((m) => {
               const photoUrl = memberPhotoUrl(m.photo_path);
               return (
