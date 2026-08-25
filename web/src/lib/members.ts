@@ -12,6 +12,7 @@ export type MemberListItem = {
   assigned_servant_id: string | null;
   university: { id: string; name: string; proximity: string } | null;
   assigned_servant: { full_name: string } | null;
+  avgAttendancePercent: number | null;
 };
 
 export type MemberDetail = MemberListItem & {
@@ -24,6 +25,10 @@ export type MemberDetail = MemberListItem & {
   servant_comments: string | null;
 };
 
+/** Client-side filter shape -- REQUIREMENTS.md §6.4's filter panel now
+ * filters live in the browser (item 21/24d) rather than round-tripping to
+ * the server per keystroke/checkbox, so this type is consumed by the
+ * client component, not applied here. */
 export type MemberFilters = {
   q?: string;
   servantIds?: string[]; // may include the literal "unassigned"
@@ -33,21 +38,20 @@ export type MemberFilters = {
   male?: boolean;
   female?: boolean;
   proximities?: string[]; // Local | Regional | Abroad | Unknown
+  myAssignedOnly?: boolean;
 };
 
 const LIST_SELECT =
-  "id, full_name, phone, photo_path, program_of_study, is_visitor, gender, date_of_birth, assigned_servant_id, university:universities(id, name, proximity), assigned_servant:profiles(full_name)";
+  "id, full_name, phone, photo_path, program_of_study, is_visitor, gender, date_of_birth, assigned_servant_id, created_at, university:universities(id, name, proximity), assigned_servant:profiles(full_name)";
 
 /**
- * All active members of a group, matching client-side (REQUIREMENTS.md
- * §6.4's filter panel). Fetching the whole group and filtering in JS is
- * simpler and plenty fast at this app's scale (dozens of members per group,
- * not thousands) than building the equivalent as a dynamic Postgrest query.
+ * Every active member of a group, with a computed average-attendance % per
+ * REQUIREMENTS.md §6.4/§7.2's corrected formula: present dates / tracked
+ * dates *since that member's registration*, not the full trailing-12-month
+ * window regardless of when they joined (the bug flagged in the old app).
+ * Returns null (not 0%) when there's no tracked date yet to divide by.
  */
-export async function getGroupMembers(
-  groupId: string,
-  filters: MemberFilters = {},
-): Promise<MemberListItem[]> {
+export async function getGroupMembers(groupId: string): Promise<MemberListItem[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("members")
@@ -56,40 +60,36 @@ export async function getGroupMembers(
     .eq("status", "active")
     .order("full_name");
 
-  let members = (data ?? []) as unknown as MemberListItem[];
+  const members = (data ?? []) as unknown as (MemberListItem & { created_at: string })[];
+  if (members.length === 0) return [];
 
-  if (filters.q) {
-    const q = filters.q.toLowerCase();
-    members = members.filter((m) => m.full_name.toLowerCase().includes(q));
-  }
-  if (filters.excludeVisitors) {
-    members = members.filter((m) => !m.is_visitor);
-  }
-  if (filters.hasPhoto) {
-    members = members.filter((m) => !!m.photo_path);
-  }
-  if (filters.male || filters.female) {
-    members = members.filter(
-      (m) => (filters.male && m.gender === "Male") || (filters.female && m.gender === "Female"),
-    );
-  }
-  if (filters.universityIds?.length) {
-    members = members.filter((m) => m.university && filters.universityIds!.includes(m.university.id));
-  }
-  if (filters.proximities?.length) {
-    members = members.filter((m) => {
-      const proximity = m.university?.proximity ?? "Unknown";
-      return filters.proximities!.includes(proximity);
-    });
-  }
-  if (filters.servantIds?.length) {
-    members = members.filter((m) => {
-      if (filters.servantIds!.includes("unassigned") && !m.assigned_servant_id) return true;
-      return m.assigned_servant_id && filters.servantIds!.includes(m.assigned_servant_id);
-    });
+  const memberIds = members.map((m) => m.id);
+  const { data: attendance } = await supabase
+    .from("attendance_records")
+    .select("member_id, service_date")
+    .eq("attendee_type", "member")
+    .in("member_id", memberIds);
+
+  const trackedDates = Array.from(new Set((attendance ?? []).map((a) => a.service_date))).sort();
+  const presentByMember = new Map<string, Set<string>>();
+  for (const a of attendance ?? []) {
+    if (!a.member_id) continue;
+    if (!presentByMember.has(a.member_id)) presentByMember.set(a.member_id, new Set());
+    presentByMember.get(a.member_id)!.add(a.service_date);
   }
 
-  return members;
+  return members.map((m) => {
+    const since = m.created_at.slice(0, 10);
+    const trackedSinceRegistration = trackedDates.filter((d) => d >= since);
+    const presentSet = presentByMember.get(m.id) ?? new Set<string>();
+    const presentCount = trackedSinceRegistration.filter((d) => presentSet.has(d)).length;
+    const avgAttendancePercent =
+      trackedSinceRegistration.length > 0 ? Math.round((presentCount / trackedSinceRegistration.length) * 100) : null;
+
+    const { created_at: _created_at, ...rest } = m;
+    void _created_at;
+    return { ...rest, avgAttendancePercent };
+  });
 }
 
 export async function getMember(memberId: string): Promise<MemberDetail | null> {
@@ -102,5 +102,8 @@ export async function getMember(memberId: string): Promise<MemberDetail | null> 
     .eq("id", memberId)
     .maybeSingle();
 
-  return data as unknown as MemberDetail | null;
+  if (!data) return null;
+  const { created_at: _created_at, ...rest } = data as unknown as MemberDetail & { created_at: string };
+  void _created_at;
+  return { ...rest, avgAttendancePercent: null };
 }

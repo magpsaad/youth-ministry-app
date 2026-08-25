@@ -13,6 +13,7 @@ export type DashboardStats = {
 export type BirthdayMember = {
   id: string;
   full_name: string;
+  photo_path: string | null;
   date_of_birth: string;
   assigned_servant: { full_name: string } | null;
 };
@@ -21,9 +22,24 @@ export type UnassignedMember = {
   id: string;
   full_name: string;
   photo_path: string | null;
+  phone: string | null;
+  program_of_study: string | null;
   university: { name: string } | null;
   gender: string | null;
 };
+
+/** Lightweight, used by the nav shell header on every tab (not just Dashboard). */
+export async function getLastServiceDate(): Promise<string | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("attendance_records")
+    .select("service_date")
+    .eq("attendee_type", "member")
+    .order("service_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data?.service_date ?? null;
+}
 
 /**
  * REQUIREMENTS.md §6.3/§7.2. "Tracked" service dates are whichever dates
@@ -104,7 +120,7 @@ export async function getUpcomingBirthdays(groupId: string): Promise<BirthdayMem
   const supabase = await createClient();
   const { data } = await supabase
     .from("members")
-    .select("id, full_name, date_of_birth, assigned_servant:profiles(full_name)")
+    .select("id, full_name, photo_path, date_of_birth, assigned_servant:profiles(full_name)")
     .eq("group_id", groupId)
     .eq("status", "active")
     .not("date_of_birth", "is", null);
@@ -133,7 +149,7 @@ export async function getUnassignedMembers(groupId: string): Promise<UnassignedM
   const supabase = await createClient();
   const { data } = await supabase
     .from("members")
-    .select("id, full_name, photo_path, gender, university:universities(name)")
+    .select("id, full_name, photo_path, phone, program_of_study, gender, university:universities(name)")
     .eq("group_id", groupId)
     .eq("status", "active")
     .is("assigned_servant_id", null)
