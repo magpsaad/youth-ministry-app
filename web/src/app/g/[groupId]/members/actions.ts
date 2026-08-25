@@ -4,22 +4,6 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { photosBucket } from "@/lib/storage";
 
-/** TEMPORARY diagnostic helper (photo-upload "is_app_user" investigation) --
- * Supabase error objects (StorageError, PostgrestError) carry more than
- * `.message` (code/status/details/hint), which the UI was discarding. Revert
- * to plain `error.message` once the root cause is found. */
-function describeError(step: string, err: unknown): string {
-  console.error(`[${step}]`, err);
-  if (err && typeof err === "object") {
-    const e = err as Record<string, unknown>;
-    const parts = [e.message, e.code, e.status, e.statusCode, e.error, e.details, e.hint]
-      .filter((v) => v !== undefined && v !== null && v !== "")
-      .map(String);
-    return `[${step}] ${parts.length ? parts.join(" | ") : JSON.stringify(err)}`;
-  }
-  return `[${step}] ${String(err)}`;
-}
-
 export type UpdateMemberInput = {
   phone: string | null;
   email: string | null;
@@ -86,10 +70,10 @@ export async function uploadMemberPhotoAction(memberId: string, groupId: string,
   const { error: uploadError } = await supabase.storage
     .from(photosBucket())
     .upload(path, file, { upsert: true, contentType: file.type });
-  if (uploadError) return { error: describeError("storage.upload", uploadError) };
+  if (uploadError) return { error: uploadError.message };
 
   const { error: updateError } = await supabase.from("members").update({ photo_path: path }).eq("id", memberId);
-  if (updateError) return { error: describeError("members.update", updateError) };
+  if (updateError) return { error: updateError.message };
 
   revalidatePath(`/g/${groupId}/members`);
   revalidatePath(`/g/${groupId}/dashboard`);
@@ -99,10 +83,10 @@ export async function uploadMemberPhotoAction(memberId: string, groupId: string,
 export async function removeMemberPhotoAction(memberId: string, groupId: string, photoPath: string) {
   const supabase = await createClient();
   const { error: removeError } = await supabase.storage.from(photosBucket()).remove([photoPath]);
-  if (removeError) return { error: describeError("storage.remove", removeError) };
+  if (removeError) return { error: removeError.message };
 
   const { error } = await supabase.from("members").update({ photo_path: null }).eq("id", memberId);
-  if (error) return { error: describeError("members.update", error) };
+  if (error) return { error: error.message };
 
   revalidatePath(`/g/${groupId}/members`);
   revalidatePath(`/g/${groupId}/dashboard`);
