@@ -58,26 +58,38 @@ export async function assignServantAction(memberId: string, groupId: string, ser
 /** Upload/replace a member's photo -- available to any user with access to
  * this member (not admin-restricted, REQUIREMENTS.md §6.4). No cropping yet
  * (the current app's Cropper.js step) -- uploads the picked/captured file
- * as-is; cropping/resizing is a reasonable follow-up polish item. */
+ * as-is; cropping/resizing is a reasonable follow-up polish item.
+ *
+ * Each upload gets a unique path (timestamped) rather than overwriting the
+ * previous one at a fixed `{memberId}.{ext}` path -- reusing the same path
+ * produced the same public URL, which the browser/CDN would keep serving
+ * from cache even after the underlying file changed, making "replace" look
+ * like a no-op. The old file is removed after the new one is confirmed live. */
 export async function uploadMemberPhotoAction(memberId: string, groupId: string, formData: FormData) {
   const file = formData.get("photo") as File | null;
   if (!file || file.size === 0) return { error: "No file selected" };
 
   const supabase = await createClient();
   const ext = file.name.split(".").pop() || "jpg";
-  const path = `${memberId}.${ext}`;
+  const path = `${memberId}-${Date.now()}.${ext}`;
+
+  const { data: existing } = await supabase.from("members").select("photo_path").eq("id", memberId).maybeSingle();
 
   const { error: uploadError } = await supabase.storage
     .from(photosBucket())
-    .upload(path, file, { upsert: true, contentType: file.type });
+    .upload(path, file, { contentType: file.type });
   if (uploadError) return { error: uploadError.message };
 
   const { error: updateError } = await supabase.from("members").update({ photo_path: path }).eq("id", memberId);
   if (updateError) return { error: updateError.message };
 
+  if (existing?.photo_path && existing.photo_path !== path) {
+    await supabase.storage.from(photosBucket()).remove([existing.photo_path]);
+  }
+
   revalidatePath(`/g/${groupId}/members`);
   revalidatePath(`/g/${groupId}/dashboard`);
-  return { error: null };
+  return { error: null, photoPath: path };
 }
 
 export async function removeMemberPhotoAction(memberId: string, groupId: string, photoPath: string) {
