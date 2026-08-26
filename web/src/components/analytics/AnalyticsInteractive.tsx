@@ -62,6 +62,7 @@ export function AnalyticsInteractive({
 
     return Array.from(datesByMonth.keys())
       .sort()
+      .reverse()
       .map((month) => {
         const dates = Array.from(datesByMonth.get(month)!);
         let presentCount = 0;
