@@ -1,4 +1,5 @@
 const PHOTOS_BUCKET = `${process.env.NEXT_PUBLIC_APP_ENV}-photos`;
+const CALENDAR_BUCKET = `${process.env.NEXT_PUBLIC_APP_ENV}-calendar`;
 
 /** Public URL for a stored photo path -- predictable for public buckets, no
  * API round-trip needed. Works in both server and client code since
@@ -10,4 +11,13 @@ export function memberPhotoUrl(path: string | null): string | null {
 
 export function photosBucket(): string {
   return PHOTOS_BUCKET;
+}
+
+export function calendarAttachmentUrl(path: string | null): string | null {
+  if (!path) return null;
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${CALENDAR_BUCKET}/${path}`;
+}
+
+export function calendarBucket(): string {
+  return CALENDAR_BUCKET;
 }
