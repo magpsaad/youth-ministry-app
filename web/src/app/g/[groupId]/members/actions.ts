@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { photosBucket } from "@/lib/storage";
+import { logAudit } from "@/lib/audit";
 
 export type UpdateMemberInput = {
   phone: string | null;
@@ -20,9 +21,13 @@ export type UpdateMemberInput = {
 /** Full Name and Registration Comments are always read-only (REQUIREMENTS.md §6.4) -- never accepted here. */
 export async function updateMemberAction(memberId: string, groupId: string, input: UpdateMemberInput) {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const { error } = await supabase.from("members").update(input).eq("id", memberId);
   if (error) return { error: error.message };
 
+  if (user) await logAudit(user.id, "MEMBER_EDITED", { groupId, details: { memberId } });
   revalidatePath(`/g/${groupId}/members`);
   revalidatePath(`/g/${groupId}/dashboard`);
   return { error: null };
@@ -33,9 +38,13 @@ export async function updateMemberAction(memberId: string, groupId: string, inpu
  * widened from Admin-only per owner request, see the accompanying migration). */
 export async function deleteMemberAction(memberId: string, groupId: string) {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const { error } = await supabase.from("members").delete().eq("id", memberId);
   if (error) return { error: error.message };
 
+  if (user) await logAudit(user.id, "MEMBER_DELETED", { groupId, details: { memberId } });
   revalidatePath(`/g/${groupId}/members`);
   revalidatePath(`/g/${groupId}/dashboard`);
   return { error: null };
@@ -44,12 +53,16 @@ export async function deleteMemberAction(memberId: string, groupId: string) {
 /** Assigning a member to a servant also clears the "new assignment" flag it may have just set. */
 export async function assignServantAction(memberId: string, groupId: string, servantId: string | null) {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const { error } = await supabase
     .from("members")
     .update({ assigned_servant_id: servantId, is_new_assignment: false })
     .eq("id", memberId);
   if (error) return { error: error.message };
 
+  if (user) await logAudit(user.id, "SERVANT_ASSIGNED", { groupId, details: { memberId, servantId } });
   revalidatePath(`/g/${groupId}/members`);
   revalidatePath(`/g/${groupId}/dashboard`);
   return { error: null };
@@ -70,6 +83,9 @@ export async function uploadMemberPhotoAction(memberId: string, groupId: string,
   if (!file || file.size === 0) return { error: "No file selected" };
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const ext = file.name.split(".").pop() || "jpg";
   const path = `${memberId}-${Date.now()}.${ext}`;
 
@@ -87,6 +103,7 @@ export async function uploadMemberPhotoAction(memberId: string, groupId: string,
     await supabase.storage.from(photosBucket()).remove([existing.photo_path]);
   }
 
+  if (user) await logAudit(user.id, "MEMBER_PHOTO_UPLOADED", { groupId, details: { memberId } });
   revalidatePath(`/g/${groupId}/members`);
   revalidatePath(`/g/${groupId}/dashboard`);
   return { error: null, photoPath: path };

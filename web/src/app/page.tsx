@@ -6,6 +6,7 @@ import { getAccessSummary } from "@/lib/roles";
 import { getPendingServantsCount } from "@/lib/pending-servants";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { ensureProfile } from "@/lib/supabase/ensure-profile";
+import { logAudit } from "@/lib/audit";
 import { LoadGroupPanel } from "@/components/LoadGroupPanel";
 import { AppLogo } from "@/components/AppLogo";
 import { SignOutButton } from "@/components/SignOutButton";
@@ -16,6 +17,7 @@ export default async function LandingPage() {
   if (!user) redirect("/login");
 
   await ensureProfile(user);
+  void logAudit(user.id, "APP_ACCESS");
 
   const [settings, access, groups, pendingServantsCount] = await Promise.all([
     getAppSettings(),
@@ -56,7 +58,12 @@ export default async function LandingPage() {
             memberLabel={settings.member_label}
           />
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <StubButton label="Servants Directory" />
+            <Link
+              href="/servants-directory"
+              className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
+            >
+              Servants Directory
+            </Link>
             <ServiceCalendarButton />
             <Link
               href="/qr-codes"
@@ -72,8 +79,18 @@ export default async function LandingPage() {
           <section className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
             <h2 className="text-lg font-bold text-[#1e3a5f] mb-4">Coordinator Corner</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <StubButton label="Servant Profiles &amp; Assignments" />
-              <StubButton label="Servants Attendance" />
+              <Link
+                href="/servant-profiles"
+                className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
+              >
+                Servant Profiles &amp; Assignments
+              </Link>
+              <Link
+                href="/servants-attendance"
+                className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
+              >
+                Servants Attendance
+              </Link>
               {(access.isAdmin || access.isGeneralCoordinator) && (
                 <Link
                   href="/admin/pending-servants"
@@ -96,20 +113,57 @@ export default async function LandingPage() {
           <section className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
             <h2 className="text-lg font-bold text-[#1e3a5f] mb-4">Admin Corner</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {yr0Group && <StubButton label={`Load: ${yr0Group.name}`} fullWidth />}
-              <StubButton label="Access Maintenance" />
-              <StubButton label="Universities Maintenance" />
+              {yr0Group && (
+                <Link
+                  href={`/g/${yr0Group.id}/members`}
+                  className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45] sm:col-span-2"
+                >
+                  Load: {yr0Group.name}
+                </Link>
+              )}
+              <Link
+                href="/admin/access-maintenance"
+                className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
+              >
+                Access Maintenance
+              </Link>
+              <Link
+                href="/admin/universities-maintenance"
+                className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
+              >
+                Universities Maintenance
+              </Link>
               <Link
                 href="/admin/calendar-maintenance"
                 className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
               >
                 Calendar Maintenance
               </Link>
-              <StubButton label="Actions Needed Config" />
-              <StubButton label="Verses Maintenance" />
+              <Link
+                href="/admin/actions-needed-config"
+                className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
+              >
+                Actions Needed Config
+              </Link>
+              <Link
+                href="/admin/verses-maintenance"
+                className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
+              >
+                Verses Maintenance
+              </Link>
               <StubButton label="Group Transition" />
-              <StubButton label="Audit Logs" />
-              <StubButton label="Audit Report" />
+              <Link
+                href="/admin/audit-logs"
+                className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
+              >
+                Audit Logs
+              </Link>
+              <Link
+                href="/admin/audit-report"
+                className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
+              >
+                Audit Report
+              </Link>
             </div>
           </section>
         )}

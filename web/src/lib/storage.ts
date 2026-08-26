@@ -13,6 +13,13 @@ export function photosBucket(): string {
   return PHOTOS_BUCKET;
 }
 
+/** Same bucket/path scheme as memberPhotoUrl -- servants and members share
+ * the one photos bucket (migration 0010's is_app_user() gate already covers
+ * both), this is just a clearer name at servant call sites. */
+export function servantPhotoUrl(path: string | null): string | null {
+  return memberPhotoUrl(path);
+}
+
 export function calendarAttachmentUrl(path: string | null): string | null {
   if (!path) return null;
   return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${CALENDAR_BUCKET}/${path}`;
