@@ -43,3 +43,13 @@ export async function getPendingServants(): Promise<PendingServant[]> {
 
   return rows.map((r) => ({ ...r, checkInCount: countByPending.get(r.id) ?? 0 }));
 }
+
+/** Lightweight count for the landing page's "Pending Servants" button badge. */
+export async function getPendingServantsCount(): Promise<number> {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("pending_servants")
+    .select("id", { count: "exact", head: true })
+    .is("resulting_profile_id", null);
+  return count ?? 0;
+}

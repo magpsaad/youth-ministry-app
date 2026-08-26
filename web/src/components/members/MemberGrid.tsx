@@ -62,7 +62,7 @@ export function MemberGrid({
                 >
                   {m.full_name}
                   {m.is_visitor && (
-                    <span className="ml-2 rounded-full bg-[#e2e3e5] text-[#383d41] text-[10px] px-2 py-0.5 align-middle">
+                    <span className="ml-2 rounded-full bg-[#ffe5cc] text-[#b35900] text-[10px] font-semibold px-2 py-0.5 align-middle">
                       Visitor
                     </span>
                   )}

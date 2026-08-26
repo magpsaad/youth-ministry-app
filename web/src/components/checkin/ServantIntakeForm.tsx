@@ -6,6 +6,8 @@ import { submitNewServantAction, type NewServantInput } from "@/app/checkin/acti
 const inputClass =
   "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const EMPTY_FORM: NewServantInput = {
   full_name: "",
   phone: null,
@@ -15,11 +17,28 @@ const EMPTY_FORM: NewServantInput = {
   comments: null,
 };
 
+function validate(form: NewServantInput): string | null {
+  if (!form.full_name.trim() || form.full_name.trim().split(/\s+/).length < 2) {
+    return "Please enter your first and last name.";
+  }
+  const digits = (form.phone ?? "").replace(/\D/g, "");
+  if (digits.length < 10 || digits.length > 11) {
+    return "Please enter a valid phone number.";
+  }
+  if (!form.email || !EMAIL_RE.test(form.email.trim())) {
+    return "Please enter a valid email address.";
+  }
+  if (!form.gender) {
+    return "Please select a gender.";
+  }
+  return null;
+}
+
 /** New servant self-registration (0014_servant_self_registration.sql) --
- * deliberately captures info + attendance only, no app account. An Admin/
- * General Coordinator reviews and approves it later; the account is
- * created automatically the first time this person actually signs into
- * the app themselves. */
+ * deliberately captures info + (service-day permitting) attendance only,
+ * no app account. An Admin/General Coordinator reviews and approves it
+ * later; the account is created automatically the first time this person
+ * actually signs into the app themselves. */
 export function ServantIntakeForm({
   token,
   onBack,
@@ -27,7 +46,7 @@ export function ServantIntakeForm({
 }: {
   token: string;
   onBack?: () => void;
-  onSubmitted: (name: string) => void;
+  onSubmitted: (name: string, attendanceRecorded: boolean) => void;
 }) {
   const [form, setForm] = useState<NewServantInput>(EMPTY_FORM);
   const [pending, setPending] = useState(false);
@@ -39,8 +58,9 @@ export function ServantIntakeForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.full_name.trim()) {
-      setError("Please enter your full name.");
+    const validationError = validate(form);
+    if (validationError) {
+      setError(validationError);
       return;
     }
     setPending(true);
@@ -51,14 +71,14 @@ export function ServantIntakeForm({
       setError(result.error);
       return;
     }
-    onSubmitted(form.full_name);
+    onSubmitted(form.full_name, result.attendanceRecorded);
   }
 
   return (
     <form onSubmit={handleSubmit} className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-4 space-y-3">
       <h2 className="text-base font-bold text-[#1e3a5f]">New Servant Registration</h2>
       <p className="text-xs text-[#666]">
-        Your info and today&rsquo;s attendance will be recorded. A coordinator will follow up to give you app access.
+        Your info will be recorded. A coordinator will follow up to give you app access.
       </p>
       {error && <p className="text-sm text-[#dc3545]">{error}</p>}
       <Field label="Full Name *">
@@ -69,24 +89,31 @@ export function ServantIntakeForm({
           className={inputClass}
         />
       </Field>
-      <Field label="Phone">
+      <Field label="Phone *">
         <input
+          required
           type="tel"
           value={form.phone ?? ""}
           onChange={(e) => field("phone", e.target.value || null)}
           className={inputClass}
         />
       </Field>
-      <Field label="Email">
+      <Field label="Email *">
         <input
+          required
           type="email"
           value={form.email ?? ""}
           onChange={(e) => field("email", e.target.value || null)}
           className={inputClass}
         />
       </Field>
-      <Field label="Gender">
-        <select value={form.gender ?? ""} onChange={(e) => field("gender", e.target.value || null)} className={inputClass}>
+      <Field label="Gender *">
+        <select
+          required
+          value={form.gender ?? ""}
+          onChange={(e) => field("gender", e.target.value || null)}
+          className={inputClass}
+        >
           <option value="">—</option>
           <option value="Male">Male</option>
           <option value="Female">Female</option>

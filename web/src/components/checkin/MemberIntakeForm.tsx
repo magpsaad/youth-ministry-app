@@ -7,6 +7,8 @@ import { submitNewMemberAction, type NewMemberInput } from "@/app/checkin/action
 const inputClass =
   "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const EMPTY_FORM: NewMemberInput = {
   full_name: "",
   phone: null,
@@ -20,9 +22,29 @@ const EMPTY_FORM: NewMemberInput = {
   comments: null,
 };
 
+/** Client-side mirror of the server-side checks in app/checkin/actions.ts --
+ * gives instant feedback, but the server never trusts this alone. */
+function validate(form: NewMemberInput): string | null {
+  if (!form.full_name.trim() || form.full_name.trim().split(/\s+/).length < 2) {
+    return "Please enter your first and last name.";
+  }
+  const digits = (form.phone ?? "").replace(/\D/g, "");
+  if (digits.length < 10 || digits.length > 11) {
+    return "Please enter a valid phone number.";
+  }
+  if (!form.email || !EMAIL_RE.test(form.email.trim())) {
+    return "Please enter a valid email address.";
+  }
+  if (!form.gender) {
+    return "Please select a gender.";
+  }
+  return null;
+}
+
 /** REQUIREMENTS.md §6.11 -- "Don't see your name?" intake, same fields as
- * the member schema. Creates the roster record AND today's attendance in
- * one shot (checkin_submit_new_member handles both server-side). */
+ * the member schema. Creates the roster record AND (service-day permitting)
+ * today's attendance in one shot. Name/Phone/Email/Gender are required and
+ * listed first; the rest stays free-form. */
 export function MemberIntakeForm({
   token,
   universities,
@@ -34,7 +56,7 @@ export function MemberIntakeForm({
   universities: University[];
   memberLabel: string;
   onBack?: () => void;
-  onSubmitted: (name: string) => void;
+  onSubmitted: (name: string, attendanceRecorded: boolean) => void;
 }) {
   const [form, setForm] = useState<NewMemberInput>(EMPTY_FORM);
   const [pending, setPending] = useState(false);
@@ -46,8 +68,9 @@ export function MemberIntakeForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.full_name.trim()) {
-      setError("Please enter your full name.");
+    const validationError = validate(form);
+    if (validationError) {
+      setError(validationError);
       return;
     }
     setPending(true);
@@ -58,7 +81,7 @@ export function MemberIntakeForm({
       setError(result.error);
       return;
     }
-    onSubmitted(form.full_name);
+    onSubmitted(form.full_name, result.attendanceRecorded);
   }
 
   return (
@@ -73,21 +96,35 @@ export function MemberIntakeForm({
           className={inputClass}
         />
       </Field>
-      <Field label="Phone">
+      <Field label="Phone *">
         <input
+          required
           type="tel"
           value={form.phone ?? ""}
           onChange={(e) => field("phone", e.target.value || null)}
           className={inputClass}
         />
       </Field>
-      <Field label="Email">
+      <Field label="Email *">
         <input
+          required
           type="email"
           value={form.email ?? ""}
           onChange={(e) => field("email", e.target.value || null)}
           className={inputClass}
         />
+      </Field>
+      <Field label="Gender *">
+        <select
+          required
+          value={form.gender ?? ""}
+          onChange={(e) => field("gender", e.target.value || null)}
+          className={inputClass}
+        >
+          <option value="">—</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+        </select>
       </Field>
       <Field label="University/College">
         <select
@@ -118,13 +155,6 @@ export function MemberIntakeForm({
           onChange={(e) => field("date_of_birth", e.target.value || null)}
           className={inputClass}
         />
-      </Field>
-      <Field label="Gender">
-        <select value={form.gender ?? ""} onChange={(e) => field("gender", e.target.value || null)} className={inputClass}>
-          <option value="">—</option>
-          <option value="Male">Male</option>
-          <option value="Female">Female</option>
-        </select>
       </Field>
       <Field label="Father of Confession">
         <input
