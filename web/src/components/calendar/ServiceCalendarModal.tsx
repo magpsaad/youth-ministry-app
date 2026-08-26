@@ -1,9 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import type { CalendarEvent } from "@/lib/calendar-types";
-import { EVENT_TYPE_COLORS } from "@/lib/calendar-types";
+import { EVENT_TYPE_COLORS, contrastText } from "@/lib/calendar-types";
+import { AppLogo } from "@/components/AppLogo";
+import { HomeIcon } from "@/components/icons";
+import { SignOutButton } from "@/components/SignOutButton";
 import { EventForm } from "./EventForm";
 
 type View = "month" | "week" | "list" | "fridays";
@@ -44,7 +48,7 @@ function matchesWeekday(e: CalendarEvent, isoWeekday: number): boolean {
 }
 
 function EventPill({ event, onClick }: { event: CalendarEvent; onClick: () => void }) {
-  const colors = EVENT_TYPE_COLORS[event.event_type];
+  const bg = EVENT_TYPE_COLORS[event.event_type].color;
   return (
     <button
       type="button"
@@ -52,8 +56,8 @@ function EventPill({ event, onClick }: { event: CalendarEvent; onClick: () => vo
         e.stopPropagation();
         onClick();
       }}
-      className="w-full text-left truncate rounded px-1.5 py-0.5 text-[11px] font-medium"
-      style={{ backgroundColor: colors.bg, color: colors.color }}
+      className="max-w-full truncate rounded px-1.5 py-0.5 text-[11px] font-medium"
+      style={{ backgroundColor: bg, color: contrastText(bg) }}
       title={event.title}
     >
       {event.title}
@@ -111,36 +115,47 @@ function DayGrid({
   );
 }
 
-function ListView({ events, onEventClick }: { events: CalendarEvent[]; onEventClick: (e: CalendarEvent) => void }) {
-  const sorted = [...events].sort((a, b) => a.start_date.localeCompare(b.start_date));
-  if (sorted.length === 0) {
-    return <p className="text-center text-sm text-[#666] py-8">No events to show.</p>;
-  }
+/** One row: date on the left, that date's events (or "No events") on the
+ * right. Shared by Week (every day, even empty) and List/Fridays (only
+ * dates that actually have events). */
+function DateRow({
+  date,
+  events,
+  showMonth,
+  onDayClick,
+  onEventClick,
+  rowRef,
+}: {
+  date: Date;
+  events: CalendarEvent[];
+  showMonth: boolean;
+  onDayClick: (dateISO: string) => void;
+  onEventClick: (event: CalendarEvent) => void;
+  rowRef?: (el: HTMLDivElement | null) => void;
+}) {
+  const dateISO = toISO(date);
+  const isToday = dateISO === toISO(new Date());
   return (
-    <div className="space-y-2">
-      {sorted.map((e) => {
-        const colors = EVENT_TYPE_COLORS[e.event_type];
-        return (
-          <button
-            key={e.id}
-            type="button"
-            onClick={() => onEventClick(e)}
-            className="w-full text-left rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-3 flex items-center gap-3 hover:shadow-[0_4px_15px_rgba(0,0,0,0.12)] transition-shadow"
-          >
-            <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold shrink-0" style={{ backgroundColor: colors.bg, color: colors.color }}>
-              {e.event_type}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-[#1e3a5f] truncate">{e.title}</p>
-              <p className="text-xs text-[#666]">
-                {e.start_date}
-                {e.end_date !== e.start_date ? ` – ${e.end_date}` : ""}
-                {e.location ? ` · ${e.location}` : ""}
-              </p>
-            </div>
-          </button>
-        );
-      })}
+    <div ref={rowRef} className={`flex border-b border-[#e0e0e0] ${isToday ? "bg-[#eef4fb]" : "bg-white"}`}>
+      <div className={`w-20 shrink-0 px-2 py-3 text-center border-l-2 ${isToday ? "border-l-[#1e3a5f]" : "border-l-transparent"}`}>
+        <div className="text-[11px] uppercase text-[#666]">{date.toLocaleDateString(undefined, { weekday: "short" })}</div>
+        <div className="text-lg font-bold text-[#333]">{date.getDate()}</div>
+        {showMonth && (
+          <div className="text-[10px] text-[#999]">
+            {date.toLocaleDateString(undefined, { month: "short" })} {date.getFullYear()}
+          </div>
+        )}
+      </div>
+      <div
+        className="flex-1 p-2 flex flex-wrap items-center gap-2 cursor-pointer hover:bg-[#f9f9f9]"
+        onClick={() => onDayClick(dateISO)}
+      >
+        {events.length === 0 ? (
+          <span className="text-sm text-[#999] italic">No events</span>
+        ) : (
+          events.map((e) => <EventPill key={e.id} event={e} onClick={() => onEventClick(e)} />)
+        )}
+      </div>
     </div>
   );
 }
@@ -152,12 +167,18 @@ export function ServiceCalendarModal({
   events,
   serviceWeekdayLabel,
   serviceWeekday,
+  logoUrl,
+  appTitleShort,
+  appVersion,
   onClose,
   onRefresh,
 }: {
   events: CalendarEvent[];
   serviceWeekdayLabel: string;
   serviceWeekday: number;
+  logoUrl: string | null;
+  appTitleShort: string;
+  appVersion: string;
   onClose: () => void;
   onRefresh: () => void;
 }) {
@@ -165,6 +186,7 @@ export function ServiceCalendarModal({
   const [cursor, setCursor] = useState(new Date());
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | "new" | null>(null);
   const [newEventDate, setNewEventDate] = useState<string | undefined>(undefined);
+  const rowRefs = useRef(new Map<string, HTMLDivElement>());
 
   const eventsForDate = useMemo(() => {
     return (dateISO: string) => events.filter((e) => dateISO >= e.start_date && dateISO <= e.end_date);
@@ -183,16 +205,67 @@ export function ServiceCalendarModal({
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(cursor), i));
   const weekLabel = `${weekDays[0].toLocaleDateString(undefined, { month: "short", day: "numeric" })} – ${weekDays[6].toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
 
+  // Distinct dates that have >=1 event, sorted chronologically -- used by
+  // both List (all) and Fridays (filtered) so they share the same agenda
+  // row layout instead of the day-grid used by Month/Week.
+  const listDates = useMemo(() => {
+    const eventsByDate = new Map<string, CalendarEvent[]>();
+    for (const e of events) {
+      let d = new Date(`${e.start_date}T00:00:00`);
+      const end = new Date(`${e.end_date}T00:00:00`);
+      while (d.getTime() <= end.getTime()) {
+        const iso = toISO(d);
+        if (!eventsByDate.has(iso)) eventsByDate.set(iso, []);
+        eventsByDate.get(iso)!.push(e);
+        d = addDays(d, 1);
+      }
+    }
+    return Array.from(eventsByDate.keys())
+      .sort()
+      .map((iso) => ({ date: new Date(`${iso}T00:00:00`), events: eventsByDate.get(iso)! }));
+  }, [events]);
+
+  const fridaysListDates = useMemo(
+    () => listDates.filter((d) => d.events.some((e) => matchesWeekday(e, serviceWeekday))),
+    [listDates, serviceWeekday],
+  );
+
+  // Auto-position List/Fridays to the current week on open/view-switch.
+  useEffect(() => {
+    if (view !== "list" && view !== "fridays") return;
+    const todayISO = toISO(new Date());
+    const source = view === "list" ? listDates : fridaysListDates;
+    const target = source.find((d) => toISO(d.date) >= todayISO) ?? source[source.length - 1];
+    if (target) {
+      const el = rowRefs.current.get(toISO(target.date));
+      el?.scrollIntoView({ block: "center" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view]);
+
   return createPortal(
     <div className="fixed inset-0 z-[70] bg-[#f5f5f5] flex flex-col">
-      <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-4 py-3 flex items-center justify-between shadow-[0_2px_10px_rgba(0,0,0,0.1)]">
-        <h2 className="text-lg font-bold">Service Calendar</h2>
-        <button onClick={onClose} className="text-white/80 hover:text-white text-2xl leading-none">
-          ×
+      <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative shrink-0">
+        <button
+          onClick={onClose}
+          title="Home"
+          aria-label="Home"
+          className="absolute top-2.5 left-4 text-white/70 hover:text-white transition-colors"
+        >
+          <HomeIcon className="h-4 w-4" />
         </button>
+        <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">
+          <SignOutButton className="text-white/70 hover:text-white transition-colors" />
+          <span className="text-[10px] text-white/60">Version {appVersion}</span>
+        </div>
+        <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+          <AppLogo logoUrl={logoUrl} title={appTitleShort} size={32} circular={false} />
+          <h1 className="text-2xl font-bold">{appTitleShort}</h1>
+        </Link>
+        <p className="mt-1 text-sm opacity-90">Service Calendar</p>
       </header>
 
-      <div className="bg-white border-b border-[#ddd] px-4 py-2 flex flex-wrap items-center justify-between gap-2">
+      <div className="bg-white border-b border-[#ddd] px-4 py-2 flex flex-wrap items-center justify-between gap-2 shrink-0">
         <div className="flex gap-1">
           {(["month", "week", "list", "fridays"] as View[]).map((v) => (
             <button
@@ -238,11 +311,39 @@ export function ServiceCalendarModal({
           />
         )}
         {view === "week" && (
-          <DayGrid days={weekDays} eventsForDate={eventsForDate} onDayClick={openNew} onEventClick={setEditingEvent} />
+          <div className="rounded-lg overflow-hidden border border-[#e0e0e0]">
+            {weekDays.map((day) => (
+              <DateRow
+                key={toISO(day)}
+                date={day}
+                events={eventsForDate(toISO(day))}
+                showMonth={false}
+                onDayClick={openNew}
+                onEventClick={setEditingEvent}
+              />
+            ))}
+          </div>
         )}
-        {view === "list" && <ListView events={events} onEventClick={setEditingEvent} />}
-        {view === "fridays" && (
-          <ListView events={events.filter((e) => matchesWeekday(e, serviceWeekday))} onEventClick={setEditingEvent} />
+        {(view === "list" || view === "fridays") && (
+          <div className="rounded-lg overflow-hidden border border-[#e0e0e0]">
+            {(view === "list" ? listDates : fridaysListDates).map(({ date, events: dayEvents }) => (
+              <DateRow
+                key={toISO(date)}
+                date={date}
+                events={view === "fridays" ? dayEvents.filter((e) => matchesWeekday(e, serviceWeekday)) : dayEvents}
+                showMonth
+                onDayClick={openNew}
+                onEventClick={setEditingEvent}
+                rowRef={(el) => {
+                  if (el) rowRefs.current.set(toISO(date), el);
+                  else rowRefs.current.delete(toISO(date));
+                }}
+              />
+            ))}
+            {(view === "list" ? listDates : fridaysListDates).length === 0 && (
+              <p className="text-center text-sm text-[#666] py-8">No events to show.</p>
+            )}
+          </div>
         )}
       </div>
 

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCalendarEvents, type CalendarEvent, type CalendarEventType } from "@/lib/calendar";
 import { calendarBucket } from "@/lib/storage";
+import { getAppSettings } from "@/lib/app-settings";
 
 export async function getCalendarEventsAction(): Promise<CalendarEvent[]> {
   return getCalendarEvents();
@@ -18,14 +19,25 @@ export async function getCalendarBootstrapAction(): Promise<{
   events: CalendarEvent[];
   serviceWeekday: number;
   serviceWeekdayLabel: string;
+  logoUrl: string | null;
+  appTitleShort: string;
+  appVersion: string;
 }> {
   const supabase = await createClient();
-  const [events, { data: settings }] = await Promise.all([
+  const [events, { data: weekdayRow }, settings] = await Promise.all([
     getCalendarEvents(),
     supabase.from("app_settings").select("service_weekday").single(),
+    getAppSettings(),
   ]);
-  const serviceWeekday = settings?.service_weekday ?? 5;
-  return { events, serviceWeekday, serviceWeekdayLabel: `${WEEKDAY_NAMES[serviceWeekday]}s` };
+  const serviceWeekday = weekdayRow?.service_weekday ?? 5;
+  return {
+    events,
+    serviceWeekday,
+    serviceWeekdayLabel: `${WEEKDAY_NAMES[serviceWeekday]}s`,
+    logoUrl: settings.logo_url,
+    appTitleShort: settings.app_title_short,
+    appVersion: settings.app_version,
+  };
 }
 
 export type EventInput = {

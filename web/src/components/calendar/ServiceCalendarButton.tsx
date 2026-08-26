@@ -13,6 +13,7 @@ export function ServiceCalendarButton() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [serviceWeekday, setServiceWeekday] = useState(5);
   const [serviceWeekdayLabel, setServiceWeekdayLabel] = useState("Fridays");
+  const [branding, setBranding] = useState({ logoUrl: null as string | null, appTitleShort: "", appVersion: "" });
   const [pending, startTransition] = useTransition();
 
   function handleOpen() {
@@ -21,6 +22,7 @@ export function ServiceCalendarButton() {
       setEvents(result.events);
       setServiceWeekday(result.serviceWeekday);
       setServiceWeekdayLabel(result.serviceWeekdayLabel);
+      setBranding({ logoUrl: result.logoUrl, appTitleShort: result.appTitleShort, appVersion: result.appVersion });
       setOpen(true);
     });
   }
@@ -46,6 +48,9 @@ export function ServiceCalendarButton() {
           events={events}
           serviceWeekday={serviceWeekday}
           serviceWeekdayLabel={serviceWeekdayLabel}
+          logoUrl={branding.logoUrl}
+          appTitleShort={branding.appTitleShort}
+          appVersion={branding.appVersion}
           onClose={() => setOpen(false)}
           onRefresh={handleRefresh}
         />
