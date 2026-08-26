@@ -26,3 +26,13 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
+
+/* Browsers hide background colors on print by default ("background graphics"
+   is opt-in in the print dialog) -- force it everywhere so colored QR frames
+   and calendar pills always print in color regardless of that setting. */
+@media print {
+  * {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+}

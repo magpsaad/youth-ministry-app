@@ -48,19 +48,22 @@ export function QrCodesInteractive({ qrCodes: initial }: { qrCodes: QrCodeForPri
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 print:grid-cols-2 print:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 print:grid-cols-1 print:gap-0">
         {qrCodes.map((q) => {
           const textColor = contrastText(q.color);
           return (
-            <div key={q.id} className="flex flex-col items-center print:break-inside-avoid">
-              <div className="rounded-3xl p-3" style={{ backgroundColor: q.color }}>
+            <div
+              key={q.id}
+              className="flex flex-col items-center print:break-inside-avoid print:break-after-page print:min-h-screen print:justify-center"
+            >
+              <div className="rounded-3xl p-3 print:p-6" style={{ backgroundColor: q.color }}>
                 <div
-                  className="rounded-2xl bg-white p-3 w-[220px] [&_svg]:h-auto [&_svg]:w-full"
+                  className="rounded-2xl bg-white p-3 w-[220px] print:w-[420px] [&_svg]:h-auto [&_svg]:w-full"
                   dangerouslySetInnerHTML={{ __html: q.svg }}
                 />
               </div>
               <div
-                className="-mt-4 rounded-full px-6 py-2 text-center font-bold shadow-[0_2px_6px_rgba(0,0,0,0.15)]"
+                className="-mt-4 rounded-full px-6 py-2 text-center font-bold shadow-[0_2px_6px_rgba(0,0,0,0.15)] print:px-10 print:py-4 print:text-2xl"
                 style={{ backgroundColor: q.color, color: textColor }}
               >
                 {q.label}

@@ -7,6 +7,7 @@ import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon } from "@/components/icons";
 import { SignOutButton } from "@/components/SignOutButton";
 import { CalendarMaintenanceInteractive } from "@/components/admin/CalendarMaintenanceInteractive";
+import { getHolidayRulesAction } from "@/app/admin/calendar-maintenance/actions";
 
 /** REQUIREMENTS.md §6.8/§6.1 -- Admin Corner, Admins only. */
 export default async function CalendarMaintenancePage() {
@@ -22,7 +23,7 @@ export default async function CalendarMaintenancePage() {
     );
   }
 
-  const settings = await getAppSettings();
+  const [settings, initialRules] = await Promise.all([getAppSettings(), getHolidayRulesAction()]);
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
@@ -31,9 +32,10 @@ export default async function CalendarMaintenancePage() {
           href="/"
           title="Home"
           aria-label="Home"
-          className="absolute top-2.5 left-4 text-white/70 hover:text-white transition-colors"
+          className="absolute top-2.5 left-4 inline-flex items-center gap-1 text-white/70 hover:text-white transition-colors"
         >
           <HomeIcon className="h-4 w-4" />
+          <span className="text-xs font-medium">Home</span>
         </Link>
         <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">
           <SignOutButton className="text-white/70 hover:text-white transition-colors" />
@@ -46,7 +48,7 @@ export default async function CalendarMaintenancePage() {
         <p className="mt-1 text-sm opacity-90">Calendar Maintenance</p>
       </header>
       <main className="max-w-2xl mx-auto px-4 py-6">
-        <CalendarMaintenanceInteractive defaultYear={new Date().getFullYear()} />
+        <CalendarMaintenanceInteractive defaultYear={new Date().getFullYear()} initialRules={initialRules} />
       </main>
     </div>
   );

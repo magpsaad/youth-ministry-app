@@ -62,9 +62,10 @@ export function GroupNavShell({
           href="/"
           title="Home"
           aria-label="Home"
-          className="absolute top-2.5 left-4 text-white/70 hover:text-white transition-colors"
+          className="absolute top-2.5 left-4 inline-flex items-center gap-1 text-white/70 hover:text-white transition-colors"
         >
           <HomeIcon className="h-4 w-4" />
+          <span className="text-xs font-medium">Home</span>
         </Link>
       </header>
 

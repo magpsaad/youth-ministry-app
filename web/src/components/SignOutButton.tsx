@@ -25,8 +25,15 @@ export function SignOutButton({ className }: { className?: string }) {
   }
 
   return (
-    <button onClick={handleClick} disabled={pending} title="Sign out" aria-label="Sign out" className={className}>
+    <button
+      onClick={handleClick}
+      disabled={pending}
+      title="Exit"
+      aria-label="Exit"
+      className={`inline-flex items-center gap-1 ${className ?? ""}`}
+    >
       <LogOutIcon className="h-4 w-4" />
+      <span className="text-xs font-medium">Exit</span>
     </button>
   );
 }
