@@ -2,10 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getMemberOutreach, type OutreachEntry } from "@/lib/outreach";
+import { getMemberOutreach, getOutreachEntries, type OutreachEntry, type OutreachEntryFull } from "@/lib/outreach";
 
 export async function getMemberOutreachAction(memberId: string): Promise<OutreachEntry[]> {
   return getMemberOutreach(memberId);
+}
+
+export async function getOutreachEntriesAction(groupId: string): Promise<OutreachEntryFull[]> {
+  return getOutreachEntries(groupId);
 }
 
 export type AddOutreachInput = {
@@ -36,6 +40,43 @@ export async function addOutreachEntryAction(groupId: string, input: AddOutreach
   });
   if (error) return { error: error.message };
 
+  revalidatePath(`/g/${groupId}/dashboard`);
+  revalidatePath(`/g/${groupId}/outreach`);
+  return { error: null };
+}
+
+export type EditOutreachInput = {
+  occurred_at: string;
+  type: string | null;
+  notes: string | null;
+  follow_up_due: string | null;
+};
+
+/** RLS restricts this to the entry's own creator regardless of what the UI
+ * shows (REQUIREMENTS.md §6.6 -- "only the creator sees Edit/Delete"). */
+export async function updateOutreachEntryAction(groupId: string, entryId: string, input: EditOutreachInput) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("outreach_entries")
+    .update({
+      occurred_at: input.occurred_at,
+      type: input.type,
+      notes: input.notes,
+      follow_up_due: input.follow_up_due,
+    })
+    .eq("id", entryId);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/g/${groupId}/outreach`);
+  return { error: null };
+}
+
+export async function deleteOutreachEntryAction(groupId: string, entryId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("outreach_entries").delete().eq("id", entryId);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/g/${groupId}/outreach`);
   revalidatePath(`/g/${groupId}/dashboard`);
   return { error: null };
 }
