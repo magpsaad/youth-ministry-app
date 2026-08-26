@@ -21,3 +21,15 @@ export async function approvePendingServantAction(id: string) {
   revalidatePath("/admin/pending-servants");
   return { error: null };
 }
+
+/** Removes a pending registration that never got followed up on (e.g. a
+ * one-off visitor who registered by mistake, or someone who never ended up
+ * signing into the app). Cascades to their pending_servant_attendance rows. */
+export async function removePendingServantAction(id: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("pending_servants").delete().eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/pending-servants");
+  return { error: null };
+}

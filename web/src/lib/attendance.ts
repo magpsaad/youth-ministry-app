@@ -7,6 +7,7 @@ export type AttendanceMember = {
   proximity: "Local" | "Regional" | "Abroad" | "Unknown";
   present: boolean;
   everAttended: boolean;
+  assigned_servant_id: string | null;
 };
 
 export type AttendanceDatesInfo = {
@@ -86,7 +87,7 @@ export async function getAttendanceForDate(groupId: string, date: string): Promi
 
   const { data: members } = await supabase
     .from("members")
-    .select("id, full_name, is_visitor, university:universities(proximity)")
+    .select("id, full_name, is_visitor, assigned_servant_id, university:universities(proximity)")
     .eq("group_id", groupId)
     .eq("status", "active")
     .order("full_name");
@@ -108,6 +109,7 @@ export async function getAttendanceForDate(groupId: string, date: string): Promi
     id: m.id,
     full_name: m.full_name,
     is_visitor: m.is_visitor,
+    assigned_servant_id: m.assigned_servant_id,
     proximity: ((m.university as unknown as { proximity?: string } | null)?.proximity ??
       "Unknown") as AttendanceMember["proximity"],
     present: presentToday.has(m.id),

@@ -35,6 +35,7 @@ export function CheckInFlow({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successName, setSuccessName] = useState<string | null>(null);
+  const [attendanceRecorded, setAttendanceRecorded] = useState(true);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -54,20 +55,28 @@ export function CheckInFlow({
       return;
     }
     setSuccessName(person.full_name);
+    setAttendanceRecorded(result.attendanceRecorded);
     setView("success");
   }
 
-  function handleIntakeSubmitted(name: string) {
+  function handleIntakeSubmitted(name: string, recorded: boolean) {
     setSuccessName(name);
+    setAttendanceRecorded(recorded);
     setView("success");
   }
 
   if (view === "success") {
     return (
       <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-6 text-center">
-        <p className="text-3xl">✅</p>
-        <h2 className="mt-2 text-lg font-bold text-[#1e3a5f]">You&rsquo;re checked in, {successName}!</h2>
-        <p className="mt-1 text-sm text-[#666]">See you inside.</p>
+        <p className="text-3xl">{attendanceRecorded ? "✅" : "👋"}</p>
+        <h2 className="mt-2 text-lg font-bold text-[#1e3a5f]">
+          {attendanceRecorded ? `You’re checked in, ${successName}!` : `Thanks, ${successName}!`}
+        </h2>
+        <p className="mt-1 text-sm text-[#666]">
+          {attendanceRecorded
+            ? "See you inside."
+            : "Attendance isn’t tracked today, but your information is saved."}
+        </p>
       </div>
     );
   }

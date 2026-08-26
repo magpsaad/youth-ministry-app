@@ -2,11 +2,12 @@
 
 import { useState, useTransition } from "react";
 import type { PendingServant } from "@/lib/pending-servants";
-import { approvePendingServantAction } from "@/app/admin/pending-servants/actions";
+import { approvePendingServantAction, removePendingServantAction } from "@/app/admin/pending-servants/actions";
 
 export function PendingServantRow({ servant }: { servant: PendingServant }) {
   const [pending, startTransition] = useTransition();
   const [approved, setApproved] = useState(!!servant.approved_at);
+  const [removed, setRemoved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function handleApprove() {
@@ -20,6 +21,21 @@ export function PendingServantRow({ servant }: { servant: PendingServant }) {
       setApproved(true);
     });
   }
+
+  function handleRemove() {
+    if (!confirm(`Remove ${servant.full_name}'s pending registration? This cannot be undone.`)) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await removePendingServantAction(servant.id);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setRemoved(true);
+    });
+  }
+
+  if (removed) return null;
 
   return (
     <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-4 flex flex-wrap items-center justify-between gap-3">
@@ -38,20 +54,30 @@ export function PendingServantRow({ servant }: { servant: PendingServant }) {
         </p>
         {error && <p className="text-xs text-[#dc3545] mt-1">{error}</p>}
       </div>
-      {approved ? (
-        <span className="shrink-0 rounded-full bg-[#d4edda] text-[#155724] text-xs font-semibold px-3 py-1.5">
-          Approved — waiting for them to sign in
-        </span>
-      ) : (
+      <div className="shrink-0 flex items-center gap-2">
+        {approved ? (
+          <span className="rounded-full bg-[#d4edda] text-[#155724] text-xs font-semibold px-3 py-1.5">
+            Approved — waiting for them to sign in
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={handleApprove}
+            disabled={pending}
+            className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60"
+          >
+            {pending ? "Approving…" : "Approve"}
+          </button>
+        )}
         <button
           type="button"
-          onClick={handleApprove}
+          onClick={handleRemove}
           disabled={pending}
-          className="shrink-0 rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60"
+          className="rounded-md bg-[#f0f0f0] px-3 py-2 text-sm font-semibold text-[#dc3545] hover:bg-[#f8d7da] disabled:opacity-60"
         >
-          {pending ? "Approving…" : "Approve"}
+          Remove
         </button>
-      )}
+      </div>
     </div>
   );
 }

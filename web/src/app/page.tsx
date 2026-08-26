@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getAppSettings } from "@/lib/app-settings";
 import { getAccessibleGroups } from "@/lib/groups";
 import { getAccessSummary } from "@/lib/roles";
+import { getPendingServantsCount } from "@/lib/pending-servants";
 import { createClient } from "@/lib/supabase/server";
 import { ensureProfile } from "@/lib/supabase/ensure-profile";
 import { LoadGroupPanel } from "@/components/LoadGroupPanel";
@@ -19,10 +20,11 @@ export default async function LandingPage() {
 
   await ensureProfile(user);
 
-  const [settings, access, groups] = await Promise.all([
+  const [settings, access, groups, pendingServantsCount] = await Promise.all([
     getAppSettings(),
     getAccessSummary(user.id),
     getAccessibleGroups(),
+    getPendingServantsCount(),
   ]);
 
   // The hidden position-0 pre-entry group is Admin-only everywhere in the
@@ -81,9 +83,14 @@ export default async function LandingPage() {
               {(access.isAdmin || access.isGeneralCoordinator) && (
                 <Link
                   href="/admin/pending-servants"
-                  className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45] sm:col-span-2"
+                  className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45] sm:col-span-2 flex items-center justify-center gap-2"
                 >
                   Pending Servants
+                  {pendingServantsCount > 0 && (
+                    <span className="rounded-full bg-[#dc3545] text-white text-[11px] px-2 py-0.5">
+                      {pendingServantsCount}
+                    </span>
+                  )}
                 </Link>
               )}
             </div>

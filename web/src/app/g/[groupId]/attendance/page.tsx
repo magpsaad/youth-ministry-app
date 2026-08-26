@@ -1,5 +1,6 @@
 import { getAttendanceDates, getAttendanceForDate } from "@/lib/attendance";
 import { getAppSettings } from "@/lib/app-settings";
+import { createClient } from "@/lib/supabase/server";
 import { AttendanceInteractive } from "@/components/attendance/AttendanceInteractive";
 
 function formatDate(iso: string): string {
@@ -9,6 +10,10 @@ function formatDate(iso: string): string {
 
 export default async function AttendancePage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const [datesInfo, settings] = await Promise.all([getAttendanceDates(groupId), getAppSettings()]);
 
@@ -39,6 +44,7 @@ export default async function AttendancePage({ params }: { params: Promise<{ gro
       initialDate={defaultDate}
       initialMembers={members}
       memberLabel={settings.member_label}
+      currentUserId={user?.id ?? ""}
     />
   );
 }
