@@ -94,7 +94,12 @@ export default async function LandingPage() {
               {yr0Group && <StubButton label={`Load: ${yr0Group.name}`} fullWidth />}
               <StubButton label="Access Maintenance" />
               <StubButton label="Universities Maintenance" />
-              <StubButton label="Calendar Maintenance" />
+              <Link
+                href="/admin/calendar-maintenance"
+                className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
+              >
+                Calendar Maintenance
+              </Link>
               <StubButton label="Actions Needed Config" />
               <StubButton label="Verses Maintenance" />
               <StubButton label="Group Transition" />
