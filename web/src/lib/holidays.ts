@@ -85,6 +85,15 @@ function singleDay(title: string, date: string): HolidayDate {
   return { title, startDate: date, endDate: date };
 }
 
+function fixedRange(title: string, startDate: string, endDate: string): HolidayDate {
+  return { title, startDate, endDate };
+}
+
+function pashaRange(title: string, pascha: Date, startOffset: number, durationDays: number): HolidayDate {
+  const start = addDays(pascha, startOffset);
+  return { title, startDate: toISO(start), endDate: toISO(addDays(start, durationDays - 1)) };
+}
+
 /**
  * A standard, commonly-observed Coptic Orthodox liturgical set -- the
  * major fixed-date feasts (approximate Gregorian-equivalent dates, as
@@ -102,11 +111,15 @@ export function computeHolidaysForYear(year: number): HolidayDate[] {
     singleDay("Theophany (Epiphany)", `${year}-01-19`),
     singleDay("Presentation in the Temple", `${year}-02-15`),
     singleDay("Annunciation", `${year}-04-07`),
+    pashaRange("Fast of Nineveh", pascha, -69, 3),
     singleDay("Palm Sunday", toISO(addDays(pascha, -7))),
+    pashaRange("Holy Passion Week (Coptic)", pascha, -7, 8),
     singleDay("Good Friday (Coptic)", toISO(addDays(pascha, -2))),
     singleDay("Pascha (Easter)", toISO(pascha)),
     singleDay("Ascension", toISO(addDays(pascha, 39))),
     singleDay("Pentecost", toISO(addDays(pascha, 49))),
+    fixedRange("St. Mary's Fast", `${year}-08-07`, `${year}-08-21`),
+    singleDay("St. Mary's Feast (Assumption)", `${year}-08-22`),
     singleDay("Nayrouz (Coptic New Year)", `${year}-09-11`),
     singleDay("Feast of the Cross", `${year}-09-27`),
   ].sort((a, b) => a.startDate.localeCompare(b.startDate));
