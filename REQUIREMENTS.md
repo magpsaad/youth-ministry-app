@@ -282,12 +282,12 @@ Five tabs: **Dashboard, Member List, Attendance, Outreach, Analytics.** Every ta
 - Average attendance by month, using the same corrected "tracked dates since registration" rule as everywhere else (§6.4/§7.2), aggregated per calendar month; also respects "My Assigned List".
 - Average attendance by month.
 
-### 6.8 Service Calendar
-- Fullscreen modal, four views: **Month, Week, List, and a "Fridays"-style filtered view** (renamed to match the deployment's actual service day).
-- Event types (fixed enum): **Trip**, **Outing**, **Group Discussion**, **Speaker Session**, **Event**, **Holiday**, each with its own color pairing (unchanged from current app).
-- Event form: Type*, Title*, Description (auto-template suggestions for Speaker Session / Group Discussion), Start/End Date*, All-Day toggle (default on), Start/End Time (hidden if all-day), Location, single file attachment.
-- **Event creation/editing/deletion is open to all Servants** (confirmed intentional, not restricted).
-- **Calendar Maintenance** (Admin Corner): bulk-preload holidays/feast days for a selected year, computing Coptic/Orthodox feast dates **algorithmically** (extending beyond the current app's hardcoded 2035 cutoff).
+### 6.8 Service Calendar (built in Phase E)
+- Fullscreen modal, four views: **Month, Week, List, and a "Fridays"-style filtered view** (dynamically labeled from `app_settings.service_weekday`, so a deployment with a different service day gets the correct label automatically, not hardcoded "Fridays"). Reachable from the landing page's Servant Corner (single ministry-wide calendar, no `group_id`) -- fetches on first open, not on every landing-page load.
+- Event types (fixed enum): **Trip**, **Outing**, **Group Discussion**, **Speaker Session**, **Event**, **Holiday**, each with its own color pairing -- **confirmed exact values from the current app's own source** (`JavaScript.html`'s `CALENDAR_EVENT_TYPES`), not approximated: Trip `#FF6B6B`/`#FFE5E5`, Outing `#36F1CD`/`#E0F7F5`, Group Discussion `#020887`/`#D6E3F0`, Speaker Session `#39A0ED`/`#E0F2F8`, Event `#9C27B0`/`#F3E5F5`, Holiday `#98D8C8`/`#E8F8F5`.
+- Event form: Type*, Title*, Description (auto-template suggestions for Speaker Session / Group Discussion, applied only when the description is still empty), Start/End Date*, All-Day toggle (default on), Start/End Time (hidden if all-day), Location, single file attachment (upload only available once the event already exists, same pattern as member photo upload).
+- **Event creation/editing/deletion is open to all Servants** (confirmed intentional, not restricted) -- enforced by RLS regardless of the UI.
+- **Calendar Maintenance** (Admin Corner, Admins only): bulk-preload holidays/feast days for a selected year, computing Coptic/Orthodox feast dates **algorithmically** via the Meeus Julian Easter algorithm (extending beyond the current app's hardcoded 2035 cutoff, works for any year). **Holiday set (owner's explicit choice)**: a standard Coptic Orthodox liturgical set rather than a custom exact list -- fixed feasts (Nativity, Theophany, Presentation, Annunciation, Nayrouz, Feast of the Cross) plus Pascha-relative movable feasts (Palm Sunday, Good Friday, Pascha, Ascension, Pentecost). Shows a preview before adding, skips any holiday already present for that year (safe to re-run).
 
 ### 6.9 Actions Needed Config (help modal now live-linked)
 Admin screen to view/edit the four proximity categories' thresholds (§3.10). **The Dashboard's "?" help modal explaining Actions Needed must be generated from these same live values**, not separately hardcoded text — editing a threshold here immediately updates what users see explained on the Dashboard.
@@ -335,9 +335,9 @@ The check-in page described in §6.11 *is* the replacement for the standalone at
 ### 6.15 QR Codes (revised)
 **7 QR codes** in this deployment (one per group including the newly-visible-once-transitioned position-0 "2008 Cohort - Yr 0," plus one for Servants) — up from the current app's 6, since the pre-entry group didn't previously have one. Labels are generated dynamically from each group's current display name (§2.2) plus the configured service-year setting, replacing the current app's hardcoded "25-26" strings.
 
-**Printing (new)**: a "Print QR Codes" view lays out all current QR images with their labels in a print-optimized layout (browser print dialog, which also supports "save as PDF" natively — no extra infrastructure needed).
+**Printing (built in Phase E)**: a "Print QR Codes" view lays out all current QR images with their labels in a print-optimized layout (browser print dialog, which also supports "save as PDF" natively — no extra infrastructure needed). QR images are genuinely scannable, generated on the fly (no external service, no per-image cost) pointing at each code's check-in URL. Reachable from the landing page's Servant Corner, open to everyone with app access (not admin-restricted).
 
-**Reprint tracking (new)**: each `qr_codes` row tracks whether its *current* label has been printed (`printed_at`, §3.12). Whenever the Group Transition process changes a group's display name, its QR code is flagged as needing a reprint, and the post-transition prompt (§5) lists exactly which codes are now stale.
+**Reprint tracking (built in Phase E)**: each `qr_codes` row tracks whether its *current* label has been printed (`printed_at`, §3.12) — a code shows "Needs Reprint" whenever it's never been marked printed, or has changed since it last was. Whenever the Group Transition process changes a group's display name, its QR code is flagged as needing a reprint this same way, and the post-transition prompt (§5) lists exactly which codes are now stale.
 
 ---
 
