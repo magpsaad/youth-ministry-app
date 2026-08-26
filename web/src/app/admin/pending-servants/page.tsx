@@ -6,6 +6,7 @@ import { getAppSettings } from "@/lib/app-settings";
 import { getPendingServants } from "@/lib/pending-servants";
 import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon } from "@/components/icons";
+import { SignOutButton } from "@/components/SignOutButton";
 import { PendingServantRow } from "@/components/admin/PendingServantRow";
 
 /** Minimal Admin/General Coordinator screen to review servants who self-
@@ -29,7 +30,7 @@ export default async function PendingServantsPage() {
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
-      <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-6 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative">
+      <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative">
         <Link
           href="/"
           title="Home"
@@ -38,10 +39,15 @@ export default async function PendingServantsPage() {
         >
           <HomeIcon className="h-4 w-4" />
         </Link>
-        <div className="flex justify-center">
-          <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={48} />
+        <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">
+          <SignOutButton className="text-white/70 hover:text-white transition-colors" />
+          <span className="text-[10px] text-white/60">Version {settings.app_version}</span>
         </div>
-        <h1 className="mt-2 text-lg font-bold">Pending Servants</h1>
+        <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+          <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={32} circular={false} />
+          <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
+        </Link>
+        <p className="mt-1 text-sm opacity-90">Pending Servants</p>
       </header>
       <main className="max-w-2xl mx-auto px-4 py-6 space-y-3">
         {pending.length === 0 ? (
