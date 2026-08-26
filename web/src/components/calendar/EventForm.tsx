@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import type { CalendarEvent, CalendarEventType } from "@/lib/calendar-types";
 import { EVENT_TYPES } from "@/lib/calendar-types";
 import { calendarAttachmentUrl } from "@/lib/storage";
@@ -29,8 +29,10 @@ function todayISO() {
 }
 
 /** Create/edit modal for a Service Calendar event (§6.8) -- open to all
- * Servants (RLS enforces this regardless of the UI). Attachment upload only
- * appears once the event exists (same pattern as member photo upload). */
+ * Servants (RLS enforces this regardless of the UI). The attachment field
+ * is available even while creating a brand-new event -- the file is held
+ * in state and uploaded right after the event itself is created, since the
+ * storage path needs a real event id first. */
 export function EventForm({
   event,
   defaultDate,
@@ -54,9 +56,9 @@ export function EventForm({
     location: event?.location ?? null,
   });
   const [attachmentPath, setAttachmentPath] = useState(event?.attachment_url ?? null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function field<K extends keyof EventInput>(key: K, value: EventInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -81,11 +83,33 @@ export function EventForm({
     }
     setError(null);
     startTransition(async () => {
-      const result = event ? await updateEventAction(event.id, form) : await createEventAction(form);
-      if (result.error) {
-        setError(result.error);
-        return;
+      let eventId: string | null;
+      if (event) {
+        const result = await updateEventAction(event.id, form);
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+        eventId = event.id;
+      } else {
+        const result = await createEventAction(form);
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+        eventId = result.id;
       }
+
+      if (pendingFile && eventId) {
+        const formData = new FormData();
+        formData.set("attachment", pendingFile);
+        const uploadResult = await uploadEventAttachmentAction(eventId, formData);
+        if (uploadResult.error) {
+          setError(uploadResult.error);
+          return;
+        }
+      }
+
       onSaved();
       onClose();
     });
@@ -102,23 +126,6 @@ export function EventForm({
       }
       onSaved();
       onClose();
-    });
-  }
-
-  function handleAttachmentChange(e: React.ChangeEvent<HTMLInputElement>) {
-    if (!event) return;
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const formData = new FormData();
-    formData.set("attachment", file);
-    startTransition(async () => {
-      const result = await uploadEventAttachmentAction(event.id, formData);
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-      setAttachmentPath(result.path);
-      onSaved();
     });
   }
 
@@ -238,31 +245,25 @@ export function EventForm({
             />
           </div>
 
-          {event && (
-            <div>
-              <label className="block font-semibold mb-1">Attachment</label>
-              {attachmentUrl ? (
-                <div className="flex items-center gap-2">
-                  <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-[#1e3a5f] hover:underline truncate">
-                    View attachment
-                  </a>
-                  <button type="button" onClick={handleRemoveAttachment} disabled={pending} className="text-xs font-semibold text-[#dc3545] hover:underline">
-                    Remove
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={pending}
-                  className="rounded-md bg-[#f0f0f0] px-3 py-1.5 text-xs font-semibold text-[#333] hover:bg-[#e0e0e0]"
-                >
-                  Add Attachment
+          <div>
+            <label className="block font-semibold mb-1">Attachment</label>
+            {attachmentUrl && !pendingFile ? (
+              <div className="flex items-center gap-2">
+                <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-[#1e3a5f] hover:underline truncate">
+                  View attachment
+                </a>
+                <button type="button" onClick={handleRemoveAttachment} disabled={pending} className="text-xs font-semibold text-[#dc3545] hover:underline">
+                  Remove
                 </button>
-              )}
-              <input ref={fileInputRef} type="file" onChange={handleAttachmentChange} className="hidden" />
-            </div>
-          )}
+              </div>
+            ) : (
+              <input
+                type="file"
+                onChange={(e) => setPendingFile(e.target.files?.[0] ?? null)}
+                className="w-full text-sm text-[#333] file:mr-3 file:rounded-md file:border-0 file:bg-[#1e3a5f] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-[#152a45]"
+              />
+            )}
+          </div>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2 justify-between items-center border-t border-[#f0f0f0] pt-4">
