@@ -9,6 +9,7 @@ import { ensureProfile } from "@/lib/supabase/ensure-profile";
 import { LoadGroupPanel } from "@/components/LoadGroupPanel";
 import { AppLogo } from "@/components/AppLogo";
 import { SignOutButton } from "@/components/SignOutButton";
+import { ServiceCalendarButton } from "@/components/calendar/ServiceCalendarButton";
 
 export default async function LandingPage() {
   const user = await getCurrentUser();
@@ -56,7 +57,7 @@ export default async function LandingPage() {
           />
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
             <StubButton label="Servants Directory" />
-            <StubButton label="Service Calendar" />
+            <ServiceCalendarButton />
             <StubButton label="QR Codes" />
           </div>
         </section>
