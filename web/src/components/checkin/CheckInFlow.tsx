@@ -36,6 +36,7 @@ export function CheckInFlow({
   const [error, setError] = useState<string | null>(null);
   const [successName, setSuccessName] = useState<string | null>(null);
   const [attendanceRecorded, setAttendanceRecorded] = useState(true);
+  const [wasNewRegistration, setWasNewRegistration] = useState(false);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -56,12 +57,14 @@ export function CheckInFlow({
     }
     setSuccessName(person.full_name);
     setAttendanceRecorded(result.attendanceRecorded);
+    setWasNewRegistration(false);
     setView("success");
   }
 
   function handleIntakeSubmitted(name: string, recorded: boolean) {
     setSuccessName(name);
     setAttendanceRecorded(recorded);
+    setWasNewRegistration(true);
     setView("success");
   }
 
@@ -75,7 +78,9 @@ export function CheckInFlow({
         <p className="mt-1 text-sm text-[#666]">
           {attendanceRecorded
             ? "See you inside."
-            : "Attendance isn’t tracked today, but your information is saved."}
+            : wasNewRegistration
+              ? "Attendance isn’t tracked today, but your registration is saved."
+              : "Attendance isn’t tracked today — please check back this Friday."}
         </p>
       </div>
     );
