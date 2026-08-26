@@ -4,17 +4,14 @@ import { getAppSettings } from "@/lib/app-settings";
 import { getAccessibleGroups } from "@/lib/groups";
 import { getAccessSummary } from "@/lib/roles";
 import { getPendingServantsCount } from "@/lib/pending-servants";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { ensureProfile } from "@/lib/supabase/ensure-profile";
 import { LoadGroupPanel } from "@/components/LoadGroupPanel";
 import { AppLogo } from "@/components/AppLogo";
 import { SignOutButton } from "@/components/SignOutButton";
 
 export default async function LandingPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   await ensureProfile(user);

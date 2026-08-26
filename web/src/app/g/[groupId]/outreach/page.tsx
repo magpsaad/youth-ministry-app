@@ -3,14 +3,13 @@ import { getGroupMembersLite } from "@/lib/members";
 import { getServantsForGroup } from "@/lib/servants";
 import { getAppSettings } from "@/lib/app-settings";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { OutreachInteractive } from "@/components/outreach/OutreachInteractive";
 
 export default async function OutreachPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   const [entries, members, servants, settings, profile] = await Promise.all([
     getOutreachEntries(groupId),

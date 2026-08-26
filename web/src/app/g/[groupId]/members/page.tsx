@@ -4,15 +4,14 @@ import { getServantsForGroup } from "@/lib/servants";
 import { getAppSettings } from "@/lib/app-settings";
 import { getAccessSummary } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { MemberListInteractive } from "@/components/members/MemberListInteractive";
 
 export default async function MembersPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   const [members, universities, servants, settings, access, profile] = await Promise.all([
     getGroupMembers(groupId),

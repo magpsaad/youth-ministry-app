@@ -1,14 +1,11 @@
 import { getAttendanceBundle } from "@/lib/attendance";
 import { getAppSettings } from "@/lib/app-settings";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { AttendanceInteractive } from "@/components/attendance/AttendanceInteractive";
 
 export default async function AttendancePage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   const [bundle, settings] = await Promise.all([getAttendanceBundle(groupId), getAppSettings()]);
 

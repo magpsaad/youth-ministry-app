@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings } from "@/lib/app-settings";
 import { getPendingServants } from "@/lib/pending-servants";
@@ -13,10 +13,7 @@ import { PendingServantRow } from "@/components/admin/PendingServantRow";
  * -- a functional first pass, to be folded into the fuller Admin screens
  * design in Phase F. */
 export default async function PendingServantsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   const access = await getAccessSummary(user.id);

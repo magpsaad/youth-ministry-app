@@ -4,14 +4,13 @@ import { getUniversities } from "@/lib/universities";
 import { getAppSettings } from "@/lib/app-settings";
 import { getAccessSummary } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { DashboardInteractive } from "@/components/dashboard/DashboardInteractive";
 
 export default async function DashboardPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   const [statsData, birthdays, unassigned, servants, universities, settings, access, profile] = await Promise.all([
     getDashboardStatsData(groupId),
