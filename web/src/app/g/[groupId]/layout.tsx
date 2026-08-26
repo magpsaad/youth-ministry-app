@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { getAppSettings } from "@/lib/app-settings";
 import { getLastServiceDate } from "@/lib/dashboard";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { GroupNavShell } from "@/components/GroupNavShell";
 import { MyAssignedProvider } from "@/components/MyAssignedContext";
 
@@ -15,9 +16,7 @@ export default async function GroupLayout({
   const { groupId } = await params;
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   const [{ data: group }, settings, lastServiceDate] = await Promise.all([
