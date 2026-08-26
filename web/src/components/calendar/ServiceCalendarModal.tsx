@@ -250,9 +250,10 @@ export function ServiceCalendarModal({
           onClick={onClose}
           title="Home"
           aria-label="Home"
-          className="absolute top-2.5 left-4 text-white/70 hover:text-white transition-colors"
+          className="absolute top-2.5 left-4 inline-flex items-center gap-1 text-white/70 hover:text-white transition-colors"
         >
           <HomeIcon className="h-4 w-4" />
+          <span className="text-xs font-medium">Home</span>
         </button>
         <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">
           <SignOutButton className="text-white/70 hover:text-white transition-colors" />
