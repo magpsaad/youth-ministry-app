@@ -432,6 +432,8 @@ Confirmed: the current Google Sheets app remains the **only** source of truth fo
 
 **Role assignments** (`user_roles` — who is an Admin/General Coordinator/Sub-Coordinator/Servant, and for which group): the old Permissions sheet doesn't map cleanly onto the new role model (§4), so these are set up once, directly in the new app's Access Maintenance screen, and are expected to diverge from (and eventually fully replace) the old sheet.
 
+**Phone number normalization (confirmed during Phase C build)**: every phone number brought over from Sheets during migration must be reformatted to the same standard the app itself now enforces on new entries (§6.11 item 6) — `1 (416) 930-1659` — regardless of whatever format it's stored as in the source sheet, so the whole roster is consistent from day one rather than only new registrations being clean.
+
 `groups` and `qr_codes` are new-app concepts with no Sheets equivalent at all, and `audit_log` is the new app's own operational log (not a mirror of anything) — none of these are touched by a refresh; they evolve only through the app's own tools (Group Transition, Admin settings).
 
 ### 10.2 Production Cutover Runbook
