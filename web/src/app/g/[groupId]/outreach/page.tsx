@@ -1,5 +1,5 @@
 import { getOutreachEntries } from "@/lib/outreach";
-import { getGroupMembers } from "@/lib/members";
+import { getGroupMembersLite } from "@/lib/members";
 import { getServantsForGroup } from "@/lib/servants";
 import { getAppSettings } from "@/lib/app-settings";
 import { createClient } from "@/lib/supabase/server";
@@ -14,7 +14,7 @@ export default async function OutreachPage({ params }: { params: Promise<{ group
 
   const [entries, members, servants, settings, profile] = await Promise.all([
     getOutreachEntries(groupId),
-    getGroupMembers(groupId),
+    getGroupMembersLite(groupId),
     getServantsForGroup(groupId),
     getAppSettings(),
     user

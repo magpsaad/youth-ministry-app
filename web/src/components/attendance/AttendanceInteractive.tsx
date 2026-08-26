@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import type { AttendanceMember } from "@/lib/attendance";
+import type { AttendanceBundle } from "@/lib/attendance";
 import { useMyAssigned } from "@/components/MyAssignedContext";
-import { setAttendanceAction, getAttendanceForDateAction } from "@/app/g/[groupId]/attendance/actions";
+import { setAttendanceAction } from "@/app/g/[groupId]/attendance/actions";
 
 const PROXIMITY_BADGE: Record<string, string> = {
   Local: "bg-[#d1ecf1] text-[#0c5460]",
@@ -18,88 +18,112 @@ const STATUS_RANK: Record<"Present" | "Absent" | "Never Attended", number> = {
   "Never Attended": 2,
 };
 
-function statusLabel(m: AttendanceMember): "Present" | "Absent" | "Never Attended" {
-  if (m.present) return "Present";
-  return m.everAttended ? "Absent" : "Never Attended";
+function formatDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
 type SortKey = "name" | "proximity" | "status";
 
 /** REQUIREMENTS.md §6.5 -- date picker + Present/Absent/"Never Attended"
- * table. Only Present is a real per-date write (a row exists or doesn't,
- * confirmed no separate status column); "Never Attended" is an automatic
- * badge that fully replaces "Absent" for anyone with zero attendance
- * history, not a third writable state. Respects "My Assigned List"
- * (§6.2) like every other tab. */
+ * table. The whole bundle (roster + every attendance row) is fetched once
+ * server-side; switching the selected date is a pure client-side
+ * recomputation, no round trip. Only Present is a real per-date write (a
+ * row exists or doesn't); "Never Attended" is an automatic badge that
+ * fully replaces "Absent" for anyone with zero attendance history.
+ * Respects "My Assigned List" (§6.2) like every other tab. */
 export function AttendanceInteractive({
   groupId,
-  dateOptions,
-  initialDate,
-  initialMembers,
+  bundle,
   memberLabel,
   currentUserId,
 }: {
   groupId: string;
-  dateOptions: { value: string; label: string }[];
-  initialDate: string;
-  initialMembers: AttendanceMember[];
+  bundle: AttendanceBundle;
   memberLabel: string;
   currentUserId: string;
 }) {
   const { myAssignedOnly, hydrated } = useMyAssigned();
-  const [date, setDate] = useState(initialDate);
-  const [members, setMembers] = useState(initialMembers);
-  const [loading, startLoading] = useTransition();
+  const [attendanceByMember, setAttendanceByMember] = useState(bundle.attendanceByMember);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDesc, setSortDesc] = useState(false);
+  const [, startTransition] = useTransition();
 
-  function handleDateChange(newDate: string) {
-    setDate(newDate);
-    startLoading(async () => {
-      const data = await getAttendanceForDateAction(groupId, newDate);
-      setMembers(data);
-    });
+  const dateOptions = useMemo(() => {
+    const options = bundle.trackedDates.map((d) => ({
+      value: d,
+      label: d === bundle.todayDate ? `${formatDate(d)} (Today)` : formatDate(d),
+    }));
+    if (bundle.todayAvailable && !bundle.trackedDates.includes(bundle.todayDate)) {
+      options.unshift({ value: bundle.todayDate, label: `${formatDate(bundle.todayDate)} (Today)` });
+    }
+    return options;
+  }, [bundle.trackedDates, bundle.todayDate, bundle.todayAvailable]);
+
+  const [date, setDate] = useState(dateOptions[0]?.value ?? bundle.todayDate);
+
+  function statusLabel(memberId: string): "Present" | "Absent" | "Never Attended" {
+    const dates = attendanceByMember[memberId] ?? [];
+    if (dates.includes(date)) return "Present";
+    return dates.length > 0 ? "Absent" : "Never Attended";
   }
 
   function handleSort(key: SortKey) {
-    if (key === sortKey) {
-      setSortDesc((v) => !v);
-    } else {
+    if (key === sortKey) setSortDesc((v) => !v);
+    else {
       setSortKey(key);
       setSortDesc(false);
     }
   }
 
-  function handleToggle(member: AttendanceMember) {
-    const nextPresent = !member.present;
-    if (!confirm(`Mark ${member.full_name} as ${nextPresent ? "present" : "absent"} for ${date}?`)) return;
-    setTogglingId(member.id);
-    startLoading(async () => {
-      const result = await setAttendanceAction(member.id, groupId, date, nextPresent);
+  function handleToggle(memberId: string, fullName: string) {
+    const isPresent = (attendanceByMember[memberId] ?? []).includes(date);
+    const nextPresent = !isPresent;
+    if (!confirm(`Mark ${fullName} as ${nextPresent ? "present" : "absent"} for ${date}?`)) return;
+    setTogglingId(memberId);
+    startTransition(async () => {
+      const result = await setAttendanceAction(memberId, groupId, date, nextPresent);
       setTogglingId(null);
       if (result.error) {
         alert(result.error);
         return;
       }
-      setMembers((prev) => prev.map((m) => (m.id === member.id ? { ...m, present: nextPresent } : m)));
+      setAttendanceByMember((prev) => {
+        const dates = prev[memberId] ?? [];
+        return {
+          ...prev,
+          [memberId]: nextPresent ? [...dates, date] : dates.filter((d) => d !== date),
+        };
+      });
     });
   }
 
   const visible = useMemo(() => {
-    const filtered = hydrated && myAssignedOnly ? members.filter((m) => m.assigned_servant_id === currentUserId) : members;
+    const filtered =
+      hydrated && myAssignedOnly ? bundle.members.filter((m) => m.assigned_servant_id === currentUserId) : bundle.members;
     const sorted = [...filtered].sort((a, b) => {
       let cmp = 0;
       if (sortKey === "name") cmp = a.full_name.localeCompare(b.full_name);
       else if (sortKey === "proximity") cmp = a.proximity.localeCompare(b.proximity);
-      else cmp = STATUS_RANK[statusLabel(a)] - STATUS_RANK[statusLabel(b)];
+      else cmp = STATUS_RANK[statusLabel(a.id)] - STATUS_RANK[statusLabel(b.id)];
       return sortDesc ? -cmp : cmp;
     });
     return sorted;
-  }, [members, hydrated, myAssignedOnly, currentUserId, sortKey, sortDesc]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bundle.members, hydrated, myAssignedOnly, currentUserId, sortKey, sortDesc, date, attendanceByMember]);
 
   function sortIndicator(key: SortKey) {
     return sortKey === key ? (sortDesc ? " ▼" : " ▲") : "";
+  }
+
+  if (dateOptions.length === 0) {
+    return (
+      <div className="mt-4 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-6 text-center text-sm text-[#666]">
+        No service dates are tracked yet for this group, and today isn&rsquo;t open for attendance until the
+        configured cutoff time (or until someone checks in via the QR code).
+      </div>
+    );
   }
 
   return (
@@ -108,8 +132,7 @@ export function AttendanceInteractive({
         <label className="text-sm font-semibold text-[#333]">Service Date</label>
         <select
           value={date}
-          onChange={(e) => handleDateChange(e.target.value)}
-          disabled={loading}
+          onChange={(e) => setDate(e.target.value)}
           className="rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
         >
           {dateOptions.map((d) => (
@@ -146,7 +169,7 @@ export function AttendanceInteractive({
           </thead>
           <tbody className="divide-y divide-[#f0f0f0]">
             {visible.map((m) => {
-              const status = statusLabel(m);
+              const status = statusLabel(m.id);
               return (
                 <tr key={m.id}>
                   <td className="px-4 py-2.5">
@@ -166,7 +189,7 @@ export function AttendanceInteractive({
                     <button
                       type="button"
                       disabled={togglingId === m.id}
-                      onClick={() => handleToggle(m)}
+                      onClick={() => handleToggle(m.id, m.full_name)}
                       className={`rounded-full px-3 py-1 text-xs font-semibold disabled:opacity-50 ${
                         status === "Present"
                           ? "bg-[#d4edda] text-[#155724] hover:bg-[#c3e6cb]"

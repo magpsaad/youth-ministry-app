@@ -92,6 +92,28 @@ export async function getGroupMembers(groupId: string): Promise<MemberListItem[]
   });
 }
 
+export type MemberBasic = {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  assigned_servant_id: string | null;
+};
+
+/** Lightweight roster fetch for contexts that just need id/name/phone/
+ * assignment (e.g. the Outreach tab's member picker) -- skips the
+ * per-member average-attendance computation getGroupMembers does, which
+ * requires a second full attendance_records fetch this doesn't need. */
+export async function getGroupMembersLite(groupId: string): Promise<MemberBasic[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("members")
+    .select("id, full_name, phone, assigned_servant_id")
+    .eq("group_id", groupId)
+    .eq("status", "active")
+    .order("full_name");
+  return data ?? [];
+}
+
 export async function getMember(memberId: string): Promise<MemberDetail | null> {
   const supabase = await createClient();
   const { data } = await supabase

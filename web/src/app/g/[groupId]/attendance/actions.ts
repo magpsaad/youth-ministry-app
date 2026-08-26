@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getAttendanceForDate, type AttendanceMember } from "@/lib/attendance";
 
 /** Toggles a member's Present/Absent status for one date -- no status
  * column, so "Present" is a row existing, "Absent" is deleting it. */
@@ -26,9 +25,4 @@ export async function setAttendanceAction(memberId: string, groupId: string, dat
   revalidatePath(`/g/${groupId}/attendance`);
   revalidatePath(`/g/${groupId}/dashboard`);
   return { error: null };
-}
-
-/** Re-fetches the table when the date picker changes. */
-export async function getAttendanceForDateAction(groupId: string, date: string): Promise<AttendanceMember[]> {
-  return getAttendanceForDate(groupId, date);
 }

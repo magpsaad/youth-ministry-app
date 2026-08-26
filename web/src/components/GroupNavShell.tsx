@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "@/app/login/actions";
 import { AppLogo } from "@/components/AppLogo";
-import { HomeIcon, LogOutIcon } from "@/components/icons";
+import { HomeIcon } from "@/components/icons";
 import { useMyAssigned } from "@/components/MyAssignedContext";
+import { SignOutButton } from "@/components/SignOutButton";
 
 const TABS = (memberLabel: string) => [
   { slug: "dashboard", label: "Dashboard" },
@@ -54,15 +54,7 @@ export function GroupNavShell({
         <p className="mt-1 text-sm opacity-90">{groupName} Servant Dashboard</p>
 
         <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">
-          <form action={signOut}>
-            <button
-              title="Sign out"
-              aria-label="Sign out"
-              className="text-white/70 hover:text-white transition-colors"
-            >
-              <LogOutIcon className="h-4 w-4" />
-            </button>
-          </form>
+          <SignOutButton className="text-white/70 hover:text-white transition-colors" />
           <span className="text-[10px] text-white/60">Version {appVersion}</span>
         </div>
 

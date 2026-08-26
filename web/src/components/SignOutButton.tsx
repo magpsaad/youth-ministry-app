@@ -1,0 +1,32 @@
+"use client";
+
+import { useTransition } from "react";
+import { signOut } from "@/app/login/actions";
+import { LogOutIcon } from "@/components/icons";
+import { MY_ASSIGNED_STORAGE_KEY } from "@/components/MyAssignedContext";
+
+/** Clears "My Assigned List" before signing out -- sessionStorage otherwise
+ * survives a sign-out/sign-in cycle for as long as the browser tab stays
+ * open (its lifetime is the tab, not the login session), so the next
+ * sign-in was incorrectly inheriting whatever state the previous session
+ * left it in instead of defaulting to unchecked. */
+export function SignOutButton({ className }: { className?: string }) {
+  const [pending, startTransition] = useTransition();
+
+  function handleClick() {
+    try {
+      sessionStorage.removeItem(MY_ASSIGNED_STORAGE_KEY);
+    } catch {
+      // sessionStorage unavailable (e.g. private browsing); sign-out still proceeds.
+    }
+    startTransition(async () => {
+      await signOut();
+    });
+  }
+
+  return (
+    <button onClick={handleClick} disabled={pending} title="Sign out" aria-label="Sign out" className={className}>
+      <LogOutIcon className="h-4 w-4" />
+    </button>
+  );
+}
