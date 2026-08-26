@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCalendarEvents, type CalendarEvent, type CalendarEventType } from "@/lib/calendar";
 import { calendarBucket } from "@/lib/storage";
 import { getAppSettings } from "@/lib/app-settings";
+import { logAudit } from "@/lib/audit";
 
 export async function getCalendarEventsAction(): Promise<CalendarEvent[]> {
   return getCalendarEvents();
@@ -68,24 +69,33 @@ export async function createEventAction(input: EventInput) {
     .single();
   if (error) return { error: error.message, id: null };
 
+  await logAudit(user.id, "CALENDAR_EVENT_CREATED", { details: { eventId: data.id } });
   revalidatePath("/");
   return { error: null, id: data.id as string };
 }
 
 export async function updateEventAction(eventId: string, input: EventInput) {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const { error } = await supabase.from("service_calendar_events").update(input).eq("id", eventId);
   if (error) return { error: error.message };
 
+  if (user) await logAudit(user.id, "CALENDAR_EVENT_UPDATED", { details: { eventId } });
   revalidatePath("/");
   return { error: null };
 }
 
 export async function deleteEventAction(eventId: string) {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const { error } = await supabase.from("service_calendar_events").delete().eq("id", eventId);
   if (error) return { error: error.message };
 
+  if (user) await logAudit(user.id, "CALENDAR_EVENT_DELETED", { details: { eventId } });
   revalidatePath("/");
   return { error: null };
 }

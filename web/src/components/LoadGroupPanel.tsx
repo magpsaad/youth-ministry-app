@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getRandomVerseAction } from "@/app/actions";
+import { getRandomVerseAction, logGroupSelectedAction } from "@/app/actions";
 import type { GroupSummary } from "@/lib/groups";
 
 export function LoadGroupPanel({
@@ -24,6 +24,7 @@ export function LoadGroupPanel({
     setLoading(true);
     const v = await getRandomVerseAction();
     setVerse(v);
+    void logGroupSelectedAction(selectedId);
     // Brief pause so the verse is actually readable, matching the current
     // app's loading-transition behavior (REQUIREMENTS.md §6.1).
     await new Promise((resolve) => setTimeout(resolve, 1400));
