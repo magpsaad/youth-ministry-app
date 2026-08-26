@@ -179,7 +179,9 @@ export function CalendarMaintenanceInteractive({
         <p className="text-xs text-[#666] mb-3">
           Add a feast or fast (e.g. St. Mary&rsquo;s Fast) and its date will be computed automatically every year --
           either a fixed date, or a number of days relative to that year&rsquo;s Pascha, optionally spanning multiple
-          days.
+          days. <strong>These are separate from the two checkboxes above</strong> -- each one is included or excluded
+          using its own checkbox below, not by the &ldquo;Coptic Orthodox feasts&rdquo; toggle, even if it&rsquo;s a
+          Coptic observance.
         </p>
 
         <div className="divide-y divide-[#f0f0f0] mb-4">
