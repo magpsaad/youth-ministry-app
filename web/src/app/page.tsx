@@ -58,7 +58,12 @@ export default async function LandingPage() {
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2">
             <StubButton label="Servants Directory" />
             <ServiceCalendarButton />
-            <StubButton label="QR Codes" />
+            <Link
+              href="/qr-codes"
+              className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
+            >
+              QR Codes
+            </Link>
           </div>
         </section>
 
