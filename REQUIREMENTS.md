@@ -339,6 +339,12 @@ The check-in page described in §6.11 *is* the replacement for the standalone at
 
 **Reprint tracking (built in Phase E)**: each `qr_codes` row tracks whether its *current* label has been printed (`printed_at`, §3.12) — a code shows "Needs Reprint" whenever it's never been marked printed, or has changed since it last was. Whenever the Group Transition process changes a group's display name, its QR code is flagged as needing a reprint this same way, and the post-transition prompt (§5) lists exactly which codes are now stale.
 
+**Colors and shape (finalized during Phase E build)**: each QR is shown inside a colored rounded frame with a matching colored label pill underneath (text color computed for contrast), replicating the current app's actual printed look — **the six colors were sampled directly from the old app's real QR image files** (`Photos/QR Codes/*.png` in Drive), not approximated: Year 1 `#8C7F5C`, Year 2 `#3F32F1`, Year 3 `#F34D27`, Year 4 `#4EB132`, Year 5+ `#F5D447`, Servants `#9B2EBF`. Position 0 (pre-entry) gets a new color, `#FFA640` — a lighter orange, deliberately distinct from Year 3's red-orange.
+
+**Color belongs to the cohort, not the ladder position (confirmed during Phase E build)**: the color is stored directly on the `groups` row (`qr_color`) rather than derived from `ladder_position` at render time — so when the annual Group Transition (§5) advances "2007 Cohort - Yr 1" to "Yr 2", it keeps its already-assigned color rather than switching to whatever color Yr 2 happened to use before. A newly-created incoming pre-entry cohort must be assigned its own color at creation time (Phase G, not yet built) — this is a requirement on that future work, not something resolved yet.
+
+**Ordering and Year 0's visibility (confirmed during Phase E build)**: the print view lists QR codes Year 1 through Year 5+, then Servants — position 0's QR is **excluded entirely unless the viewer is an Admin or General Coordinator**, since it's only needed once a year for the July/August welcoming party and would otherwise just be confusing clutter for everyone else. Decided against regenerating it on-demand instead (that would invalidate any already-printed copy for no real benefit) — the row and its check-in token are permanent, only its visibility on this page is restricted.
+
 ---
 
 ## 7. Business Rules (exact logic to preserve)

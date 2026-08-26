@@ -4,10 +4,20 @@ import { useState, useTransition } from "react";
 import type { QrCodeForPrinting } from "@/lib/qrcodes";
 import { markPrintedAction } from "@/app/qr-codes/actions";
 
+function contrastText(hex: string): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.6 ? "#000000" : "#FFFFFF";
+}
+
 /** REQUIREMENTS.md §6.15 -- print-optimized layout for every current QR
  * code, real scannable images generated on the fly (no external service).
- * "Needs Reprint" flags whenever a code's label has changed (e.g. a
- * future Group Transition rename) since it was last marked printed. */
+ * Colored frame/label matches the old app's actual look (colors sampled
+ * directly from its real QR image files, not guessed). "Needs Reprint"
+ * flags whenever a code's label/state has changed since it was last
+ * marked printed. */
 export function QrCodesInteractive({ qrCodes: initial }: { qrCodes: QrCodeForPrinting[] }) {
   const [qrCodes, setQrCodes] = useState(initial);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -38,29 +48,39 @@ export function QrCodesInteractive({ qrCodes: initial }: { qrCodes: QrCodeForPri
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 print:grid-cols-2 print:gap-6">
-        {qrCodes.map((q) => (
-          <div
-            key={q.id}
-            className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-4 flex flex-col items-center text-center print:shadow-none print:border print:border-[#ccc] print:break-inside-avoid"
-          >
-            <div className="[&_svg]:h-auto [&_svg]:w-full [&_svg]:max-w-[180px]" dangerouslySetInnerHTML={{ __html: q.svg }} />
-            <p className="mt-2 font-semibold text-[#1e3a5f]">{q.label}</p>
-            {q.needsReprint && (
-              <span className="print:hidden mt-1 rounded-full bg-[#fff3cd] text-[#856404] text-[11px] font-semibold px-2 py-0.5">
-                Needs Reprint
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={() => handleMarkPrinted(q.id)}
-              disabled={pendingId === q.id}
-              className="print:hidden mt-2 rounded-md bg-[#f0f0f0] px-3 py-1.5 text-xs font-semibold text-[#333] hover:bg-[#e0e0e0] disabled:opacity-60"
-            >
-              {pendingId === q.id ? "Marking…" : "Mark as Printed"}
-            </button>
-          </div>
-        ))}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 print:grid-cols-2 print:gap-6">
+        {qrCodes.map((q) => {
+          const textColor = contrastText(q.color);
+          return (
+            <div key={q.id} className="flex flex-col items-center print:break-inside-avoid">
+              <div className="rounded-3xl p-3" style={{ backgroundColor: q.color }}>
+                <div
+                  className="rounded-2xl bg-white p-3 w-[220px] [&_svg]:h-auto [&_svg]:w-full"
+                  dangerouslySetInnerHTML={{ __html: q.svg }}
+                />
+              </div>
+              <div
+                className="-mt-4 rounded-full px-6 py-2 text-center font-bold shadow-[0_2px_6px_rgba(0,0,0,0.15)]"
+                style={{ backgroundColor: q.color, color: textColor }}
+              >
+                {q.label}
+              </div>
+              {q.needsReprint && (
+                <span className="print:hidden mt-2 rounded-full bg-[#fff3cd] text-[#856404] text-[11px] font-semibold px-2 py-0.5">
+                  Needs Reprint
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => handleMarkPrinted(q.id)}
+                disabled={pendingId === q.id}
+                className="print:hidden mt-2 rounded-md bg-[#f0f0f0] px-3 py-1.5 text-xs font-semibold text-[#333] hover:bg-[#e0e0e0] disabled:opacity-60"
+              >
+                {pendingId === q.id ? "Marking…" : "Mark as Printed"}
+              </button>
+            </div>
+          );
+        })}
         {qrCodes.length === 0 && <p className="text-sm text-[#666] col-span-full text-center py-8">No QR codes yet.</p>}
       </div>
     </div>
