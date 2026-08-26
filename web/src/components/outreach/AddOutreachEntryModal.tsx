@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import type { MemberListItem } from "@/lib/members";
+import type { MemberBasic } from "@/lib/members";
 import { addOutreachEntryAction } from "@/app/g/[groupId]/outreach/actions";
 import { PhoneIcon, MessageIcon } from "@/components/icons";
 
@@ -27,7 +27,7 @@ export function AddOutreachEntryModal({
   onSaved,
 }: {
   groupId: string;
-  members: MemberListItem[];
+  members: MemberBasic[];
   currentUserId: string;
   currentUserName: string;
   memberLabel: string;

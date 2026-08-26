@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { OutreachEntryFull } from "@/lib/outreach";
-import type { MemberListItem } from "@/lib/members";
+import type { MemberBasic } from "@/lib/members";
 import type { ServantOption } from "@/lib/servants";
 import { useMyAssigned } from "@/components/MyAssignedContext";
 import { deleteOutreachEntryAction } from "@/app/g/[groupId]/outreach/actions";
@@ -29,7 +29,7 @@ export function OutreachInteractive({
 }: {
   groupId: string;
   entries: OutreachEntryFull[];
-  members: MemberListItem[];
+  members: MemberBasic[];
   servants: ServantOption[];
   memberLabel: string;
   currentUserId: string;

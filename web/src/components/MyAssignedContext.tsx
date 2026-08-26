@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
-const STORAGE_KEY = "myAssignedOnly";
+export const MY_ASSIGNED_STORAGE_KEY = "myAssignedOnly";
+const STORAGE_KEY = MY_ASSIGNED_STORAGE_KEY;
 
 const MyAssignedCtx = createContext<{ myAssignedOnly: boolean; toggle: () => void; hydrated: boolean }>({
   myAssignedOnly: false,

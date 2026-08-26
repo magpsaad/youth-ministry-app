@@ -8,8 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ensureProfile } from "@/lib/supabase/ensure-profile";
 import { LoadGroupPanel } from "@/components/LoadGroupPanel";
 import { AppLogo } from "@/components/AppLogo";
-import { LogOutIcon } from "@/components/icons";
-import { signOut } from "./login/actions";
+import { SignOutButton } from "@/components/SignOutButton";
 
 export default async function LandingPage() {
   const supabase = await createClient();
@@ -44,15 +43,7 @@ export default async function LandingPage() {
         <p className="mt-1 text-[13px] opacity-90">{settings.app_subtitle}</p>
 
         <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">
-          <form action={signOut}>
-            <button
-              title="Sign out"
-              aria-label="Sign out"
-              className="text-white/70 hover:text-white transition-colors"
-            >
-              <LogOutIcon className="h-4 w-4" />
-            </button>
-          </form>
+          <SignOutButton className="text-white/70 hover:text-white transition-colors" />
           <span className="text-[10px] text-white/60">Version {settings.app_version}</span>
         </div>
       </header>
