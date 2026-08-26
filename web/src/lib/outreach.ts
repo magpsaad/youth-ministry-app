@@ -26,6 +26,7 @@ export type OutreachEntryFull = {
   member_id: string;
   member_name: string;
   member_phone: string | null;
+  assigned_servant_id: string | null;
   servant_id: string;
   servant_name: string;
   occurred_at: string;
@@ -35,21 +36,19 @@ export type OutreachEntryFull = {
 };
 
 /** Full Outreach tab (§6.6) -- every entry for this group's members, newest
- * first. Search/filter (Member, Servant, Date range) happens client-side on
- * this fetched set, same architecture as the Member List. */
+ * first. Search/filter (Member, Servant, Date range, My Assigned List)
+ * happens client-side on this fetched set, same architecture as the Member
+ * List. Filters by the joined member's group_id directly (one round trip)
+ * rather than fetching member ids first and filtering in a second query. */
 export async function getOutreachEntries(groupId: string): Promise<OutreachEntryFull[]> {
   const supabase = await createClient();
-
-  const { data: memberRows } = await supabase.from("members").select("id").eq("group_id", groupId);
-  const memberIds = (memberRows ?? []).map((m) => m.id);
-  if (memberIds.length === 0) return [];
 
   const { data } = await supabase
     .from("outreach_entries")
     .select(
-      "id, member_id, servant_id, occurred_at, type, notes, follow_up_due, member:members(full_name, phone), servant:profiles(full_name)",
+      "id, member_id, servant_id, occurred_at, type, notes, follow_up_due, member:members!inner(full_name, phone, assigned_servant_id, group_id), servant:profiles(full_name)",
     )
-    .in("member_id", memberIds)
+    .eq("member.group_id", groupId)
     .order("occurred_at", { ascending: false });
 
   return ((data ?? []) as unknown as {
@@ -60,13 +59,14 @@ export async function getOutreachEntries(groupId: string): Promise<OutreachEntry
     type: string | null;
     notes: string | null;
     follow_up_due: string | null;
-    member: { full_name: string; phone: string | null } | null;
+    member: { full_name: string; phone: string | null; assigned_servant_id: string | null } | null;
     servant: { full_name: string } | null;
   }[]).map((r) => ({
     id: r.id,
     member_id: r.member_id,
     member_name: r.member?.full_name ?? "Unknown",
     member_phone: r.member?.phone ?? null,
+    assigned_servant_id: r.member?.assigned_servant_id ?? null,
     servant_id: r.servant_id,
     servant_name: r.servant?.full_name ?? "Unknown",
     occurred_at: r.occurred_at,
