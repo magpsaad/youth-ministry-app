@@ -11,6 +11,7 @@ import {
   removeServantAction,
 } from "@/app/servant-profiles/actions";
 import { CameraIcon, TrashIcon } from "@/components/icons";
+import { PhotoCropperModal } from "@/components/PhotoCropperModal";
 
 const inputClass = (editing: boolean) =>
   `w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
@@ -39,6 +40,7 @@ export function ServantDetailModal({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [photoPath, setPhotoPath] = useState(servant.photo_path);
+  const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [phone, setPhone] = useState(servant.phone ?? "");
   const [fatherOfConfession, setFatherOfConfession] = useState(servant.father_of_confession ?? "");
@@ -61,11 +63,16 @@ export function ServantDetailModal({
     });
   }
 
-  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handlePhotoSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (file) setPendingPhotoFile(file);
+    e.target.value = ""; // allow re-selecting the same file
+  }
+
+  function handlePhotoCropped(blob: Blob) {
+    setPendingPhotoFile(null);
     const formData = new FormData();
-    formData.set("photo", file);
+    formData.set("photo", new File([blob], "photo.jpg", { type: "image/jpeg" }));
     startTransition(async () => {
       const result = await uploadServantPhotoAction(servant.id, formData);
       if (result.error) {
@@ -132,7 +139,7 @@ export function ServantDetailModal({
             </div>
           )}
           <div className="flex gap-3 mt-2">
-            <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoChange} className="hidden" />
+            <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoSelected} className="hidden" />
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -236,6 +243,13 @@ export function ServantDetailModal({
           )}
         </div>
       </div>
+      {pendingPhotoFile && (
+        <PhotoCropperModal
+          file={pendingPhotoFile}
+          onCancel={() => setPendingPhotoFile(null)}
+          onCropped={handlePhotoCropped}
+        />
+      )}
     </div>,
     document.body,
   );
