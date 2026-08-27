@@ -488,6 +488,7 @@ Target: the weekend following the last Friday meeting of the Coptic year, **Sept
 - Both Categorical and Alphabetical servant-directory view modes are retained.
 - Audit log "archiving by age" may remain a hard-delete-after-N-months operation rather than moving records to cold storage.
 - New-member and attendance intake forms get sensible field-level validation without every rule being individually specified here.
+- **Future work, not yet scheduled (owner flagged, 2026-08-27)**: both average-attendance-% windows are currently hardcoded in application code -- members' all-time-since-registration rule (§7.2, `lib/members.ts`) and servants' rolling-trailing-12-months rule (`lib/servant-directory.ts`/`lib/servant-attendance.ts`). The owner wants these made admin-configurable via `app_settings` (or a similar settings table), **as two independent values** -- members and servants are expected to end up with different configured windows, not a single shared setting. Explicitly told to hold off on implementing this; revisit when asked.
 
 ---
 
