@@ -17,6 +17,7 @@ import {
 import { CameraIcon, TrashIcon } from "@/components/icons";
 import { AddOutreachModal } from "@/components/outreach/AddOutreachModal";
 import { PrevOutreachModal } from "@/components/outreach/PrevOutreachModal";
+import { PhotoCropperModal } from "@/components/PhotoCropperModal";
 
 const inputClass = (editing: boolean) =>
   `w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
@@ -50,6 +51,7 @@ export function MemberDetailModal({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [photoPath, setPhotoPath] = useState(member.photo_path);
+  const [pendingPhotoFile, setPendingPhotoFile] = useState<File | null>(null);
   const [showAddOutreach, setShowAddOutreach] = useState(false);
   const [showPrevOutreach, setShowPrevOutreach] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -122,11 +124,16 @@ export function MemberDetailModal({
     });
   }
 
-  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handlePhotoSelected(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (file) setPendingPhotoFile(file);
+    e.target.value = ""; // allow re-selecting the same file
+  }
+
+  function handlePhotoCropped(blob: Blob) {
+    setPendingPhotoFile(null);
     const formData = new FormData();
-    formData.set("photo", file);
+    formData.set("photo", new File([blob], "photo.jpg", { type: "image/jpeg" }));
     startTransition(async () => {
       const result = await uploadMemberPhotoAction(member.id, groupId, formData);
       if (result.error) {
@@ -196,7 +203,7 @@ export function MemberDetailModal({
               type="file"
               accept="image/*"
               capture="environment"
-              onChange={handlePhotoChange}
+              onChange={handlePhotoSelected}
               className="hidden"
             />
             <button
@@ -407,6 +414,13 @@ export function MemberDetailModal({
       )}
       {showPrevOutreach && (
         <PrevOutreachModal memberId={member.id} memberName={member.full_name} onClose={() => setShowPrevOutreach(false)} />
+      )}
+      {pendingPhotoFile && (
+        <PhotoCropperModal
+          file={pendingPhotoFile}
+          onCancel={() => setPendingPhotoFile(null)}
+          onCropped={handlePhotoCropped}
+        />
       )}
     </div>,
     document.body,
