@@ -55,33 +55,44 @@ export function ActionsNeededConfigInteractive({
     <div className="space-y-4">
     <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
       <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Attendance Window Settings</h2>
-      <p className="text-sm text-[#666] mb-4">
-        How far back average-attendance % looks, as a rolling number of weeks -- floored at each person&rsquo;s Join
-        Date (their earliest attendance record), so the window never reaches before they actually joined. Youths and
-        servants are configured independently.
-      </p>
+      <p className="text-sm text-[#666] mb-1">How far back average-attendance % looks, as a rolling number of weeks.</p>
+      <ul className="text-sm text-[#666] mb-4 list-disc pl-5 space-y-0.5">
+        <li>
+          The app calculates it based on the <strong>later</strong> of (today &minus; the rolling window) and each
+          person&rsquo;s Join Date (their earliest attendance record) &mdash; so the window never reaches before they
+          joined.
+        </li>
+        <li>Leave a field blank to calculate over that group&rsquo;s entire attendance history instead, with no rolling cap.</li>
+        <li>Youths and servants are configured independently.</li>
+      </ul>
       {windowError && <p className="mb-3 text-sm text-[#dc3545]">{windowError}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <label className="text-xs text-[#666]">
-          Youth attendance window (weeks)
+          Youth attendance window (weeks, blank = no cap)
           <input
             type="number"
             min={1}
-            value={windowSettings.youth_attendance_window_weeks}
+            value={windowSettings.youth_attendance_window_weeks ?? ""}
             onChange={(e) =>
-              setWindowSettings((prev) => ({ ...prev, youth_attendance_window_weeks: Number(e.target.value) }))
+              setWindowSettings((prev) => ({
+                ...prev,
+                youth_attendance_window_weeks: e.target.value === "" ? null : Number(e.target.value),
+              }))
             }
             className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
           />
         </label>
         <label className="text-xs text-[#666]">
-          Servant attendance window (weeks)
+          Servant attendance window (weeks, blank = no cap)
           <input
             type="number"
             min={1}
-            value={windowSettings.servant_attendance_window_weeks}
+            value={windowSettings.servant_attendance_window_weeks ?? ""}
             onChange={(e) =>
-              setWindowSettings((prev) => ({ ...prev, servant_attendance_window_weeks: Number(e.target.value) }))
+              setWindowSettings((prev) => ({
+                ...prev,
+                servant_attendance_window_weeks: e.target.value === "" ? null : Number(e.target.value),
+              }))
             }
             className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
           />
