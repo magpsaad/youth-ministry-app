@@ -93,14 +93,14 @@ export default async function LandingPage() {
               </Link>
               <Link
                 href="/servants-attendance"
-                className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45] sm:col-span-2"
+                className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
               >
                 Servants Attendance
               </Link>
               {(access.isAdmin || access.isGeneralCoordinator) && (
                 <Link
                   href="/admin/pending-servants"
-                  className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45] sm:col-span-2 flex items-center justify-center gap-2"
+                  className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45] flex items-center justify-center gap-2"
                 >
                   Pending Servants
                   {pendingServantsCount > 0 && (
