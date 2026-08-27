@@ -5,7 +5,7 @@ export type MemberAnalyticsRow = {
   id: string;
   assigned_servant_id: string | null;
   is_visitor: boolean;
-  created_at: string;
+  join_date: string | null;
   hasPhone: boolean;
   hasEmail: boolean;
   hasDob: boolean;
@@ -32,7 +32,7 @@ export async function getAnalyticsRawData(groupId: string): Promise<AnalyticsRaw
 
   const { data: memberRows } = await supabase
     .from("members")
-    .select("id, assigned_servant_id, is_visitor, created_at, phone, email, date_of_birth, father_of_confession, photo_path")
+    .select("id, assigned_servant_id, is_visitor, join_date, phone, email, date_of_birth, father_of_confession, photo_path")
     .eq("group_id", groupId)
     .eq("status", "active");
 
@@ -40,7 +40,7 @@ export async function getAnalyticsRawData(groupId: string): Promise<AnalyticsRaw
     id: m.id,
     assigned_servant_id: m.assigned_servant_id,
     is_visitor: m.is_visitor,
-    created_at: m.created_at,
+    join_date: m.join_date,
     hasPhone: !!m.phone,
     hasEmail: !!m.email,
     hasDob: !!m.date_of_birth,

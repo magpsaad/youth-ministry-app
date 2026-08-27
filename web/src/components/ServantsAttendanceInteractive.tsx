@@ -12,7 +12,13 @@ function formatDate(iso: string): string {
 /** REQUIREMENTS.md §6.13 -- same Present/Absent/"Never Attended" pattern as
  * the member Attendance tab (§6.5), applied to servants across the whole
  * ministry (not scoped to one group). */
-export function ServantsAttendanceInteractive({ bundle }: { bundle: ServantAttendanceBundle }) {
+export function ServantsAttendanceInteractive({
+  bundle,
+  windowWeeks,
+}: {
+  bundle: ServantAttendanceBundle;
+  windowWeeks: number;
+}) {
   const [attendanceByServant, setAttendanceByServant] = useState(bundle.attendanceByServant);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -95,7 +101,10 @@ export function ServantsAttendanceInteractive({ bundle }: { bundle: ServantAtten
         />
       </div>
 
-      <p className="text-xs text-[#666]">Attendance % is a rolling trailing 12 months.</p>
+      <p className="text-xs text-[#666]">
+        Attendance % is a rolling trailing {windowWeeks} week{windowWeeks === 1 ? "" : "s"}, never counting weeks before
+        someone joined.
+      </p>
 
       <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">

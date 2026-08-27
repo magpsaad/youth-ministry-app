@@ -309,6 +309,9 @@ export function MemberDetailModal({
           <FieldRow label="Registration Comments">
             <textarea value={member.registration_comments ?? ""} readOnly className={inputClass(false)} rows={2} />
           </FieldRow>
+          <FieldRow label="Join Date">
+            <input value={member.join_date ?? "Not yet attended"} readOnly className={inputClass(false)} />
+          </FieldRow>
           <FieldRow label="Assigned Servant">
             <select
               value={assignedServantId ?? ""}

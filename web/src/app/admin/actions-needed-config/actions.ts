@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getAttendanceWindowSettings, type AttendanceWindowSettings } from "@/lib/app-settings";
 
 export type ActionsNeededConfigRow = {
   proximity: "Local" | "Regional" | "Abroad" | "Unknown";
@@ -29,6 +30,26 @@ export async function updateActionsNeededConfigAction(row: ActionsNeededConfigRo
       min_outreach_weeks: row.min_outreach_weeks,
     })
     .eq("proximity", row.proximity);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/actions-needed-config");
+  return { error: null };
+}
+
+export { getAttendanceWindowSettings };
+
+/** REQUIREMENTS.md §7.2/§6.13 -- the two independent, admin-configurable
+ * rolling-attendance-window settings, folded into this existing threshold-
+ * editing screen rather than a new one. */
+export async function updateAttendanceWindowSettingsAction(settings: AttendanceWindowSettings) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("app_settings")
+    .update({
+      youth_attendance_window_weeks: settings.youth_attendance_window_weeks,
+      servant_attendance_window_weeks: settings.servant_attendance_window_weeks,
+    })
+    .eq("id", true);
   if (error) return { error: error.message };
 
   revalidatePath("/admin/actions-needed-config");

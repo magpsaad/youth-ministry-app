@@ -185,6 +185,9 @@ export function ServantDetailModal({
               <option value="Female">Female</option>
             </select>
           </FieldRow>
+          <FieldRow label="Join Date">
+            <input value={servant.join_date ?? "Not yet attended"} readOnly className={inputClass(false)} />
+          </FieldRow>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2 justify-between items-center border-t border-[#f0f0f0] pt-4">

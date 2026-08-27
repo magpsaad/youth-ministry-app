@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAttendanceWindowSettings } from "@/lib/app-settings";
 
 export type MemberListItem = {
   id: string;
@@ -10,6 +11,7 @@ export type MemberListItem = {
   gender: string | null;
   date_of_birth: string | null;
   assigned_servant_id: string | null;
+  join_date: string | null;
   university: { id: string; name: string; proximity: string } | null;
   assigned_servant: { full_name: string } | null;
   avgAttendancePercent: number | null;
@@ -42,25 +44,26 @@ export type MemberFilters = {
 };
 
 const LIST_SELECT =
-  "id, full_name, phone, photo_path, program_of_study, is_visitor, gender, date_of_birth, assigned_servant_id, created_at, university:universities(id, name, proximity), assigned_servant:profiles(full_name)";
+  "id, full_name, phone, photo_path, program_of_study, is_visitor, gender, date_of_birth, assigned_servant_id, join_date, university:universities(id, name, proximity), assigned_servant:profiles(full_name)";
 
 /**
  * Every active member of a group, with a computed average-attendance % per
  * REQUIREMENTS.md §6.4/§7.2's corrected formula: present dates / tracked
- * dates *since that member's registration*, not the full trailing-12-month
- * window regardless of when they joined (the bug flagged in the old app).
- * Returns null (not 0%) when there's no tracked date yet to divide by.
+ * dates since the member's `join_date` (their earliest attendance record --
+ * §3.3, distinct from `created_at`, which is just when the row was
+ * inserted and would read wrong for migrated data), capped to a rolling
+ * window (`youth_attendance_window_weeks`, admin-configurable). Returns
+ * null (not 0%) when there's no tracked date yet to divide by, including
+ * when the member has never attended at all (join_date is null).
  */
 export async function getGroupMembers(groupId: string): Promise<MemberListItem[]> {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("members")
-    .select(LIST_SELECT)
-    .eq("group_id", groupId)
-    .eq("status", "active")
-    .order("full_name");
+  const [{ data }, windowSettings] = await Promise.all([
+    supabase.from("members").select(LIST_SELECT).eq("group_id", groupId).eq("status", "active").order("full_name"),
+    getAttendanceWindowSettings(),
+  ]);
 
-  const members = (data ?? []) as unknown as (MemberListItem & { created_at: string })[];
+  const members = (data ?? []) as unknown as MemberListItem[];
   if (members.length === 0) return [];
 
   const memberIds = members.map((m) => m.id);
@@ -78,17 +81,21 @@ export async function getGroupMembers(groupId: string): Promise<MemberListItem[]
     presentByMember.get(a.member_id)!.add(a.service_date);
   }
 
-  return members.map((m) => {
-    const since = m.created_at.slice(0, 10);
-    const trackedSinceRegistration = trackedDates.filter((d) => d >= since);
-    const presentSet = presentByMember.get(m.id) ?? new Set<string>();
-    const presentCount = trackedSinceRegistration.filter((d) => presentSet.has(d)).length;
-    const avgAttendancePercent =
-      trackedSinceRegistration.length > 0 ? Math.round((presentCount / trackedSinceRegistration.length) * 100) : null;
+  const windowStart = new Date();
+  windowStart.setDate(windowStart.getDate() - windowSettings.youth_attendance_window_weeks * 7);
+  const windowStartISO = windowStart.toISOString().slice(0, 10);
 
-    const { created_at: _created_at, ...rest } = m;
-    void _created_at;
-    return { ...rest, avgAttendancePercent };
+  return members.map((m) => {
+    if (!m.join_date) return { ...m, avgAttendancePercent: null };
+
+    const since = m.join_date > windowStartISO ? m.join_date : windowStartISO;
+    const trackedInWindow = trackedDates.filter((d) => d >= since);
+    const presentSet = presentByMember.get(m.id) ?? new Set<string>();
+    const presentCount = trackedInWindow.filter((d) => presentSet.has(d)).length;
+    const avgAttendancePercent =
+      trackedInWindow.length > 0 ? Math.round((presentCount / trackedInWindow.length) * 100) : null;
+
+    return { ...m, avgAttendancePercent };
   });
 }
 
@@ -125,7 +132,5 @@ export async function getMember(memberId: string): Promise<MemberDetail | null> 
     .maybeSingle();
 
   if (!data) return null;
-  const { created_at: _created_at, ...rest } = data as unknown as MemberDetail & { created_at: string };
-  void _created_at;
-  return { ...rest, avgAttendancePercent: null };
+  return { ...(data as unknown as MemberDetail), avgAttendancePercent: null };
 }

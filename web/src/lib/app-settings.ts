@@ -38,3 +38,31 @@ export async function getAppSettings(): Promise<AppSettings> {
 
   return data ?? FALLBACK;
 }
+
+export type AttendanceWindowSettings = {
+  youth_attendance_window_weeks: number;
+  servant_attendance_window_weeks: number;
+};
+
+const ATTENDANCE_WINDOW_FALLBACK: AttendanceWindowSettings = {
+  youth_attendance_window_weeks: 52,
+  servant_attendance_window_weeks: 52,
+};
+
+/**
+ * REQUIREMENTS.md §7.2/§6.13 -- the two independent, admin-configurable
+ * rolling-attendance-window settings (owner's explicit choice: weeks,
+ * floored at each person's `join_date`). Kept separate from
+ * getAppSettings() -- that one is called on nearly every page for
+ * branding, and these two fields are only ever needed by the handful of
+ * screens that actually compute average attendance %.
+ */
+export async function getAttendanceWindowSettings(): Promise<AttendanceWindowSettings> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("app_settings")
+    .select("youth_attendance_window_weeks, servant_attendance_window_weeks")
+    .single();
+
+  return data ?? ATTENDANCE_WINDOW_FALLBACK;
+}

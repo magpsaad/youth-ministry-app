@@ -68,7 +68,8 @@ export function AnalyticsInteractive({
         let presentCount = 0;
         let totalSlots = 0;
         for (const m of filteredMembers) {
-          const since = m.created_at.slice(0, 10);
+          if (!m.join_date) continue;
+          const since = m.join_date;
           for (const d of dates) {
             if (d < since) continue;
             totalSlots += 1;
