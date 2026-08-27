@@ -22,7 +22,7 @@ export function ServantsDirectoryInteractive({
   windowWeeks,
 }: {
   servants: ServantDirectoryEntry[];
-  windowWeeks: number;
+  windowWeeks: number | null;
 }) {
   const [viewMode, setViewMode] = useState<"categorical" | "alphabetical">("categorical");
   const [search, setSearch] = useState("");
@@ -66,8 +66,9 @@ export function ServantsDirectoryInteractive({
   return (
     <div className="space-y-4">
       <p className="text-xs text-[#666]">
-        Attendance % is a rolling trailing {windowWeeks} week{windowWeeks === 1 ? "" : "s"}, never counting weeks before
-        someone joined.
+        {windowWeeks === null
+          ? "Attendance % is calculated over each servant's entire history since their Join Date."
+          : `Attendance % is a rolling trailing ${windowWeeks} week${windowWeeks === 1 ? "" : "s"}, never counting weeks before someone joined.`}
       </p>
 
       <div className="flex flex-wrap items-center gap-3">

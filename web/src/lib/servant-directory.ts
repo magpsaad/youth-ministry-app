@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getAttendanceWindowSettings } from "@/lib/app-settings";
+import { getAttendanceWindowSettings, resolveAttendanceSince } from "@/lib/app-settings";
 
 export type ServantDirectoryEntry = {
   id: string;
@@ -30,9 +30,13 @@ export type ServantDirectoryEntry = {
 export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
   const supabase = await createClient();
   const windowSettings = await getAttendanceWindowSettings();
-  const windowStart = new Date();
-  windowStart.setDate(windowStart.getDate() - windowSettings.servant_attendance_window_weeks * 7);
-  const windowStartISO = windowStart.toISOString().slice(0, 10);
+  const windowWeeks = windowSettings.servant_attendance_window_weeks;
+  let queryFloorISO: string | null = null;
+  if (windowWeeks !== null) {
+    const windowStart = new Date();
+    windowStart.setDate(windowStart.getDate() - windowWeeks * 7);
+    queryFloorISO = windowStart.toISOString().slice(0, 10);
+  }
 
   const { data: roleRows } = await supabase
     .from("user_roles")
@@ -73,12 +77,13 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
   const userIds = Array.from(byUser.keys());
   if (userIds.length === 0) return [];
 
-  const { data: attendanceRows } = await supabase
+  let attendanceQuery = supabase
     .from("attendance_records")
     .select("servant_id, service_date")
     .eq("attendee_type", "servant")
-    .in("servant_id", userIds)
-    .gte("service_date", windowStartISO);
+    .in("servant_id", userIds);
+  if (queryFloorISO) attendanceQuery = attendanceQuery.gte("service_date", queryFloorISO);
+  const { data: attendanceRows } = await attendanceQuery;
 
   const presentByServant = new Map<string, Set<string>>();
   const allTrackedDates = new Set<string>();
@@ -95,8 +100,8 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
     if (!profile) continue;
 
     let averageAttendance: number | null = null;
-    if (profile.join_date) {
-      const since = profile.join_date > windowStartISO ? profile.join_date : windowStartISO;
+    const since = resolveAttendanceSince(profile.join_date, windowWeeks);
+    if (since) {
       const relevantDates = trackedDates.filter((d) => d >= since);
       const presentSet = presentByServant.get(userId) ?? new Set<string>();
       averageAttendance =

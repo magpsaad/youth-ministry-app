@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getAttendanceWindowSettings } from "@/lib/app-settings";
+import { getAttendanceWindowSettings, resolveAttendanceSince } from "@/lib/app-settings";
 
 export type ServantAttendanceMember = {
   id: string;
@@ -92,16 +92,13 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
   const todayHasRows = trackedDatesSet.has(todayDate);
   const cutoffPassed = timeMinutes >= toMinutes(cutoff);
 
-  const windowStart = new Date();
-  windowStart.setDate(windowStart.getDate() - windowSettings.servant_attendance_window_weeks * 7);
-  const windowStartISO = windowStart.toISOString().slice(0, 10);
   const allDates = Array.from(trackedDatesSet);
 
   const members: ServantAttendanceMember[] = ids.map((id) => {
     const info = byUser.get(id)!;
-    if (!info.join_date) return { id, full_name: info.full_name, groupLabel: info.groupLabel, averageAttendance: null };
+    const since = resolveAttendanceSince(info.join_date, windowSettings.servant_attendance_window_weeks);
+    if (!since) return { id, full_name: info.full_name, groupLabel: info.groupLabel, averageAttendance: null };
 
-    const since = info.join_date > windowStartISO ? info.join_date : windowStartISO;
     const relevantDates = allDates.filter((d) => d >= since);
     const presentSet = new Set(attendanceByServant[id] ?? []);
     const averageAttendance =

@@ -40,8 +40,9 @@ export async function getAppSettings(): Promise<AppSettings> {
 }
 
 export type AttendanceWindowSettings = {
-  youth_attendance_window_weeks: number;
-  servant_attendance_window_weeks: number;
+  /** null = no rolling cap -- calculate over the person's entire attendance history since their Join Date. */
+  youth_attendance_window_weeks: number | null;
+  servant_attendance_window_weeks: number | null;
 };
 
 const ATTENDANCE_WINDOW_FALLBACK: AttendanceWindowSettings = {
@@ -65,4 +66,22 @@ export async function getAttendanceWindowSettings(): Promise<AttendanceWindowSet
     .single();
 
   return data ?? ATTENDANCE_WINDOW_FALLBACK;
+}
+
+/**
+ * The shared "since" cutoff for an average-attendance-% calculation: the
+ * later of (today - windowWeeks) and the person's own join date, so the
+ * window never reaches before they actually joined. A null windowWeeks
+ * means no rolling cap at all -- since is just their join date, i.e. their
+ * entire attendance history. Returns null if the person has never
+ * attended (no join date yet).
+ */
+export function resolveAttendanceSince(joinDate: string | null, windowWeeks: number | null): string | null {
+  if (!joinDate) return null;
+  if (windowWeeks === null) return joinDate;
+
+  const windowStart = new Date();
+  windowStart.setDate(windowStart.getDate() - windowWeeks * 7);
+  const windowStartISO = windowStart.toISOString().slice(0, 10);
+  return joinDate > windowStartISO ? joinDate : windowStartISO;
 }

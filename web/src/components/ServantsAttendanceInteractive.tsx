@@ -17,7 +17,7 @@ export function ServantsAttendanceInteractive({
   windowWeeks,
 }: {
   bundle: ServantAttendanceBundle;
-  windowWeeks: number;
+  windowWeeks: number | null;
 }) {
   const [attendanceByServant, setAttendanceByServant] = useState(bundle.attendanceByServant);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -102,8 +102,9 @@ export function ServantsAttendanceInteractive({
       </div>
 
       <p className="text-xs text-[#666]">
-        Attendance % is a rolling trailing {windowWeeks} week{windowWeeks === 1 ? "" : "s"}, never counting weeks before
-        someone joined.
+        {windowWeeks === null
+          ? "Attendance % is calculated over each servant's entire history since their Join Date."
+          : `Attendance % is a rolling trailing ${windowWeeks} week${windowWeeks === 1 ? "" : "s"}, never counting weeks before someone joined.`}
       </p>
 
       <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden overflow-x-auto">

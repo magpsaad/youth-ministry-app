@@ -146,16 +146,16 @@ export default async function LandingPage() {
                 Calendar Maintenance
               </Link>
               <Link
-                href="/admin/actions-needed-config"
-                className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
-              >
-                Actions Needed Config
-              </Link>
-              <Link
                 href="/admin/verses-maintenance"
                 className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
               >
                 Verses Maintenance
+              </Link>
+              <Link
+                href="/admin/actions-needed-config"
+                className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
+              >
+                App Settings
               </Link>
               <StubButton label="Group Transition" />
               <Link

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getAttendanceWindowSettings } from "@/lib/app-settings";
+import { getAttendanceWindowSettings, resolveAttendanceSince } from "@/lib/app-settings";
 
 export type MemberListItem = {
   id: string;
@@ -81,14 +81,10 @@ export async function getGroupMembers(groupId: string): Promise<MemberListItem[]
     presentByMember.get(a.member_id)!.add(a.service_date);
   }
 
-  const windowStart = new Date();
-  windowStart.setDate(windowStart.getDate() - windowSettings.youth_attendance_window_weeks * 7);
-  const windowStartISO = windowStart.toISOString().slice(0, 10);
-
   return members.map((m) => {
-    if (!m.join_date) return { ...m, avgAttendancePercent: null };
+    const since = resolveAttendanceSince(m.join_date, windowSettings.youth_attendance_window_weeks);
+    if (!since) return { ...m, avgAttendancePercent: null };
 
-    const since = m.join_date > windowStartISO ? m.join_date : windowStartISO;
     const trackedInWindow = trackedDates.filter((d) => d >= since);
     const presentSet = presentByMember.get(m.id) ?? new Set<string>();
     const presentCount = trackedInWindow.filter((d) => presentSet.has(d)).length;
