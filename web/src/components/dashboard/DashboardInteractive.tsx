@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import type { University } from "@/lib/universities";
 import type { ServantOption } from "@/lib/servants";
 import type { BirthdayMember, DashboardStatsData, UnassignedMember } from "@/lib/dashboard";
+import type { ActionsNeededMember } from "@/lib/actions-needed";
 import { useMyAssigned } from "@/components/MyAssignedContext";
 import { memberPhotoUrl } from "@/lib/storage";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
@@ -14,11 +16,20 @@ import { OutreachQuickLink } from "@/components/outreach/OutreachQuickLink";
 import { PhoneLink } from "@/components/PhoneLink";
 import { CakeIcon, UserPlusIcon } from "@/components/icons";
 
+type ActionsNeededConfigRow = {
+  proximity: string;
+  min_presence_count: number;
+  min_absence_weeks: number;
+  min_outreach_weeks: number;
+};
+
 export function DashboardInteractive({
   groupId,
   statsData,
   birthdays,
   unassigned,
+  actionsNeeded,
+  actionsNeededConfig,
   servants,
   universities,
   memberLabel,
@@ -30,6 +41,8 @@ export function DashboardInteractive({
   statsData: DashboardStatsData;
   birthdays: BirthdayMember[];
   unassigned: UnassignedMember[];
+  actionsNeeded: ActionsNeededMember[];
+  actionsNeededConfig: ActionsNeededConfigRow[];
   servants: ServantOption[];
   universities: University[];
   memberLabel: string;
@@ -39,6 +52,34 @@ export function DashboardInteractive({
 }) {
   const { myAssignedOnly, hydrated } = useMyAssigned();
   const applyFilter = hydrated && myAssignedOnly;
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [dismissHydrated, setDismissHydrated] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const dismissKey = `actionsNeededDismissed:${groupId}`;
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(dismissKey);
+      if (raw) setDismissed(new Set(JSON.parse(raw)));
+    } catch {
+      // ignore
+    }
+    setDismissHydrated(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dismissKey]);
+
+  function dismiss(memberId: string) {
+    setDismissed((prev) => {
+      const next = new Set(prev);
+      next.add(memberId);
+      try {
+        sessionStorage.setItem(dismissKey, JSON.stringify(Array.from(next)));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }
 
   const stats = useMemo(() => {
     const rows = applyFilter ? statsData.rows.filter((r) => r.assigned_servant_id === currentUserId) : statsData.rows;
@@ -57,6 +98,22 @@ export function DashboardInteractive({
   const filteredUnassigned = applyFilter
     ? unassigned.filter(() => false) // unassigned members can never be "mine"
     : unassigned;
+
+  const visibleActionsNeeded = useMemo(() => {
+    let rows = actionsNeeded.filter((m) => !dismissed.has(m.id));
+    if (applyFilter) rows = rows.filter((m) => m.assigned_servant_id === currentUserId);
+    return rows;
+  }, [actionsNeeded, dismissed, applyFilter, currentUserId]);
+
+  const actionsNeededByServant = useMemo(() => {
+    const groups = new Map<string, ActionsNeededMember[]>();
+    for (const m of visibleActionsNeeded) {
+      const key = m.assignedServantName ?? "Unassigned";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(m);
+    }
+    return Array.from(groups.entries()).sort(([a], [b]) => (a === "Unassigned" ? 1 : b === "Unassigned" ? -1 : a.localeCompare(b)));
+  }, [visibleActionsNeeded]);
 
   return (
     <div className="mt-4 space-y-6">
@@ -203,11 +260,90 @@ export function DashboardInteractive({
         )}
       </CollapsibleSection>
 
-      <CollapsibleSection id={`actions-needed-${groupId}`} title={<span>⚠️ Actions Needed</span>}>
-        <p className="text-sm text-[#666]">
-          Nothing to report yet — this section flags members who&rsquo;ve stopped attending without a
-          recent follow-up, which needs attendance and outreach history to evaluate (Phases C and D).
-        </p>
+      <CollapsibleSection
+        id={`actions-needed-${groupId}`}
+        title={
+          <span className="flex items-center gap-2">
+            ⚠️ Actions Needed
+            <button
+              type="button"
+              onClick={() => setShowHelp(true)}
+              aria-label="What is Actions Needed?"
+              className="h-5 w-5 flex items-center justify-center rounded-full bg-[#f0f0f0] text-[#666] text-xs font-bold hover:bg-[#e0e0e0]"
+            >
+              ?
+            </button>
+          </span>
+        }
+      >
+        {!dismissHydrated || visibleActionsNeeded.length === 0 ? (
+          <p className="text-sm text-[#666]">
+            {actionsNeeded.length === 0
+              ? "Nothing to report — no one currently meets all three Actions Needed criteria."
+              : "Nothing to report — everything here has been dismissed for this session."}
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {actionsNeededByServant.map(([servantName, rows]) => (
+              <div key={servantName}>
+                <h3 className="text-sm font-bold text-[#1e3a5f] mb-2">{servantName}</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {rows.map((m) => {
+                    const photoUrl = memberPhotoUrl(m.photo_path);
+                    return (
+                      <div key={m.id} className="rounded-lg bg-[#fff3cd] border-l-4 border-[#dc3545] p-3 flex items-start gap-3">
+                        {photoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={photoUrl} alt={m.full_name} className="h-10 w-10 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <div className="h-10 w-10 shrink-0 rounded-full bg-[#1e3a5f] text-white text-xs font-bold flex items-center justify-center">
+                            {m.full_name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <MemberDetailLink
+                            memberId={m.id}
+                            groupId={groupId}
+                            universities={universities}
+                            servants={servants}
+                            memberLabel={memberLabel}
+                            canDelete={canDelete}
+                            currentUserName={currentUserName}
+                            className="font-semibold text-[#1e3a5f] hover:underline text-left truncate block"
+                          >
+                            {m.full_name}
+                          </MemberDetailLink>
+                          <p className="text-xs text-[#721c24]">
+                            Absent {m.currentConsecutiveAbsences} week{m.currentConsecutiveAbsences === 1 ? "" : "s"} in a row
+                          </p>
+                          <p className="text-xs text-[#666]">
+                            Last outreach: {m.lastOutreachDate ? new Date(m.lastOutreachDate).toLocaleDateString() : "Never"}
+                          </p>
+                          <div className="mt-1 flex items-center gap-2">
+                            <OutreachQuickLink
+                              memberId={m.id}
+                              memberName={m.full_name}
+                              groupId={groupId}
+                              currentUserName={currentUserName}
+                              className="rounded-md bg-[#1e3a5f] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#152a45]"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => dismiss(m.id)}
+                              className="rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-[#666] border border-[#ddd] hover:bg-[#f5f5f5]"
+                            >
+                              Dismiss
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </CollapsibleSection>
 
       <div className="text-center">
@@ -215,6 +351,47 @@ export function DashboardInteractive({
           View all {memberLabel.toLowerCase()}s →
         </Link>
       </div>
+
+      {showHelp &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowHelp(false)}>
+            <div
+              className="w-full max-w-md rounded-xl bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.2)]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b-2 border-[#f0f0f0] pb-3 mb-4">
+                <h2 className="text-lg font-bold text-[#1e3a5f]">What is Actions Needed?</h2>
+                <button onClick={() => setShowHelp(false)} className="text-[#999] hover:text-[#333] text-xl leading-none">
+                  ×
+                </button>
+              </div>
+              <p className="text-sm text-[#666] mb-3">
+                A {memberLabel.toLowerCase()} is flagged here once, using their trailing 12 months of history, <strong>all
+                three</strong> hold at once:
+              </p>
+              <ul className="list-disc pl-5 text-sm text-[#333] space-y-1 mb-4">
+                <li>They&rsquo;ve attended at least the minimum number of times for their proximity.</li>
+                <li>They&rsquo;re currently on a consecutive-absence streak at or beyond the minimum for their proximity.</li>
+                <li>Their most recent outreach (or lack of any) is older than the minimum for their proximity.</li>
+              </ul>
+              <div className="rounded-md bg-[#f5f5f5] p-3 text-xs text-[#333] space-y-1">
+                {actionsNeededConfig.map((c) => (
+                  <p key={c.proximity}>
+                    <strong>{c.proximity}:</strong> min. {c.min_presence_count} presence
+                    {c.min_presence_count === 1 ? "" : "s"}, {c.min_absence_weeks} consecutive absence
+                    {c.min_absence_weeks === 1 ? "" : "s"}, outreach stale after {c.min_outreach_weeks} week
+                    {c.min_outreach_weeks === 1 ? "" : "s"}.
+                  </p>
+                ))}
+              </div>
+              <p className="mt-3 text-xs text-[#666]">
+                These thresholds are editable by an Admin on the App Settings screen — this text always reflects the
+                current values.
+              </p>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
