@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ServantDirectoryEntry } from "@/lib/servant-directory";
 import { PhoneLink } from "@/components/PhoneLink";
+import { servantPhotoUrl } from "@/lib/storage";
 import { ServantDetailModal } from "@/components/ServantDetailModal";
 
 function initials(name: string): string {
@@ -131,22 +132,30 @@ function ServantRows({
 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {entries.map((s) => (
-        <button
-          key={s.id}
-          type="button"
-          onClick={() => onSelect(s)}
-          className="flex items-center gap-3 border border-[#f0f0f0] rounded-lg p-3 text-left hover:border-[#1e3a5f] transition-colors"
-        >
-          <div className="h-10 w-10 shrink-0 rounded-full bg-[#1e3a5f] text-white text-sm font-bold flex items-center justify-center">
-            {initials(s.full_name)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold text-[#333] truncate">{s.full_name}</p>
-            <PhoneLink phone={s.phone} className="text-xs" />
-          </div>
-        </button>
-      ))}
+      {entries.map((s) => {
+        const photoUrl = servantPhotoUrl(s.photo_path);
+        return (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => onSelect(s)}
+            className="flex items-center gap-3 border border-[#f0f0f0] rounded-lg p-3 text-left hover:border-[#1e3a5f] transition-colors"
+          >
+            <div className="h-10 w-10 shrink-0 rounded-full bg-[#1e3a5f] text-white text-sm font-bold flex items-center justify-center overflow-hidden">
+              {photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={photoUrl} alt={s.full_name} className="h-full w-full object-cover" />
+              ) : (
+                initials(s.full_name)
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-[#333] truncate">{s.full_name}</p>
+              <PhoneLink phone={s.phone} className="text-xs" />
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 }
