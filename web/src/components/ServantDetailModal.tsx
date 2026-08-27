@@ -3,15 +3,14 @@
 import { useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import type { ServantDirectoryEntry } from "@/lib/servant-directory";
-import type { GroupSummary } from "@/lib/groups";
 import { servantPhotoUrl } from "@/lib/storage";
 import {
   updateServantProfileAction,
   uploadServantPhotoAction,
-  reassignServantGroupAction,
+  removeServantPhotoAction,
   removeServantAction,
 } from "@/app/servant-profiles/actions";
-import { CameraIcon } from "@/components/icons";
+import { CameraIcon, TrashIcon } from "@/components/icons";
 
 const inputClass = (editing: boolean) =>
   `w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
@@ -21,17 +20,17 @@ const inputClass = (editing: boolean) =>
   }`;
 
 /** REQUIREMENTS.md §6.13 -- Full Name and Email are always read-only. Group
- * reassignment and Remove are only shown when `canManageServants` (General
- * Coordinator/Admin) -- also enforced server-side by the RPCs themselves. */
+ * assignment lives on the separate Servant Assignments screen, not here.
+ * `onSaved` (photo upload, field save) and `onClose` (X/Close button) are
+ * kept deliberately separate -- a photo upload must NOT close the modal,
+ * matching Member Detail's exact behavior (MemberDetailLink.tsx). */
 export function ServantDetailModal({
   servant,
-  groups,
   canManageServants,
   onClose,
   onSaved,
 }: {
   servant: ServantDirectoryEntry;
-  groups: GroupSummary[];
   canManageServants: boolean;
   onClose: () => void;
   onSaved: () => void;
@@ -44,8 +43,6 @@ export function ServantDetailModal({
   const [phone, setPhone] = useState(servant.phone ?? "");
   const [fatherOfConfession, setFatherOfConfession] = useState(servant.father_of_confession ?? "");
   const [gender, setGender] = useState(servant.gender ?? "");
-  const currentGroupId = servant.servantGroups[0]?.id ?? "";
-  const [groupId, setGroupId] = useState(currentGroupId);
 
   function handleSave() {
     setError(null);
@@ -58,13 +55,6 @@ export function ServantDetailModal({
       if (result.error) {
         setError(result.error);
         return;
-      }
-      if (canManageServants && groupId !== currentGroupId) {
-        const reassign = await reassignServantGroupAction(servant.id, groupId || null);
-        if (reassign.error) {
-          setError(reassign.error);
-          return;
-        }
       }
       setEditing(false);
       onSaved();
@@ -83,6 +73,19 @@ export function ServantDetailModal({
         return;
       }
       if (result.photoPath) setPhotoPath(result.photoPath);
+      onSaved();
+    });
+  }
+
+  function handleRemovePhoto() {
+    if (!photoPath) return;
+    startTransition(async () => {
+      const result = await removeServantPhotoAction(servant.id, photoPath);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setPhotoPath(null);
       onSaved();
     });
   }
@@ -134,11 +137,24 @@ export function ServantDetailModal({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={pending}
+              title={photoUrl ? "Replace photo" : "Add photo"}
               className="flex items-center gap-1 text-xs font-semibold text-[#1e3a5f] hover:underline"
             >
               <CameraIcon className="h-3.5 w-3.5" />
               {photoUrl ? "Replace" : "Add"} Photo
             </button>
+            {photoUrl && (
+              <button
+                type="button"
+                onClick={handleRemovePhoto}
+                disabled={pending}
+                title="Delete photo"
+                className="flex items-center gap-1 text-xs font-semibold text-[#dc3545] hover:underline"
+              >
+                <TrashIcon className="h-3.5 w-3.5" />
+                Delete Photo
+              </button>
+            )}
           </div>
         </div>
 
@@ -169,24 +185,6 @@ export function ServantDetailModal({
               <option value="Female">Female</option>
             </select>
           </FieldRow>
-          <FieldRow label="Serving Group">
-            <select
-              value={groupId}
-              onChange={(e) => setGroupId(e.target.value)}
-              disabled={!editing || !canManageServants}
-              className={inputClass(editing && canManageServants)}
-            >
-              <option value="">Unassigned</option>
-              {groups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
-              ))}
-            </select>
-            {!canManageServants && (
-              <p className="mt-1 text-xs text-[#666]">Only General Coordinators/Admins can reassign a servant&rsquo;s group.</p>
-            )}
-          </FieldRow>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2 justify-between items-center border-t border-[#f0f0f0] pt-4">
@@ -213,7 +211,6 @@ export function ServantDetailModal({
                     setPhone(servant.phone ?? "");
                     setFatherOfConfession(servant.father_of_confession ?? "");
                     setGender(servant.gender ?? "");
-                    setGroupId(currentGroupId);
                   }}
                   className="rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0]"
                 >

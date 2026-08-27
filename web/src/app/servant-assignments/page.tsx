@@ -3,19 +3,22 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings } from "@/lib/app-settings";
-import { getAuditLogsAction, getAuditConfigAction, getAuditLogUsersAction } from "@/app/admin/audit-logs/actions";
+import { getServantDirectory } from "@/lib/servant-directory";
+import { getAccessibleGroups } from "@/lib/groups";
 import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon } from "@/components/icons";
 import { SignOutButton } from "@/components/SignOutButton";
-import { AuditLogsInteractive } from "@/components/admin/AuditLogsInteractive";
+import { ServantAssignmentsInteractive } from "@/components/ServantAssignmentsInteractive";
 
-/** REQUIREMENTS.md §6.14/§6.1/§3.11 -- Admin Corner, Admins only. */
-export default async function AuditLogsPage() {
+/** REQUIREMENTS.md §6.1/§6.13 -- Coordinator Corner, General/Sub-Coordinators
+ * and Admins. Cohort assignment only -- profile viewing/editing lives on the
+ * separate Servant Profiles screen. */
+export default async function ServantAssignmentsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   const access = await getAccessSummary(user.id);
-  if (!access.isAdmin) {
+  if (!access.isCoordinator && !access.isAdmin) {
     return (
       <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] p-4">
         <p className="text-sm text-[#666]">You don&rsquo;t have access to this page.</p>
@@ -23,12 +26,12 @@ export default async function AuditLogsPage() {
     );
   }
 
-  const [settings, logs, config, users] = await Promise.all([
+  const [settings, servants, groups] = await Promise.all([
     getAppSettings(),
-    getAuditLogsAction({}),
-    getAuditConfigAction(),
-    getAuditLogUsersAction(),
+    getServantDirectory(),
+    getAccessibleGroups(),
   ]);
+  const servingGroups = groups.filter((g) => g.ladder_position > 0);
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
@@ -50,14 +53,13 @@ export default async function AuditLogsPage() {
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={32} circular={false} />
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
         </Link>
-        <p className="mt-1 text-sm opacity-90">Audit Logs</p>
+        <p className="mt-1 text-sm opacity-90">Servant Assignments</p>
       </header>
-      <main className="max-w-4xl mx-auto px-4 py-6">
-        <AuditLogsInteractive
-          initialLogs={logs}
-          actionTypes={config.map((c) => c.action_type)}
-          users={users}
-          initialConfig={config}
+      <main className="max-w-3xl mx-auto px-4 py-6">
+        <ServantAssignmentsInteractive
+          servants={servants}
+          groups={servingGroups}
+          canManageServants={access.isAdmin || access.isGeneralCoordinator}
         />
       </main>
     </div>

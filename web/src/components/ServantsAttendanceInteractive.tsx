@@ -95,12 +95,15 @@ export function ServantsAttendanceInteractive({ bundle }: { bundle: ServantAtten
         />
       </div>
 
+      <p className="text-xs text-[#666]">Attendance % is a rolling trailing 12 months.</p>
+
       <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[#f5f5f5] text-left text-[#666]">
               <th className="px-4 py-2 font-semibold">Servant</th>
               <th className="px-4 py-2 font-semibold">Group</th>
+              <th className="px-4 py-2 font-semibold">Attendance %</th>
               <th className="px-4 py-2 text-right font-semibold">Status</th>
             </tr>
           </thead>
@@ -111,6 +114,9 @@ export function ServantsAttendanceInteractive({ bundle }: { bundle: ServantAtten
                 <tr key={m.id}>
                   <td className="px-4 py-2.5 font-medium text-[#333]">{m.full_name}</td>
                   <td className="px-4 py-2.5 text-[#666]">{m.groupLabel}</td>
+                  <td className="px-4 py-2.5 text-[#666]">
+                    {m.averageAttendance === null ? "N/A" : `${m.averageAttendance}%`}
+                  </td>
                   <td className="px-4 py-2.5 text-right">
                     <button
                       type="button"
@@ -132,7 +138,7 @@ export function ServantsAttendanceInteractive({ bundle }: { bundle: ServantAtten
             })}
             {visible.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-[#666]">
+                <td colSpan={4} className="px-4 py-6 text-center text-[#666]">
                   No servants to show.
                 </td>
               </tr>

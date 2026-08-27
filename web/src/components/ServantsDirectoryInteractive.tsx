@@ -14,10 +14,11 @@ function initials(name: string): string {
 
 type Bucket = { label: string; entries: ServantDirectoryEntry[] };
 
-/** REQUIREMENTS.md §6.13 -- read-only, searchable, grouped by serving group
- * (then General Coordinators, then Unassigned), with phone (tel: link) and
- * average attendance %. */
+/** REQUIREMENTS.md §6.13 -- read-only, searchable. Categorical (grouped by
+ * serving group, then General Coordinators, then Unassigned) and
+ * Alphabetical view modes, consistent with Servant Profiles & Assignments. */
 export function ServantsDirectoryInteractive({ servants }: { servants: ServantDirectoryEntry[] }) {
+  const [viewMode, setViewMode] = useState<"categorical" | "alphabetical">("categorical");
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
@@ -44,7 +45,6 @@ export function ServantsDirectoryInteractive({ servants }: { servants: ServantDi
       if (s.isGeneralCoordinator) add("General Coordinators", s);
     }
 
-    // Group buckets first (alphabetical), then General Coordinators, then Unassigned.
     const groupLabels = order.filter((l) => l !== "General Coordinators" && l !== "Unassigned").sort();
     const tail = order.filter((l) => l === "General Coordinators" || l === "Unassigned").sort().reverse();
 
@@ -55,36 +55,70 @@ export function ServantsDirectoryInteractive({ servants }: { servants: ServantDi
     return result;
   }, [filtered]);
 
+  const alphabetical = useMemo(() => [...filtered].sort((a, b) => a.full_name.localeCompare(b.full_name)), [filtered]);
+
   return (
     <div className="space-y-4">
-      <input
-        type="text"
-        placeholder="Search servants..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
-      />
+      <p className="text-xs text-[#666]">Attendance % is a rolling trailing 12 months.</p>
 
-      {buckets.length === 0 && <p className="text-sm text-[#666] text-center py-8">No servants match.</p>}
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          type="text"
+          placeholder="Search servants..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 min-w-[180px] rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+        />
+        <div className="flex rounded-md border border-[#ddd] overflow-hidden text-sm">
+          <button
+            type="button"
+            onClick={() => setViewMode("categorical")}
+            className={`px-3 py-2 font-semibold ${viewMode === "categorical" ? "bg-[#1e3a5f] text-white" : "bg-white text-[#333]"}`}
+          >
+            Categorical
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("alphabetical")}
+            className={`px-3 py-2 font-semibold ${viewMode === "alphabetical" ? "bg-[#1e3a5f] text-white" : "bg-white text-[#333]"}`}
+          >
+            Alphabetical
+          </button>
+        </div>
+      </div>
 
-      {buckets.map((bucket) => (
-        <div key={bucket.label} className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-4">
-          <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">{bucket.label}</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {bucket.entries.map((s) => (
-              <div key={s.id} className="flex items-center gap-3 border border-[#f0f0f0] rounded-lg p-3">
-                <div className="h-10 w-10 shrink-0 rounded-full bg-[#1e3a5f] text-white text-sm font-bold flex items-center justify-center">
-                  {initials(s.full_name)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-[#333] truncate">{s.full_name}</p>
-                  <PhoneLink phone={s.phone} className="text-xs" />
-                  <p className="text-[11px] text-[#666]">
-                    Attendance: {s.averageAttendance === null ? "N/A" : `${s.averageAttendance}%`}
-                  </p>
-                </div>
-              </div>
-            ))}
+      {filtered.length === 0 && <p className="text-sm text-[#666] text-center py-8">No servants match.</p>}
+
+      {viewMode === "categorical"
+        ? buckets.map((bucket) => (
+            <div key={bucket.label} className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-4">
+              <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">{bucket.label}</h3>
+              <ServantCards entries={bucket.entries} />
+            </div>
+          ))
+        : filtered.length > 0 && (
+            <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-4">
+              <ServantCards entries={alphabetical} />
+            </div>
+          )}
+    </div>
+  );
+}
+
+function ServantCards({ entries }: { entries: ServantDirectoryEntry[] }) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {entries.map((s) => (
+        <div key={s.id} className="flex items-center gap-3 border border-[#f0f0f0] rounded-lg p-3">
+          <div className="h-10 w-10 shrink-0 rounded-full bg-[#1e3a5f] text-white text-sm font-bold flex items-center justify-center">
+            {initials(s.full_name)}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-[#333] truncate">{s.full_name}</p>
+            <PhoneLink phone={s.phone} className="text-xs" />
+            <p className="text-[11px] text-[#666]">
+              Attendance: {s.averageAttendance === null ? "N/A" : `${s.averageAttendance}%`}
+            </p>
           </div>
         </div>
       ))}

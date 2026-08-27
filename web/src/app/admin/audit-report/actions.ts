@@ -3,22 +3,38 @@
 import { createClient } from "@/lib/supabase/server";
 
 export type AuditReportRow = {
-  action_type: string;
+  occurred_at: string;
+  user_id: string | null;
   user_name: string | null;
 };
 
-export type AuditReportFilters = { fromDate?: string; toDate?: string };
-
-export async function getAuditReportDataAction(filters: AuditReportFilters): Promise<AuditReportRow[]> {
+export async function getAuditReportDataAction(): Promise<AuditReportRow[]> {
   const supabase = await createClient();
-  let query = supabase.from("audit_log").select("action_type, profiles(full_name)").limit(5000);
+  const { data } = await supabase
+    .from("audit_log")
+    .select("occurred_at, user_id, profiles(full_name)")
+    .order("occurred_at", { ascending: false })
+    .limit(5000);
 
-  if (filters.fromDate) query = query.gte("occurred_at", filters.fromDate);
-  if (filters.toDate) query = query.lte("occurred_at", `${filters.toDate}T23:59:59`);
-
-  const { data } = await query;
   return (data ?? []).map((r) => ({
-    action_type: r.action_type,
+    occurred_at: r.occurred_at,
+    user_id: r.user_id,
     user_name: (r.profiles as unknown as { full_name: string } | null)?.full_name ?? null,
   }));
+}
+
+export type AuditReportUser = { id: string; full_name: string };
+
+export async function getAuditReportUsersAction(): Promise<AuditReportUser[]> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("audit_log").select("user_id, profiles(full_name)").not("user_id", "is", null);
+
+  const byId = new Map<string, string>();
+  for (const r of data ?? []) {
+    const name = (r.profiles as unknown as { full_name: string } | null)?.full_name;
+    if (r.user_id && name && !byId.has(r.user_id)) byId.set(r.user_id, name);
+  }
+  return Array.from(byId.entries())
+    .map(([id, full_name]) => ({ id, full_name }))
+    .sort((a, b) => a.full_name.localeCompare(b.full_name));
 }

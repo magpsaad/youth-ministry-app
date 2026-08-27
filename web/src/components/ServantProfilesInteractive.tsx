@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ServantDirectoryEntry } from "@/lib/servant-directory";
-import type { GroupSummary } from "@/lib/groups";
 import { PhoneLink } from "@/components/PhoneLink";
 import { ServantDetailModal } from "@/components/ServantDetailModal";
 
@@ -18,14 +17,13 @@ function initials(name: string): string {
 /** REQUIREMENTS.md §6.13 -- lists all servants; click any servant to view
  * their profile. Two view modes: Categorical (grouped by serving group,
  * then General Coordinators, then Unassigned; female before male within
- * each group) and Alphabetical. */
+ * each group) and Alphabetical. Group/cohort assignment lives on the
+ * separate Servant Assignments screen. */
 export function ServantProfilesInteractive({
   servants,
-  groups,
   canManageServants,
 }: {
   servants: ServantDirectoryEntry[];
-  groups: GroupSummary[];
   canManageServants: boolean;
 }) {
   const router = useRouter();
@@ -68,11 +66,6 @@ export function ServantProfilesInteractive({
   }, [filtered]);
 
   const alphabetical = useMemo(() => [...filtered].sort((a, b) => a.full_name.localeCompare(b.full_name)), [filtered]);
-
-  function closeAndRefresh() {
-    setSelected(null);
-    router.refresh();
-  }
 
   return (
     <div className="space-y-4">
@@ -120,10 +113,9 @@ export function ServantProfilesInteractive({
       {selected && (
         <ServantDetailModal
           servant={selected}
-          groups={groups}
           canManageServants={canManageServants}
           onClose={() => setSelected(null)}
-          onSaved={closeAndRefresh}
+          onSaved={() => router.refresh()}
         />
       )}
     </div>
