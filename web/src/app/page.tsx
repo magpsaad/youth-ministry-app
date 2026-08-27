@@ -124,7 +124,7 @@ export default async function LandingPage() {
                   href={`/g/${yr0Group.id}/members`}
                   className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45] sm:col-span-2"
                 >
-                  Load: {yr0Group.name}
+                  View: {yr0Group.name}
                 </Link>
               )}
               <Link
