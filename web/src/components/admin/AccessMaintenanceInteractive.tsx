@@ -10,10 +10,11 @@ const ROLE_LABELS: Record<AccessRoleRow["role"], string> = {
   general_coordinator: "General Coordinator",
   sub_coordinator: "Sub-Coordinator",
   servant: "Servant",
+  read_only: "Read-Only (exception access)",
 };
 
-const ROLES_REQUIRING_GROUP: AccessRoleRow["role"][] = ["sub_coordinator"];
-const ROLES_ALLOWING_GROUP: AccessRoleRow["role"][] = ["sub_coordinator", "servant"];
+const ROLES_REQUIRING_GROUP: AccessRoleRow["role"][] = ["sub_coordinator", "read_only"];
+const ROLES_ALLOWING_GROUP: AccessRoleRow["role"][] = ["sub_coordinator", "servant", "read_only"];
 
 /** REQUIREMENTS.md §6.14/§4 -- Access Maintenance: grant/revoke role rows
  * over `user_roles`. Only existing profiles (people who've signed in at
@@ -62,7 +63,7 @@ export function AccessMaintenanceInteractive({
       setRoles((prev) => [
         ...prev,
         {
-          id: crypto.randomUUID(),
+          id: res.id!,
           user_id: selectedProfileId,
           role: newRole,
           group_id: groupId,

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings } from "@/lib/app-settings";
-import { getAuditReportDataAction } from "@/app/admin/audit-report/actions";
+import { getAuditReportDataAction, getAuditReportUsersAction } from "@/app/admin/audit-report/actions";
 import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon } from "@/components/icons";
 import { SignOutButton } from "@/components/SignOutButton";
@@ -23,7 +23,11 @@ export default async function AuditReportPage() {
     );
   }
 
-  const [settings, rows] = await Promise.all([getAppSettings(), getAuditReportDataAction({})]);
+  const [settings, rows, users] = await Promise.all([
+    getAppSettings(),
+    getAuditReportDataAction(),
+    getAuditReportUsersAction(),
+  ]);
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
@@ -48,7 +52,7 @@ export default async function AuditReportPage() {
         <p className="mt-1 text-sm opacity-90">Audit Report</p>
       </header>
       <main className="max-w-3xl mx-auto px-4 py-6">
-        <AuditReportInteractive initial={rows} />
+        <AuditReportInteractive initial={rows} users={users} />
       </main>
     </div>
   );

@@ -4,14 +4,15 @@ import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings } from "@/lib/app-settings";
 import { getServantDirectory } from "@/lib/servant-directory";
-import { getAccessibleGroups } from "@/lib/groups";
 import { logAudit } from "@/lib/audit";
 import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon } from "@/components/icons";
 import { SignOutButton } from "@/components/SignOutButton";
 import { ServantProfilesInteractive } from "@/components/ServantProfilesInteractive";
 
-/** REQUIREMENTS.md §6.1/§6.13 -- Coordinator Corner, General/Sub-Coordinators and Admins. */
+/** REQUIREMENTS.md §6.1/§6.13 -- Coordinator Corner, General/Sub-Coordinators
+ * and Admins. Profile viewing/editing only -- cohort assignment lives on the
+ * separate Servant Assignments screen. */
 export default async function ServantProfilesPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -25,12 +26,7 @@ export default async function ServantProfilesPage() {
     );
   }
 
-  const [settings, servants, groups] = await Promise.all([
-    getAppSettings(),
-    getServantDirectory(),
-    getAccessibleGroups(),
-  ]);
-  const servingGroups = groups.filter((g) => g.ladder_position > 0);
+  const [settings, servants] = await Promise.all([getAppSettings(), getServantDirectory()]);
 
   await logAudit(user.id, "SERVANT_PROFILES_VIEWED");
 
@@ -54,14 +50,10 @@ export default async function ServantProfilesPage() {
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={32} circular={false} />
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
         </Link>
-        <p className="mt-1 text-sm opacity-90">Servant Profiles &amp; Assignments</p>
+        <p className="mt-1 text-sm opacity-90">Servant Profiles</p>
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6">
-        <ServantProfilesInteractive
-          servants={servants}
-          groups={servingGroups}
-          canManageServants={access.isAdmin || access.isGeneralCoordinator}
-        />
+        <ServantProfilesInteractive servants={servants} canManageServants={access.isAdmin || access.isGeneralCoordinator} />
       </main>
     </div>
   );

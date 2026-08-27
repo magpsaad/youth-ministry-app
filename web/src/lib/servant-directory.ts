@@ -20,12 +20,16 @@ export type ServantDirectoryEntry = {
  * Directory, Servant Profiles & Assignments, and Servants Attendance.
  * Includes anyone holding a 'servant' or 'general_coordinator' role row
  * (Sub-Coordinators/Admins-only-with-no-servant-role aren't "servants" for
- * this listing). Average attendance % follows the same "since registration"
- * rule as members (§6.4/§7.2): tracked servant-attendance dates before a
- * person's own `created_at` are excluded from their denominator.
+ * this listing). Average attendance % is a rolling trailing 12 months
+ * (owner's explicit choice, distinct from members' all-time-since-
+ * registration rule in §7.2) -- tracked servant-attendance dates before a
+ * person's own `created_at`, or older than 12 months, are excluded.
  */
 export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
   const supabase = await createClient();
+  const twelveMonthsAgo = new Date();
+  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+  const twelveMonthsAgoISO = twelveMonthsAgo.toISOString().slice(0, 10);
 
   const { data: roleRows } = await supabase
     .from("user_roles")
@@ -70,7 +74,8 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
     .from("attendance_records")
     .select("servant_id, service_date")
     .eq("attendee_type", "servant")
-    .in("servant_id", userIds);
+    .in("servant_id", userIds)
+    .gte("service_date", twelveMonthsAgoISO);
 
   const presentByServant = new Map<string, Set<string>>();
   const allTrackedDates = new Set<string>();
@@ -86,7 +91,7 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
     const profile = profilesById.get(userId);
     if (!profile) continue;
 
-    const since = profile.created_at.slice(0, 10);
+    const since = profile.created_at.slice(0, 10) > twelveMonthsAgoISO ? profile.created_at.slice(0, 10) : twelveMonthsAgoISO;
     const relevantDates = trackedDates.filter((d) => d >= since);
     const presentSet = presentByServant.get(userId) ?? new Set<string>();
     const averageAttendance =

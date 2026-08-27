@@ -62,7 +62,7 @@ export default async function LandingPage() {
               href="/servants-directory"
               className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
             >
-              Servants Directory
+              Servant Directory
             </Link>
             <ServiceCalendarButton />
             <Link
@@ -83,11 +83,17 @@ export default async function LandingPage() {
                 href="/servant-profiles"
                 className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
               >
-                Servant Profiles &amp; Assignments
+                Servant Profiles
+              </Link>
+              <Link
+                href="/servant-assignments"
+                className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
+              >
+                Servant Assignments
               </Link>
               <Link
                 href="/servants-attendance"
-                className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
+                className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45] sm:col-span-2"
               >
                 Servants Attendance
               </Link>
@@ -168,7 +174,7 @@ export default async function LandingPage() {
           </section>
         )}
 
-        {!access.isAdmin && !access.isCoordinator && !access.isServant && (
+        {!access.isAdmin && !access.isCoordinator && !access.isServant && !access.isReadOnly && (
           <p className="text-center text-sm text-[#666]">
             Your account isn&rsquo;t assigned to any role yet. Contact an Admin for access.
           </p>

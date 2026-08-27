@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 
-export type Role = "admin" | "general_coordinator" | "sub_coordinator" | "servant";
+export type Role = "admin" | "general_coordinator" | "sub_coordinator" | "servant" | "read_only";
 
 export type AccessSummary = {
   roles: { role: Role; group_id: string | null }[];
@@ -8,6 +8,9 @@ export type AccessSummary = {
   isGeneralCoordinator: boolean;
   isSubCoordinator: boolean;
   isServant: boolean;
+  /** REQUIREMENTS.md §4.2 -- read-only exception access to a cohort the
+   * user doesn't otherwise serve; always layered on top of a real role. */
+  isReadOnly: boolean;
   /** REQUIREMENTS.md §6.1 -- shows the Coordinator Corner (general or sub). */
   isCoordinator: boolean;
 };
@@ -33,6 +36,7 @@ export async function getAccessSummary(userId: string): Promise<AccessSummary> {
     isGeneralCoordinator: has("general_coordinator"),
     isSubCoordinator: has("sub_coordinator"),
     isServant: has("servant"),
+    isReadOnly: has("read_only"),
     isCoordinator: has("general_coordinator") || has("sub_coordinator"),
   };
 }

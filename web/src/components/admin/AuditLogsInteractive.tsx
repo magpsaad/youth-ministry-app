@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import type { AuditLogRow, AuditConfigRow } from "@/app/admin/audit-logs/actions";
-import { getAuditLogsAction, toggleAuditConfigAction } from "@/app/admin/audit-logs/actions";
+import { useEffect, useState, useTransition } from "react";
+import type { AuditLogRow, AuditConfigRow, AuditLogUser } from "@/app/admin/audit-logs/actions";
+import { getAuditLogsAction, toggleAuditConfigAction, archiveAuditLogAction } from "@/app/admin/audit-logs/actions";
+import { DateFilterModal } from "@/components/outreach/DateFilterModal";
 
 function formatWhen(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
@@ -17,30 +18,37 @@ function formatWhen(iso: string): string {
 export function AuditLogsInteractive({
   initialLogs,
   actionTypes,
+  users,
   initialConfig,
 }: {
   initialLogs: AuditLogRow[];
   actionTypes: string[];
+  users: AuditLogUser[];
   initialConfig: AuditConfigRow[];
 }) {
   const [logs, setLogs] = useState(initialLogs);
   const [config, setConfig] = useState(initialConfig);
   const [actionType, setActionType] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [userId, setUserId] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [showDateFilter, setShowDateFilter] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
+  const [archiveMsg, setArchiveMsg] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  function handleFilter() {
+  useEffect(() => {
     startTransition(async () => {
       const rows = await getAuditLogsAction({
         actionType: actionType || undefined,
-        fromDate: fromDate || undefined,
-        toDate: toDate || undefined,
+        userId: userId || undefined,
+        fromDate: dateFrom || undefined,
+        toDate: dateTo || undefined,
       });
       setLogs(rows);
     });
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [actionType, userId, dateFrom, dateTo]);
 
   function handleToggleConfig(type: string, enabled: boolean) {
     setConfig((prev) => prev.map((c) => (c.action_type === type ? { ...c, enabled } : c)));
@@ -49,9 +57,34 @@ export function AuditLogsInteractive({
     });
   }
 
+  function handleArchive(days: number, label: string) {
+    if (!confirm(`Permanently delete every log entry older than ${label}? This cannot be undone.`)) return;
+    setArchiveMsg(null);
+    startTransition(async () => {
+      const res = await archiveAuditLogAction(days);
+      if (res.error) {
+        setArchiveMsg(res.error);
+        return;
+      }
+      setArchiveMsg(`Deleted ${res.deleted} entr${res.deleted === 1 ? "y" : "ies"} older than ${label}.`);
+      const rows = await getAuditLogsAction({
+        actionType: actionType || undefined,
+        userId: userId || undefined,
+        fromDate: dateFrom || undefined,
+        toDate: dateTo || undefined,
+      });
+      setLogs(rows);
+    });
+  }
+
+  const dateFilterActive = Boolean(dateFrom || dateTo);
+
   return (
     <div className="space-y-4">
       <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+        <p className="text-sm font-semibold text-[#1e3a5f] mb-3">
+          {logs.length} entr{logs.length === 1 ? "y" : "ies"} shown{logs.length === 300 ? " (most recent 300 matching)" : ""}
+        </p>
         <div className="flex flex-wrap items-end gap-3 mb-2">
           <label className="text-xs text-[#666]">
             Action Type
@@ -69,37 +102,35 @@ export function AuditLogsInteractive({
             </select>
           </label>
           <label className="text-xs text-[#666]">
-            From
-            <input
-              type="date"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
+            User
+            <select
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
               className="mt-1 block rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
-            />
-          </label>
-          <label className="text-xs text-[#666]">
-            To
-            <input
-              type="date"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-              className="mt-1 block rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
-            />
+            >
+              <option value="">All users</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.full_name}
+                </option>
+              ))}
+            </select>
           </label>
           <button
             type="button"
-            onClick={handleFilter}
-            disabled={pending}
-            className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60"
+            onClick={() => setShowDateFilter(true)}
+            className="flex items-center gap-1 rounded-md border border-[#ddd] px-3 py-2 text-sm text-[#333] hover:bg-[#f5f5f5]"
           >
-            Filter
+            Date Filter
+            {dateFilterActive && <span className="rounded-full bg-[#1e3a5f] text-white text-[10px] px-1.5 py-0.5">1</span>}
+            <span className="text-[#999]">▾</span>
           </button>
           <button
             type="button"
             onClick={() => setShowConfig((v) => !v)}
             className="ml-auto rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0]"
           >
-            {showConfig ? "Hide" : "Configure Logged Actions"}
+            {showConfig ? "Hide" : "Select Logged Actions"}
           </button>
         </div>
 
@@ -118,6 +149,38 @@ export function AuditLogsInteractive({
             ))}
           </div>
         )}
+      </div>
+
+      <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+        <h3 className="text-sm font-bold text-[#1e3a5f] mb-2">Archive Old Entries</h3>
+        <p className="text-xs text-[#666] mb-3">Permanently deletes log entries older than the selected age. Cannot be undone.</p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => handleArchive(90, "3 months")}
+            disabled={pending}
+            className="rounded-md bg-[#f0f0f0] px-3 py-1.5 text-xs font-semibold text-[#333] hover:bg-[#e0e0e0] disabled:opacity-60"
+          >
+            Older than 3 months
+          </button>
+          <button
+            type="button"
+            onClick={() => handleArchive(182, "6 months")}
+            disabled={pending}
+            className="rounded-md bg-[#f0f0f0] px-3 py-1.5 text-xs font-semibold text-[#333] hover:bg-[#e0e0e0] disabled:opacity-60"
+          >
+            Older than 6 months
+          </button>
+          <button
+            type="button"
+            onClick={() => handleArchive(365, "1 year")}
+            disabled={pending}
+            className="rounded-md bg-[#f0f0f0] px-3 py-1.5 text-xs font-semibold text-[#333] hover:bg-[#e0e0e0] disabled:opacity-60"
+          >
+            Older than 1 year
+          </button>
+        </div>
+        {archiveMsg && <p className="mt-2 text-xs text-[#155724]">{archiveMsg}</p>}
       </div>
 
       <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden overflow-x-auto">
@@ -149,7 +212,19 @@ export function AuditLogsInteractive({
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-[#666]">Showing up to the 300 most recent matching entries.</p>
+
+      {showDateFilter && (
+        <DateFilterModal
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          onApply={(from, to) => {
+            setDateFrom(from);
+            setDateTo(to);
+            setShowDateFilter(false);
+          }}
+          onClose={() => setShowDateFilter(false)}
+        />
+      )}
     </div>
   );
 }

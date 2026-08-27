@@ -4,6 +4,7 @@ export type ServantAttendanceMember = {
   id: string;
   full_name: string;
   groupLabel: string; // serving group name, "General Coordinator", or "Unassigned"
+  averageAttendance: number | null; // rolling trailing 12 months
 };
 
 export type ServantAttendanceBundle = {
@@ -47,7 +48,7 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
     supabase.from("app_settings").select("same_day_cutoff_time, timezone").single(),
     supabase
       .from("user_roles")
-      .select("user_id, role, group_id, groups(name), profiles(full_name)")
+      .select("user_id, role, group_id, groups(name), profiles(full_name, created_at)")
       .in("role", ["servant", "general_coordinator"]),
   ]);
 
@@ -55,18 +56,17 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
   const timezone = settings?.timezone ?? "America/New_York";
   const { date: todayDate, timeMinutes } = nowInTimezone(timezone);
 
-  const byUser = new Map<string, ServantAttendanceMember>();
+  const byUser = new Map<string, { full_name: string; created_at: string; groupLabel: string }>();
   for (const r of roleRows ?? []) {
     if (byUser.has(r.user_id)) continue;
-    const profile = r.profiles as unknown as { full_name: string } | null;
+    const profile = r.profiles as unknown as { full_name: string; created_at: string } | null;
     if (!profile) continue;
     const groupName = (r.groups as unknown as { name: string } | null)?.name;
     const groupLabel = r.role === "general_coordinator" ? "General Coordinator" : (groupName ?? "Unassigned");
-    byUser.set(r.user_id, { id: r.user_id, full_name: profile.full_name, groupLabel });
+    byUser.set(r.user_id, { full_name: profile.full_name, created_at: profile.created_at, groupLabel });
   }
 
-  const members = Array.from(byUser.values()).sort((a, b) => a.full_name.localeCompare(b.full_name));
-  const ids = members.map((m) => m.id);
+  const ids = Array.from(byUser.keys());
 
   const attendanceByServant: Record<string, string[]> = {};
   const trackedDatesSet = new Set<string>();
@@ -87,6 +87,24 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
   const trackedDates = Array.from(trackedDatesSet).sort((a, b) => (a < b ? 1 : -1));
   const todayHasRows = trackedDatesSet.has(todayDate);
   const cutoffPassed = timeMinutes >= toMinutes(cutoff);
+
+  const twelveMonthsAgo = new Date();
+  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+  const twelveMonthsAgoISO = twelveMonthsAgo.toISOString().slice(0, 10);
+  const allDates = Array.from(trackedDatesSet);
+
+  const members: ServantAttendanceMember[] = ids.map((id) => {
+    const info = byUser.get(id)!;
+    const since = info.created_at.slice(0, 10) > twelveMonthsAgoISO ? info.created_at.slice(0, 10) : twelveMonthsAgoISO;
+    const relevantDates = allDates.filter((d) => d >= since);
+    const presentSet = new Set(attendanceByServant[id] ?? []);
+    const averageAttendance =
+      relevantDates.length > 0
+        ? Math.round((relevantDates.filter((d) => presentSet.has(d)).length / relevantDates.length) * 100)
+        : null;
+    return { id, full_name: info.full_name, groupLabel: info.groupLabel, averageAttendance };
+  });
+  members.sort((a, b) => a.full_name.localeCompare(b.full_name));
 
   return { members, attendanceByServant, trackedDates, todayDate, todayAvailable: todayHasRows || cutoffPassed };
 }

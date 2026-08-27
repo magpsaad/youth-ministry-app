@@ -9,7 +9,7 @@ export type AccessProfile = { id: string; full_name: string; email: string | nul
 export type AccessRoleRow = {
   id: string;
   user_id: string;
-  role: "admin" | "general_coordinator" | "sub_coordinator" | "servant";
+  role: "admin" | "general_coordinator" | "sub_coordinator" | "servant" | "read_only";
   group_id: string | null;
   group_name: string | null;
 };
@@ -41,14 +41,18 @@ export async function grantRoleAction(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "Not signed in" };
+  if (!user) return { error: "Not signed in", id: null };
 
-  const { error } = await supabase.from("user_roles").insert({ user_id: userId, role, group_id: groupId });
-  if (error) return { error: error.message };
+  const { data, error } = await supabase
+    .from("user_roles")
+    .insert({ user_id: userId, role, group_id: groupId })
+    .select("id")
+    .single();
+  if (error) return { error: error.message, id: null };
 
   await logAudit(user.id, "ADMIN_ACCESS_MAINTENANCE", { groupId, details: { action: "grant", userId, role } });
   revalidatePath("/admin/access-maintenance");
-  return { error: null };
+  return { error: null, id: data.id as string };
 }
 
 export async function revokeRoleAction(roleRowId: string) {
