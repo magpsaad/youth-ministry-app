@@ -17,7 +17,13 @@ type Bucket = { label: string; entries: ServantDirectoryEntry[] };
 /** REQUIREMENTS.md §6.13 -- read-only, searchable. Categorical (grouped by
  * serving group, then General Coordinators, then Unassigned) and
  * Alphabetical view modes, consistent with Servant Profiles & Assignments. */
-export function ServantsDirectoryInteractive({ servants }: { servants: ServantDirectoryEntry[] }) {
+export function ServantsDirectoryInteractive({
+  servants,
+  windowWeeks,
+}: {
+  servants: ServantDirectoryEntry[];
+  windowWeeks: number;
+}) {
   const [viewMode, setViewMode] = useState<"categorical" | "alphabetical">("categorical");
   const [search, setSearch] = useState("");
 
@@ -59,7 +65,10 @@ export function ServantsDirectoryInteractive({ servants }: { servants: ServantDi
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-[#666]">Attendance % is a rolling trailing 12 months.</p>
+      <p className="text-xs text-[#666]">
+        Attendance % is a rolling trailing {windowWeeks} week{windowWeeks === 1 ? "" : "s"}, never counting weeks before
+        someone joined.
+      </p>
 
       <div className="flex flex-wrap items-center gap-3">
         <input

@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAttendanceWindowSettings } from "@/lib/app-settings";
 
 export type ServantAttendanceMember = {
   id: string;
   full_name: string;
   groupLabel: string; // serving group name, "General Coordinator", or "Unassigned"
-  averageAttendance: number | null; // rolling trailing 12 months
+  averageAttendance: number | null; // rolling window, floored at join_date
 };
 
 export type ServantAttendanceBundle = {
@@ -40,30 +41,33 @@ function toMinutes(hms: string): number {
 /** REQUIREMENTS.md §6.13 -- same Present/Absent pattern as member attendance
  * (§6.5), applied to servants. Visible to Coordinator Corner (any
  * coordinator tier, per the widened RLS in migration 0022), not scoped to
- * one group -- every servant across the whole ministry shows on one list. */
+ * one group -- every servant across the whole ministry shows on one list.
+ * Average attendance % uses the same rolling-window-floored-at-join_date
+ * rule as Servant Directory (`servant_attendance_window_weeks`). */
 export async function getServantAttendanceBundle(): Promise<ServantAttendanceBundle> {
   const supabase = await createClient();
 
-  const [{ data: settings }, { data: roleRows }] = await Promise.all([
+  const [{ data: settings }, { data: roleRows }, windowSettings] = await Promise.all([
     supabase.from("app_settings").select("same_day_cutoff_time, timezone").single(),
     supabase
       .from("user_roles")
-      .select("user_id, role, group_id, groups(name), profiles(full_name, created_at)")
+      .select("user_id, role, group_id, groups(name), profiles(full_name, join_date)")
       .in("role", ["servant", "general_coordinator"]),
+    getAttendanceWindowSettings(),
   ]);
 
   const cutoff = settings?.same_day_cutoff_time ?? "21:00:00";
   const timezone = settings?.timezone ?? "America/New_York";
   const { date: todayDate, timeMinutes } = nowInTimezone(timezone);
 
-  const byUser = new Map<string, { full_name: string; created_at: string; groupLabel: string }>();
+  const byUser = new Map<string, { full_name: string; join_date: string | null; groupLabel: string }>();
   for (const r of roleRows ?? []) {
     if (byUser.has(r.user_id)) continue;
-    const profile = r.profiles as unknown as { full_name: string; created_at: string } | null;
+    const profile = r.profiles as unknown as { full_name: string; join_date: string | null } | null;
     if (!profile) continue;
     const groupName = (r.groups as unknown as { name: string } | null)?.name;
     const groupLabel = r.role === "general_coordinator" ? "General Coordinator" : (groupName ?? "Unassigned");
-    byUser.set(r.user_id, { full_name: profile.full_name, created_at: profile.created_at, groupLabel });
+    byUser.set(r.user_id, { full_name: profile.full_name, join_date: profile.join_date, groupLabel });
   }
 
   const ids = Array.from(byUser.keys());
@@ -88,14 +92,16 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
   const todayHasRows = trackedDatesSet.has(todayDate);
   const cutoffPassed = timeMinutes >= toMinutes(cutoff);
 
-  const twelveMonthsAgo = new Date();
-  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-  const twelveMonthsAgoISO = twelveMonthsAgo.toISOString().slice(0, 10);
+  const windowStart = new Date();
+  windowStart.setDate(windowStart.getDate() - windowSettings.servant_attendance_window_weeks * 7);
+  const windowStartISO = windowStart.toISOString().slice(0, 10);
   const allDates = Array.from(trackedDatesSet);
 
   const members: ServantAttendanceMember[] = ids.map((id) => {
     const info = byUser.get(id)!;
-    const since = info.created_at.slice(0, 10) > twelveMonthsAgoISO ? info.created_at.slice(0, 10) : twelveMonthsAgoISO;
+    if (!info.join_date) return { id, full_name: info.full_name, groupLabel: info.groupLabel, averageAttendance: null };
+
+    const since = info.join_date > windowStartISO ? info.join_date : windowStartISO;
     const relevantDates = allDates.filter((d) => d >= since);
     const presentSet = new Set(attendanceByServant[id] ?? []);
     const averageAttendance =

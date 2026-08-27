@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAttendanceWindowSettings } from "@/lib/app-settings";
 
 export type ServantDirectoryEntry = {
   id: string;
@@ -8,28 +9,30 @@ export type ServantDirectoryEntry = {
   photo_path: string | null;
   gender: string | null;
   father_of_confession: string | null;
-  created_at: string;
+  join_date: string | null;
   isGeneralCoordinator: boolean;
   servantGroups: { id: string; name: string }[]; // groups this person holds a 'servant' role for
   isUnassignedServant: boolean; // holds a 'servant' role with no group
-  averageAttendance: number | null; // null = no tracked servant-attendance dates since they joined
+  averageAttendance: number | null; // null = never attended, or no tracked dates in the window
 };
 
 /**
  * REQUIREMENTS.md §6.13 -- the cross-group servant roster used by Servant
- * Directory, Servant Profiles & Assignments, and Servants Attendance.
- * Includes anyone holding a 'servant' or 'general_coordinator' role row
- * (Sub-Coordinators/Admins-only-with-no-servant-role aren't "servants" for
- * this listing). Average attendance % is a rolling trailing 12 months
- * (owner's explicit choice, distinct from members' all-time-since-
- * registration rule in §7.2) -- tracked servant-attendance dates before a
- * person's own `created_at`, or older than 12 months, are excluded.
+ * Directory, Servant Profiles, Servant Assignments, and Servants
+ * Attendance. Includes anyone holding a 'servant' or 'general_coordinator'
+ * role row (Sub-Coordinators/Admins-only-with-no-servant-role aren't
+ * "servants" for this listing). Average attendance % is a rolling window
+ * (`servant_attendance_window_weeks`, admin-configurable, owner's explicit
+ * choice distinct from members' rule in §7.2), floored at the servant's
+ * `join_date` (their earliest attendance record -- §3.5) so the window
+ * never reaches before they actually joined.
  */
 export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
   const supabase = await createClient();
-  const twelveMonthsAgo = new Date();
-  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-  const twelveMonthsAgoISO = twelveMonthsAgo.toISOString().slice(0, 10);
+  const windowSettings = await getAttendanceWindowSettings();
+  const windowStart = new Date();
+  windowStart.setDate(windowStart.getDate() - windowSettings.servant_attendance_window_weeks * 7);
+  const windowStartISO = windowStart.toISOString().slice(0, 10);
 
   const { data: roleRows } = await supabase
     .from("user_roles")
@@ -38,7 +41,7 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
 
   const { data: profileRows } = await supabase
     .from("profiles")
-    .select("id, full_name, phone, email, photo_path, gender, father_of_confession, created_at");
+    .select("id, full_name, phone, email, photo_path, gender, father_of_confession, join_date");
 
   const profilesById = new Map((profileRows ?? []).map((p) => [p.id, p]));
 
@@ -75,7 +78,7 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
     .select("servant_id, service_date")
     .eq("attendee_type", "servant")
     .in("servant_id", userIds)
-    .gte("service_date", twelveMonthsAgoISO);
+    .gte("service_date", windowStartISO);
 
   const presentByServant = new Map<string, Set<string>>();
   const allTrackedDates = new Set<string>();
@@ -91,13 +94,16 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
     const profile = profilesById.get(userId);
     if (!profile) continue;
 
-    const since = profile.created_at.slice(0, 10) > twelveMonthsAgoISO ? profile.created_at.slice(0, 10) : twelveMonthsAgoISO;
-    const relevantDates = trackedDates.filter((d) => d >= since);
-    const presentSet = presentByServant.get(userId) ?? new Set<string>();
-    const averageAttendance =
-      relevantDates.length > 0
-        ? Math.round((relevantDates.filter((d) => presentSet.has(d)).length / relevantDates.length) * 100)
-        : null;
+    let averageAttendance: number | null = null;
+    if (profile.join_date) {
+      const since = profile.join_date > windowStartISO ? profile.join_date : windowStartISO;
+      const relevantDates = trackedDates.filter((d) => d >= since);
+      const presentSet = presentByServant.get(userId) ?? new Set<string>();
+      averageAttendance =
+        relevantDates.length > 0
+          ? Math.round((relevantDates.filter((d) => presentSet.has(d)).length / relevantDates.length) * 100)
+          : null;
+    }
 
     entries.push({
       id: profile.id,
@@ -107,7 +113,7 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
       photo_path: profile.photo_path,
       gender: profile.gender,
       father_of_confession: profile.father_of_confession,
-      created_at: profile.created_at,
+      join_date: profile.join_date,
       isGeneralCoordinator: acc.isGeneralCoordinator,
       servantGroups: acc.servantGroups,
       isUnassignedServant: acc.isUnassignedServant,

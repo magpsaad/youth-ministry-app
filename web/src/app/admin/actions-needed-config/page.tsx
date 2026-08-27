@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
-import { getAppSettings } from "@/lib/app-settings";
+import { getAppSettings, getAttendanceWindowSettings } from "@/lib/app-settings";
 import { getActionsNeededConfigAction } from "@/app/admin/actions-needed-config/actions";
 import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon } from "@/components/icons";
@@ -23,7 +23,11 @@ export default async function ActionsNeededConfigPage() {
     );
   }
 
-  const [settings, config] = await Promise.all([getAppSettings(), getActionsNeededConfigAction()]);
+  const [settings, config, windowSettings] = await Promise.all([
+    getAppSettings(),
+    getActionsNeededConfigAction(),
+    getAttendanceWindowSettings(),
+  ]);
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
@@ -45,10 +49,10 @@ export default async function ActionsNeededConfigPage() {
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={32} circular={false} />
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
         </Link>
-        <p className="mt-1 text-sm opacity-90">Actions Needed Config</p>
+        <p className="mt-1 text-sm opacity-90">Actions Needed &amp; Attendance Config</p>
       </header>
       <main className="max-w-2xl mx-auto px-4 py-6">
-        <ActionsNeededConfigInteractive initial={config} />
+        <ActionsNeededConfigInteractive initial={config} initialWindowSettings={windowSettings} />
       </main>
     </div>
   );

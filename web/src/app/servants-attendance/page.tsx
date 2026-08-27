@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
-import { getAppSettings } from "@/lib/app-settings";
+import { getAppSettings, getAttendanceWindowSettings } from "@/lib/app-settings";
 import { getServantAttendanceBundle } from "@/lib/servant-attendance";
 import { logAudit } from "@/lib/audit";
 import { AppLogo } from "@/components/AppLogo";
@@ -24,7 +24,11 @@ export default async function ServantsAttendancePage() {
     );
   }
 
-  const [settings, bundle] = await Promise.all([getAppSettings(), getServantAttendanceBundle()]);
+  const [settings, bundle, windowSettings] = await Promise.all([
+    getAppSettings(),
+    getServantAttendanceBundle(),
+    getAttendanceWindowSettings(),
+  ]);
   await logAudit(user.id, "SERVANT_ATTENDANCE_VIEWED");
 
   return (
@@ -50,7 +54,7 @@ export default async function ServantsAttendancePage() {
         <p className="mt-1 text-sm opacity-90">Servants Attendance</p>
       </header>
       <main className="max-w-3xl mx-auto px-4 py-6">
-        <ServantsAttendanceInteractive bundle={bundle} />
+        <ServantsAttendanceInteractive bundle={bundle} windowWeeks={windowSettings.servant_attendance_window_weeks} />
       </main>
     </div>
   );
