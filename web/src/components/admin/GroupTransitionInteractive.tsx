@@ -1,0 +1,178 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import Link from "next/link";
+import type { TransitionPreview } from "@/lib/group-transition";
+import type { ServantDirectoryEntry } from "@/lib/servant-directory";
+import type { GroupSummary } from "@/lib/groups";
+import {
+  runGroupTransitionAction,
+  getPostTransitionReviewDataAction,
+} from "@/app/admin/group-transition/actions";
+import { ServantAssignmentsInteractive } from "@/components/ServantAssignmentsInteractive";
+
+type Stage = "preview" | "confirming" | "done";
+
+/** REQUIREMENTS.md §5 -- confirmation-gated preview, then (on success) the
+ * optional/skippable servant-assignment review and the QR reprint prompt.
+ * The transition itself runs atomically inside run_group_transition()
+ * (migration 0028) -- this component just drives the surrounding flow. */
+export function GroupTransitionInteractive({ initialPreview }: { initialPreview: TransitionPreview }) {
+  const [preview] = useState(initialPreview);
+  const [newCohortYear, setNewCohortYear] = useState(initialPreview.suggestedNewCohortYear);
+  const [stage, setStage] = useState<Stage>("preview");
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [affectedGroupNames, setAffectedGroupNames] = useState<string[]>([]);
+  const [reviewData, setReviewData] = useState<{ servants: ServantDirectoryEntry[]; groups: GroupSummary[] } | null>(
+    null,
+  );
+  const [showReview, setShowReview] = useState(false);
+
+  const advancing = preview.groups.filter((g) => g.nextName && g.nextName !== g.name);
+
+  function handleConfirm() {
+    setError(null);
+    startTransition(async () => {
+      const res = await runGroupTransitionAction(newCohortYear);
+      if (res.error) {
+        setError(res.error);
+        setStage("preview");
+        return;
+      }
+      setAffectedGroupNames(res.affectedGroupNames ?? []);
+      setStage("done");
+    });
+  }
+
+  function handleShowReview() {
+    setShowReview(true);
+    startTransition(async () => {
+      const data = await getPostTransitionReviewDataAction();
+      setReviewData(data);
+    });
+  }
+
+  if (stage === "done") {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+          <h2 className="text-lg font-bold text-[#155724] mb-2">Transition Complete</h2>
+          <p className="text-sm text-[#666] mb-3">
+            Group labels have changed — reprint QR codes for:
+          </p>
+          <ul className="list-disc pl-5 text-sm text-[#333] mb-4 space-y-0.5">
+            {affectedGroupNames.map((name) => (
+              <li key={name}>{name}</li>
+            ))}
+          </ul>
+          <Link
+            href="/qr-codes"
+            className="inline-block rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45]"
+          >
+            Go to Print QR Codes
+          </Link>
+        </div>
+
+        <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+          <h2 className="text-lg font-bold text-[#1e3a5f] mb-2">Review Servant Assignments (optional)</h2>
+          <p className="text-sm text-[#666] mb-3">
+            Servants and Sub-Coordinators who were scoped to the cohort that just merged into Yr 5+ have already been
+            reassigned to the new Yr 1 cohort automatically. Use this to fine-tune anyone's assignment now, or skip
+            and handle it later via Servant Assignments.
+          </p>
+          {!showReview ? (
+            <button
+              type="button"
+              onClick={handleShowReview}
+              className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45]"
+            >
+              Review Now
+            </button>
+          ) : !reviewData ? (
+            <p className="text-sm text-[#666]">Loading…</p>
+          ) : (
+            <ServantAssignmentsInteractive servants={reviewData.servants} groups={reviewData.groups} canManageServants />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+        <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">What Will Happen</h2>
+        <p className="text-sm text-[#666] mb-4">
+          This runs atomically — if anything fails partway through, nothing is changed.
+        </p>
+
+        <div className="divide-y divide-[#f0f0f0] mb-4">
+          {advancing.map((g) => (
+            <div key={g.id} className="py-2 flex items-center justify-between text-sm">
+              <span className="text-[#333]">{g.name}</span>
+              <span className="text-[#666]">→ {g.nextName}</span>
+            </div>
+          ))}
+        </div>
+
+        {preview.outgoingGroupName && (
+          <div className="rounded-md bg-[#fff3cd] text-[#856404] text-sm px-3 py-2 mb-4">
+            <p>
+              <strong>{preview.outgoingGroupName}</strong> merges into Yr 5+. Its members join the permanent Yr 5+
+              roster; its Servants and Sub-Coordinators roll back to serve the new Yr 1 cohort instead of following
+              their graduating members. Yr 5+'s QR color updates to match this cohort's color.
+            </p>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-semibold text-[#333]">New Yr 0 cohort year</label>
+          <input
+            type="number"
+            value={newCohortYear}
+            onChange={(e) => setNewCohortYear(Number(e.target.value))}
+            className="w-28 rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          />
+        </div>
+
+        {error && <p className="mt-3 text-sm text-[#dc3545]">{error}</p>}
+
+        <div className="mt-4">
+          {stage === "preview" ? (
+            <button
+              type="button"
+              onClick={() => setStage("confirming")}
+              className="rounded-md bg-[#dc3545] px-4 py-2 text-sm font-semibold text-white hover:bg-[#c82333]"
+            >
+              Transition Groups…
+            </button>
+          ) : (
+            <div className="rounded-md border-2 border-[#dc3545] p-4">
+              <p className="text-sm font-semibold text-[#721c24] mb-3">
+                This cannot be undone from the app. Confirm you want to run this transition now?
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleConfirm}
+                  disabled={pending}
+                  className="rounded-md bg-[#dc3545] px-4 py-2 text-sm font-semibold text-white hover:bg-[#c82333] disabled:opacity-60"
+                >
+                  {pending ? "Running…" : "Yes, Transition Groups"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStage("preview")}
+                  className="rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

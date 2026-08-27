@@ -157,7 +157,12 @@ export default async function LandingPage() {
               >
                 App Settings
               </Link>
-              <StubButton label="Group Transition" />
+              <Link
+                href="/admin/group-transition"
+                className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
+              >
+                Group Transition
+              </Link>
               <Link
                 href="/admin/audit-logs"
                 className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45]"
@@ -181,19 +186,5 @@ export default async function LandingPage() {
         )}
       </main>
     </div>
-  );
-}
-
-function StubButton({ label, fullWidth }: { label: string; fullWidth?: boolean }) {
-  return (
-    <button
-      disabled
-      title="Coming in a later phase"
-      className={`rounded-md bg-[#f0f0f0] px-4 py-3 text-sm font-semibold text-[#999] cursor-not-allowed ${
-        fullWidth ? "sm:col-span-2" : ""
-      }`}
-    >
-      {label}
-    </button>
   );
 }
