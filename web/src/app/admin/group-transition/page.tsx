@@ -1,0 +1,55 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/supabase/get-current-user";
+import { getAccessSummary } from "@/lib/roles";
+import { getAppSettings } from "@/lib/app-settings";
+import { getTransitionPreview } from "@/lib/group-transition";
+import { AppLogo } from "@/components/AppLogo";
+import { HomeIcon } from "@/components/icons";
+import { SignOutButton } from "@/components/SignOutButton";
+import { GroupTransitionInteractive } from "@/components/admin/GroupTransitionInteractive";
+
+/** REQUIREMENTS.md §5/§6.10/§6.1 -- Admin Corner, Admins only. */
+export default async function GroupTransitionPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const access = await getAccessSummary(user.id);
+  if (!access.isAdmin) {
+    return (
+      <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] p-4">
+        <p className="text-sm text-[#666]">You don&rsquo;t have access to this page.</p>
+      </div>
+    );
+  }
+
+  const [settings, preview] = await Promise.all([getAppSettings(), getTransitionPreview()]);
+
+  return (
+    <div className="min-h-full bg-[#f5f5f5]">
+      <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative">
+        <Link
+          href="/"
+          title="Home"
+          aria-label="Home"
+          className="absolute top-2.5 left-4 inline-flex items-center gap-1 text-white/70 hover:text-white transition-colors"
+        >
+          <HomeIcon className="h-4 w-4" />
+          <span className="text-xs font-medium">Home</span>
+        </Link>
+        <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">
+          <SignOutButton className="text-white/70 hover:text-white transition-colors" />
+          <span className="text-[10px] text-white/60">Version {settings.app_version}</span>
+        </div>
+        <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+          <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={32} circular={false} />
+          <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
+        </Link>
+        <p className="mt-1 text-sm opacity-90">Group Transition</p>
+      </header>
+      <main className="max-w-2xl mx-auto px-4 py-6">
+        <GroupTransitionInteractive initialPreview={preview} />
+      </main>
+    </div>
+  );
+}

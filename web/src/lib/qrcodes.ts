@@ -66,7 +66,7 @@ export async function getQrCodesForPrinting(includePreEntry: boolean): Promise<Q
 
   const { data } = await supabase
     .from("qr_codes")
-    .select("id, label, check_in_token, printed_at, updated_at, group:groups(ladder_position, qr_color, cohort_year)");
+    .select("id, label, check_in_token, printed_at, updated_at, group:groups(ladder_position, qr_color)");
 
   const rows = (data ?? []) as unknown as {
     id: string;
@@ -74,7 +74,7 @@ export async function getQrCodesForPrinting(includePreEntry: boolean): Promise<Q
     check_in_token: string;
     printed_at: string | null;
     updated_at: string;
-    group: { ladder_position: number; qr_color: string | null; cohort_year: number } | null;
+    group: { ladder_position: number; qr_color: string | null } | null;
   }[];
 
   const filtered = rows.filter((r) => includePreEntry || r.group?.ladder_position !== 0);
@@ -97,16 +97,12 @@ export async function getQrCodesForPrinting(includePreEntry: boolean): Promise<Q
       const needsReprint = !r.printed_at || new Date(r.updated_at) > new Date(r.printed_at);
       const color = r.group?.qr_color ?? SERVANTS_COLOR;
 
-      // Print-specific label shortening: the terminal (5+) group's stored
-      // label grows every year (e.g. "2003 Cohort and earlier") -- too long
-      // for the printed pill, so it's recomputed live here instead of
-      // stored, matching how the terminal aggregate is derived elsewhere.
-      let label = r.label;
-      if (r.group && r.group.ladder_position >= 5) {
-        label = `${r.group.cohort_year} & earlier - Yr 5+`;
-      } else if (!r.group) {
-        label = "SAY Servants";
-      }
+      // The terminal (5+) group is now a single, permanent merged bucket
+      // (REQUIREMENTS.md §2.2/§5, revised during Phase G) -- its name is a
+      // fixed, admin-set value like any other group's, not regenerated
+      // from a shifting cohort_year, so its stored label is used as-is.
+      // Only the shared Servants QR (no group row) still needs an override.
+      const label = r.group ? r.label : "SAY Servants";
 
       return { id: r.id, label, checkInUrl, svg, color, needsReprint };
     }),
