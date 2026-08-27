@@ -3,6 +3,7 @@ import type { University } from "@/lib/universities";
 import type { ServantOption } from "@/lib/servants";
 import { MemberDetailLink } from "./MemberDetailLink";
 import { PhoneLink } from "@/components/PhoneLink";
+import { memberPhotoUrl } from "@/lib/storage";
 
 const PROXIMITY_BADGE: Record<string, string> = {
   Local: "bg-[#d1ecf1] text-[#0c5460]",
@@ -36,18 +37,24 @@ export function MemberGrid({
     <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {members.map((m) => {
         const proximity = m.university?.proximity ?? "Unknown";
+        const photoUrl = memberPhotoUrl(m.photo_path);
         return (
           <div
             key={m.id}
             className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] border-l-4 border-[#1e3a5f] p-4 hover:-translate-y-1 hover:shadow-[0_4px_15px_rgba(0,0,0,0.15)] transition-all"
           >
             <div className="flex items-center gap-3">
-              <div className="h-[50px] w-[50px] shrink-0 rounded-full bg-[#1e3a5f] text-white font-bold flex items-center justify-center">
-                {m.full_name
-                  .split(" ")
-                  .map((w) => w[0])
-                  .slice(0, 2)
-                  .join("")}
+              <div className="h-[50px] w-[50px] shrink-0 rounded-full bg-[#1e3a5f] text-white font-bold flex items-center justify-center overflow-hidden">
+                {photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={photoUrl} alt={m.full_name} className="h-full w-full object-cover" />
+                ) : (
+                  m.full_name
+                    .split(" ")
+                    .map((w) => w[0])
+                    .slice(0, 2)
+                    .join("")
+                )}
               </div>
               <div className="min-w-0">
                 <MemberDetailLink
