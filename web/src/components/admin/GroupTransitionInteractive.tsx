@@ -77,9 +77,10 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
         <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
           <h2 className="text-lg font-bold text-[#1e3a5f] mb-2">Review Servant Assignments (optional)</h2>
           <p className="text-sm text-[#666] mb-3">
-            Servants and Sub-Coordinators who were scoped to the cohort that just merged into Yr 5+ have already been
-            reassigned to the new Yr 1 cohort automatically. Use this to fine-tune anyone's assignment now, or skip
-            and handle it later via Servant Assignments.
+            Servants and Sub-Coordinators who were scoped to the <em>old</em> Yr 5+ group have already been reassigned
+            to the new Yr 1 cohort automatically — the group that just became the new Yr 5+ keeps its own servants,
+            unaffected. Use this to fine-tune anyone&rsquo;s assignment now, or skip and handle it later via Servant
+            Assignments.
           </p>
           {!showReview ? (
             <button
@@ -116,12 +117,19 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
           ))}
         </div>
 
-        {preview.outgoingGroupName && (
+        {preview.newTerminalGroupName && (
           <div className="rounded-md bg-[#fff3cd] text-[#856404] text-sm px-3 py-2 mb-4">
             <p>
-              <strong>{preview.outgoingGroupName}</strong> merges into Yr 5+. Its members join the permanent Yr 5+
-              roster; its Servants and Sub-Coordinators roll back to serve the new Yr 1 cohort instead of following
-              their graduating members. Yr 5+'s QR color updates to match this cohort's color.
+              Yr 4 becomes the new Yr 5+, keeping its own color, name pattern, and its own servants — just like every
+              other year advancing.
+              {preview.oldTerminalGroupName && (
+                <>
+                  {" "}
+                  <strong>{preview.oldTerminalGroupName}</strong> (the current Yr 5+) is absorbed into it and
+                  archived: its members join the new Yr 5+ roster, and its Servants/Sub-Coordinators/Read-Only roll
+                  back to serve the new Yr 1 instead.
+                </>
+              )}
             </p>
           </div>
         )}

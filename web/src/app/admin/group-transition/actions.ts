@@ -39,7 +39,6 @@ export async function runGroupTransitionAction(newPreEntryCohortYear: number): P
   const affectedGroupNames = before.groups
     .filter((g) => g.nextName && g.nextName !== g.name)
     .map((g) => g.nextName as string);
-  if (before.outgoingGroupName) affectedGroupNames.push(`${before.outgoingGroupName} (merged into Yr 5+)`);
 
   const { error } = await supabase.rpc("run_group_transition", { new_pre_entry_cohort_year: newPreEntryCohortYear });
   if (error) return { error: error.message };

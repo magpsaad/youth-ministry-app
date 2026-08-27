@@ -1,30 +1,30 @@
 -- 0028_group_transition_merge_terminal.sql
 -- REQUIREMENTS.md §2.2/§5/§6.15 -- revises the terminal (Yr 5+) tier's
--- design after owner review: it is now ONE single, permanent group row
--- (already exists -- the 2003 Cohort row seeded at ladder_position 5),
--- not a new row created at position 5 on every transition. Distinguishing
--- individual cohorts within the terminal tier is explicitly not needed,
--- not even for archiving -- members leave the terminal tier one at a time
--- as they voluntarily stop attending, never as a whole-cohort batch.
+-- design after owner review: it is now ONE single, permanent group SLOT
+-- (not one row per graduated cohort) -- but critically, the SURVIVING row
+-- each year is the cohort advancing from position 4, not a separate fixed
+-- row. Distinguishing individual cohorts within the terminal tier is not
+-- needed, not even for archiving -- members leave one at a time, on a
+-- case-by-case basis, never as a whole-cohort batch.
 --
--- Replaces 0006's run_group_transition(). Two owner-confirmed corrections
--- to the first draft of this migration (never shipped):
+-- Replaces 0006's run_group_transition(). This file went through three
+-- owner-corrected drafts before landing here -- final, owner-confirmed model:
 --
--- 1. Youths at position 4 merge into the terminal group, but their
---    Servants/Sub-Coordinators/Read-Only grants do NOT follow them there --
---    they "roll back" to the freshest incoming cohort (the group that WAS
---    position 0, about to become position 1) instead, since servant energy
---    is better redirected to the newest cohort than kept on one that's now
---    mostly in the less-actively-managed terminal tier.
--- 2. QR colors: Years 1-4 keep their own already-assigned colors
---    unchanged (existing behavior, migration 0019/Phase E). The terminal
---    group's OWN color is NOT permanent -- each transition it updates to
---    the just-merged Yr 4 cohort's color (since the terminal tier's
---    population becomes dominated by whoever most recently joined it).
---    The brand-new incoming Yr 0 cohort inherits the terminal group's
---    color AS IT WAS immediately before that update -- i.e., last
---    transition's terminal color relays down to this transition's new
---    Yr 0, one step at a time, every transition.
+-- 1. Yr 4's row BECOMES the new terminal row, exactly like every other
+--    position advances (0->1, 1->2, 2->3, 3->4) -- same row, same
+--    already-assigned qr_color (untouched), just `ladder_position` set to
+--    5 and its name regenerated as "{its cohort_year} and earlier - Yr 5+"
+--    (not the generic 1-4 template). Its own Servants/Sub-Coordinators/
+--    Read-Only naturally stay attached -- no group_id change at all,
+--    exactly like a normal position advance.
+-- 2. The OLD terminal row (whatever was ladder_position 5 before this
+--    transition) is what gets absorbed and archived: its members merge
+--    into the row that just became the new terminal, its own QR is
+--    deleted, and its own Servants/Sub-Coordinators/Read-Only roll back to
+--    the new Yr 1 (the group that was position 0, becoming position 1 in
+--    this same transition) rather than following into the new terminal row.
+-- 3. New Yr 0's color inherits the OLD terminal row's color, captured
+--    immediately before that row is archived.
 
 create or replace function run_group_transition(new_pre_entry_cohort_year integer)
 returns void
@@ -32,52 +32,57 @@ language plpgsql
 security definer
 as $$
 declare
-  v_terminal_group_id uuid;
-  v_terminal_old_color text;
-  v_outgoing_group     groups%rowtype;
-  v_new_yr1_group_id   uuid; -- currently ladder_position 0, about to become 1
-  v_new_position0_id   uuid;
+  v_old_terminal_group_id uuid;
+  v_old_terminal_color    text;
+  v_new_terminal_group    groups%rowtype; -- currently ladder_position 4, about to become the new terminal
+  v_new_yr1_group_id      uuid;           -- currently ladder_position 0, about to become 1
+  v_new_position0_id      uuid;
 begin
   if not is_admin() then
     raise exception 'Only Admins may run a Group Transition';
   end if;
 
-  select id, qr_color into v_terminal_group_id, v_terminal_old_color
+  select id, qr_color into v_old_terminal_group_id, v_old_terminal_color
     from groups where ladder_position = 5 and not is_archived limit 1;
-  if v_terminal_group_id is null then
-    raise exception 'No terminal (Yr 5+) group found -- expected exactly one permanent row at ladder_position 5';
-  end if;
 
-  select * into v_outgoing_group from groups where ladder_position = 4 and not is_archived limit 1;
+  select * into v_new_terminal_group from groups where ladder_position = 4 and not is_archived limit 1;
   select id into v_new_yr1_group_id from groups where ladder_position = 0 and not is_archived limit 1;
 
-  if v_outgoing_group.id is not null then
-    -- Youths merge into the terminal group.
-    update members set group_id = v_terminal_group_id where group_id = v_outgoing_group.id;
+  if v_new_terminal_group.id is not null then
+    if v_old_terminal_group_id is not null then
+      -- Members of the OLD terminal group merge into the row becoming the new terminal.
+      update members set group_id = v_new_terminal_group.id where group_id = v_old_terminal_group_id;
 
-    -- Servants/Sub-Coordinators/Read-Only roll back to the freshest
-    -- incoming cohort rather than following their graduating youths.
-    if v_new_yr1_group_id is not null then
-      update user_roles set group_id = v_new_yr1_group_id where group_id = v_outgoing_group.id;
+      -- Servants/Sub-Coordinators/Read-Only of the OLD terminal group roll
+      -- back to the new Yr 1, rather than following into the new terminal row.
+      if v_new_yr1_group_id is not null then
+        update user_roles set group_id = v_new_yr1_group_id where group_id = v_old_terminal_group_id;
+      end if;
+
+      -- Its own check-in QR is now defunct.
+      delete from qr_codes where group_id = v_old_terminal_group_id;
+
+      update groups set is_archived = true where id = v_old_terminal_group_id;
     end if;
 
-    -- Terminal group's color updates to the just-merged cohort's color.
-    update groups set qr_color = v_outgoing_group.qr_color where id = v_terminal_group_id;
-
-    -- Its own check-in QR is now defunct -- the terminal group's own
-    -- permanent QR is used going forward instead.
-    delete from qr_codes where group_id = v_outgoing_group.id;
-
-    update groups set is_archived = true where id = v_outgoing_group.id;
+    -- Yr 4's row becomes the new terminal group -- same row, ladder
+    -- position advances, name regenerated with the aggregate pattern. Its
+    -- own color is untouched (keeps its already-assigned color, same as
+    -- every other position advance). Its own Servants/Sub-Coordinators/
+    -- Read-Only naturally stay attached -- no group_id change needed,
+    -- they just follow their row like any normal advance.
+    update groups
+    set ladder_position = 5,
+        name = v_new_terminal_group.cohort_year::text || ' and earlier - Yr 5+'
+    where id = v_new_terminal_group.id;
   end if;
 
-  -- Advance every remaining non-terminal, non-archived group (positions 1-3) one position.
+  -- Advance every remaining non-terminal, non-archived group (positions 0-3) one position.
   update groups
   set ladder_position = ladder_position + 1
   where ladder_position < 4 and not is_archived;
 
-  -- Regenerate names for positions 1-4 only -- the terminal group's name is
-  -- permanent/admin-set and is never touched here.
+  -- Regenerate names for positions 1-4 (position 5's name was already set above).
   update groups
   set name = replace(
         replace(
@@ -88,16 +93,17 @@ begin
       )
   where cohort_year is not null and not is_archived and ladder_position < 5;
 
-  -- Keep group-linked QR labels in sync with the just-regenerated names --
-  -- also bumps qr_codes.updated_at via its own trigger, correctly flagging
-  -- "Needs Reprint" for every group whose label just changed.
+  -- Keep every group-linked QR label in sync with its group's current name
+  -- (also bumps qr_codes.updated_at via its own trigger, correctly
+  -- flagging "Needs Reprint" for every group whose label just changed --
+  -- including the new terminal group).
   update qr_codes
   set label = groups.name
   from groups
-  where qr_codes.group_id = groups.id and groups.ladder_position < 5 and not groups.is_archived;
+  where qr_codes.group_id = groups.id and not groups.is_archived;
 
-  -- Create the new pre-entry (position 0) cohort, inheriting the terminal
-  -- group's color as it was BEFORE this transition's update above.
+  -- Create the new pre-entry (position 0) cohort, inheriting the OLD
+  -- terminal group's color as it was immediately before being archived.
   insert into groups (cohort_year, ladder_position, name, display_order, qr_color)
   values (
     new_pre_entry_cohort_year,
@@ -107,7 +113,7 @@ begin
       '{position_label}', '0'
     ),
     (select coalesce(max(display_order), 0) + 1 from groups),
-    v_terminal_old_color
+    v_old_terminal_color
   )
   returning id into v_new_position0_id;
 
@@ -122,6 +128,7 @@ begin
   insert into audit_log (user_id, action_type, details)
   values (auth.uid(), 'GROUP_TRANSITION_RUN',
           jsonb_build_object('new_pre_entry_cohort_year', new_pre_entry_cohort_year,
-                              'merged_group_id', v_outgoing_group.id));
+                              'new_terminal_group_id', v_new_terminal_group.id,
+                              'archived_old_terminal_group_id', v_old_terminal_group_id));
 end;
 $$;
