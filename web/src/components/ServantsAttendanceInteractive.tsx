@@ -23,6 +23,17 @@ export function ServantsAttendanceInteractive({
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [, startTransition] = useTransition();
+  const [sortKey, setSortKey] = useState<"name" | "group" | "attendance" | "status">("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  function handleSort(key: typeof sortKey) {
+    if (key === sortKey) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
 
   const dateOptions = useMemo(() => {
     const options = bundle.trackedDates.map((d) => ({
@@ -62,11 +73,32 @@ export function ServantsAttendanceInteractive({
     });
   }
 
+  const statusRank: Record<ReturnType<typeof statusLabel>, number> = { Present: 0, Absent: 1, "Never Attended": 2 };
+
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     const filtered = q ? bundle.members.filter((m) => m.full_name.toLowerCase().includes(q)) : bundle.members;
-    return [...filtered].sort((a, b) => a.full_name.localeCompare(b.full_name));
-  }, [bundle.members, search]);
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      let cmp: number;
+      switch (sortKey) {
+        case "group":
+          cmp = a.groupLabel.localeCompare(b.groupLabel);
+          break;
+        case "attendance":
+          cmp = (a.averageAttendance ?? -1) - (b.averageAttendance ?? -1);
+          break;
+        case "status":
+          cmp = statusRank[statusLabel(a.id)] - statusRank[statusLabel(b.id)];
+          break;
+        default:
+          cmp = 0;
+      }
+      // Name is always the tiebreaker (and the sort key itself when sortKey === "name").
+      return dir * (cmp || a.full_name.localeCompare(b.full_name));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bundle.members, search, sortKey, sortDir, date, attendanceByServant]);
 
   if (dateOptions.length === 0) {
     return (
@@ -111,10 +143,17 @@ export function ServantsAttendanceInteractive({
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[#f5f5f5] text-left text-[#666]">
-              <th className="px-4 py-2 font-semibold">Servant</th>
-              <th className="px-4 py-2 font-semibold">Group</th>
-              <th className="px-4 py-2 font-semibold">Attendance %</th>
-              <th className="px-4 py-2 text-right font-semibold">Status</th>
+              <SortableHeader label="Servant" sortKey="name" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+              <SortableHeader label="Group" sortKey="group" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+              <SortableHeader label="Attendance %" sortKey="attendance" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+              <SortableHeader
+                label="Status"
+                sortKey="status"
+                activeKey={sortKey}
+                dir={sortDir}
+                onSort={handleSort}
+                align="right"
+              />
             </tr>
           </thead>
           <tbody className="divide-y divide-[#f0f0f0]">
@@ -157,5 +196,35 @@ export function ServantsAttendanceInteractive({
         </table>
       </div>
     </div>
+  );
+}
+
+function SortableHeader<K extends string>({
+  label,
+  sortKey,
+  activeKey,
+  dir,
+  onSort,
+  align,
+}: {
+  label: string;
+  sortKey: K;
+  activeKey: K;
+  dir: "asc" | "desc";
+  onSort: (key: K) => void;
+  align?: "right";
+}) {
+  const active = activeKey === sortKey;
+  return (
+    <th className={`px-4 py-2 font-semibold ${align === "right" ? "text-right" : "text-left"}`}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`inline-flex items-center gap-1 hover:text-[#1e3a5f] ${active ? "text-[#1e3a5f]" : ""}`}
+      >
+        {label}
+        <span className="text-[10px]">{active ? (dir === "asc" ? "▲" : "▼") : "⇅"}</span>
+      </button>
+    </th>
   );
 }

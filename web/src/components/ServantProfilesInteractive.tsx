@@ -40,20 +40,27 @@ export function ServantProfilesInteractive({
 
   const categorical = useMemo(() => {
     const byLabel = new Map<string, ServantDirectoryEntry[]>();
+    const positionByLabel = new Map<string, number>();
     const order: string[] = [];
-    function add(label: string, entry: ServantDirectoryEntry) {
+    function add(label: string, entry: ServantDirectoryEntry, ladderPosition?: number) {
       if (!byLabel.has(label)) {
         byLabel.set(label, []);
         order.push(label);
+        if (ladderPosition !== undefined) positionByLabel.set(label, ladderPosition);
       }
       byLabel.get(label)!.push(entry);
     }
     for (const s of filtered) {
-      for (const g of s.servantGroups) add(g.name, s);
+      for (const g of s.servantGroups) add(g.name, s, g.ladder_position);
       if (s.isUnassignedServant) add("Unassigned", s);
       if (s.isGeneralCoordinator) add("General Coordinators", s);
     }
-    const groupLabels = order.filter((l) => l !== "General Coordinators" && l !== "Unassigned").sort();
+    // Youngest-to-oldest cohort order (ladder_position ascending), not
+    // alphabetical by name -- same fix as Servant Assignments' Categorical
+    // view (owner-reported), so both screens agree on ordering.
+    const groupLabels = order
+      .filter((l) => l !== "General Coordinators" && l !== "Unassigned")
+      .sort((a, b) => (positionByLabel.get(a) ?? 0) - (positionByLabel.get(b) ?? 0));
     const tail = order.filter((l) => l === "General Coordinators" || l === "Unassigned").sort().reverse();
 
     return [...groupLabels, ...tail].map((label) => ({

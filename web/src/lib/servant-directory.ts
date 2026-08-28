@@ -11,7 +11,7 @@ export type ServantDirectoryEntry = {
   father_of_confession: string | null;
   join_date: string | null;
   isGeneralCoordinator: boolean;
-  servantGroups: { id: string; name: string }[]; // groups this person holds a 'servant' role for
+  servantGroups: { id: string; name: string; ladder_position: number }[]; // groups this person holds a 'servant' role for
   isUnassignedServant: boolean; // holds a 'servant' role with no group
   averageAttendance: number | null; // null = never attended, or no tracked dates in the window
 };
@@ -40,7 +40,7 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
 
   const { data: roleRows } = await supabase
     .from("user_roles")
-    .select("user_id, role, group_id, groups(name)")
+    .select("user_id, role, group_id, groups(name, ladder_position)")
     .in("role", ["servant", "general_coordinator"]);
 
   const { data: profileRows } = await supabase
@@ -51,7 +51,7 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
 
   type Accum = {
     isGeneralCoordinator: boolean;
-    servantGroups: { id: string; name: string }[];
+    servantGroups: { id: string; name: string; ladder_position: number }[];
     isUnassignedServant: boolean;
   };
   const byUser = new Map<string, Accum>();
@@ -65,8 +65,8 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
     if (r.role === "general_coordinator") acc.isGeneralCoordinator = true;
     if (r.role === "servant") {
       if (r.group_id) {
-        const groupName = (r.groups as unknown as { name: string } | null)?.name;
-        if (groupName) acc.servantGroups.push({ id: r.group_id, name: groupName });
+        const group = r.groups as unknown as { name: string; ladder_position: number } | null;
+        if (group?.name != null) acc.servantGroups.push({ id: r.group_id, name: group.name, ladder_position: group.ladder_position });
       } else {
         acc.isUnassignedServant = true;
       }
