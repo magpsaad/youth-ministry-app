@@ -247,8 +247,14 @@ export function ServantAssignmentsInteractive({
       <span key={grant.id} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold" style={{ backgroundColor: bg, color: text }}>
         {label}
         {canManageServants && (
-          <button type="button" disabled={pending} onClick={() => handleRevoke(person.id, grant)} aria-label={`Remove ${label}`} className="disabled:opacity-60">
-            <i className="ti ti-x" style={{ fontSize: 11 }} />
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => handleRevoke(person.id, grant)}
+            aria-label={`Remove ${label}`}
+            className="leading-none disabled:opacity-60"
+          >
+            ×
           </button>
         )}
       </span>
@@ -268,9 +274,9 @@ export function ServantAssignmentsInteractive({
             setError(null);
           }}
           aria-label="Add role"
-          className="h-5 w-5 flex items-center justify-center rounded-full border border-[#ddd] text-[#666] hover:bg-[#f5f5f5]"
+          className="h-5 w-5 flex items-center justify-center rounded border border-[#ddd] text-[#666] leading-none hover:bg-[#f5f5f5]"
         >
-          <i className="ti ti-plus" style={{ fontSize: 12 }} />
+          +
         </button>
       );
     }
@@ -461,7 +467,7 @@ function BringSomeoneNew({
   if (!open) {
     return (
       <button type="button" onClick={onOpen} className="mt-3 w-full rounded-md border border-dashed border-[#ddd] px-3 py-1.5 text-xs font-semibold text-[#666] hover:bg-[#f5f5f5]">
-        <i className="ti ti-plus" style={{ fontSize: 12, verticalAlign: -1 }} /> Bring someone new in
+        + Bring someone new in
       </button>
     );
   }
