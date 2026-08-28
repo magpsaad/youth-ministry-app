@@ -4,6 +4,7 @@ export type ActionsNeededMember = {
   id: string;
   full_name: string;
   photo_path: string | null;
+  phone: string | null;
   assigned_servant_id: string | null;
   assignedServantName: string | null;
   proximity: "Local" | "Regional" | "Abroad" | "Unknown";
@@ -41,7 +42,7 @@ export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMe
     supabase
       .from("members")
       .select(
-        "id, full_name, photo_path, is_visitor, assigned_servant_id, assigned_servant:profiles(full_name), university:universities(proximity)",
+        "id, full_name, photo_path, phone, is_visitor, assigned_servant_id, assigned_servant:profiles(full_name), university:universities(proximity)",
       )
       .eq("group_id", groupId)
       .eq("status", "active"),
@@ -117,6 +118,7 @@ export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMe
         id: m.id,
         full_name: m.full_name,
         photo_path: m.photo_path,
+        phone: m.phone,
         assigned_servant_id: m.assigned_servant_id,
         assignedServantName: (m.assigned_servant as unknown as { full_name: string } | null)?.full_name ?? null,
         proximity,

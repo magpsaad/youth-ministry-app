@@ -50,7 +50,11 @@ export async function deleteMemberAction(memberId: string, groupId: string) {
   return { error: null };
 }
 
-/** Assigning a member to a servant also clears the "new assignment" flag it may have just set. */
+/** Assigning a member to a servant sets `is_new_assignment` so the member
+ * surfaces under that servant's Actions Needed list until the servant
+ * either outreaches them (auto-cleared by migration 0029's trigger) or
+ * dismisses the card (dismissNewAssignmentAction). Unassigning (servantId
+ * null) always clears the flag -- there's no servant left to notify. */
 export async function assignServantAction(memberId: string, groupId: string, servantId: string | null) {
   const supabase = await createClient();
   const {
@@ -58,12 +62,28 @@ export async function assignServantAction(memberId: string, groupId: string, ser
   } = await supabase.auth.getUser();
   const { error } = await supabase
     .from("members")
-    .update({ assigned_servant_id: servantId, is_new_assignment: false })
+    .update({ assigned_servant_id: servantId, is_new_assignment: servantId !== null })
     .eq("id", memberId);
   if (error) return { error: error.message };
 
   if (user) await logAudit(user.id, "SERVANT_ASSIGNED", { groupId, details: { memberId, servantId } });
   revalidatePath(`/g/${groupId}/members`);
+  revalidatePath(`/g/${groupId}/dashboard`);
+  return { error: null };
+}
+
+/** REQUIREMENTS.md §6.3/§7.1 -- manually dismisses a "Newly Assigned" Actions
+ * Needed card without requiring an outreach entry. Persistent (a DB column,
+ * not sessionStorage) since the card should stay gone across sessions. */
+export async function dismissNewAssignmentAction(memberId: string, groupId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { error } = await supabase.from("members").update({ is_new_assignment: false }).eq("id", memberId);
+  if (error) return { error: error.message };
+
+  if (user) await logAudit(user.id, "MEMBER_EDITED", { groupId, details: { memberId, action: "new_assignment_dismissed" } });
   revalidatePath(`/g/${groupId}/dashboard`);
   return { error: null };
 }
