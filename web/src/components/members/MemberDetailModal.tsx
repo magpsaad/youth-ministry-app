@@ -406,6 +406,8 @@ export function MemberDetailModal({
         <AddOutreachModal
           memberId={member.id}
           memberName={member.full_name}
+          memberPhone={member.phone}
+          memberLabel={memberLabel}
           groupId={groupId}
           currentUserName={currentUserName}
           onClose={() => setShowAddOutreach(false)}

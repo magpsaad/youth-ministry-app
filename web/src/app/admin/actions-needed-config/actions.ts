@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getAttendanceWindowSettings, type AttendanceWindowSettings } from "@/lib/app-settings";
+import { getAttendanceWindowSettings, type AttendanceWindowSettings, type AppSettings } from "@/lib/app-settings";
 
 export type ActionsNeededConfigRow = {
   proximity: "Local" | "Regional" | "Abroad" | "Unknown";
@@ -37,6 +37,23 @@ export async function updateActionsNeededConfigAction(row: ActionsNeededConfigRo
 }
 
 export { getAttendanceWindowSettings };
+
+export type AppSettingsFormInput = Omit<AppSettings, "app_version">;
+
+/** REQUIREMENTS.md §2/§6.3/§6.14 -- editable form for the app's identity/
+ * vocabulary fields (previously only ever set by one-off bootstrap SQL) plus
+ * the Current Birthdays date window. RLS restricts writes to Admins
+ * regardless of what this screen shows. */
+export async function updateAppSettingsAction(input: AppSettingsFormInput) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("app_settings").update(input).eq("id", true);
+  if (error) return { error: error.message };
+
+  // Branding fields are read on nearly every page (header, nav shell), so
+  // revalidate broadly rather than just this one admin route.
+  revalidatePath("/", "layout");
+  return { error: null };
+}
 
 /** REQUIREMENTS.md §7.2/§6.13 -- the two independent, admin-configurable
  * rolling-attendance-window settings, folded into this existing threshold-

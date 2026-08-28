@@ -1,16 +1,22 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { ActionsNeededConfigRow } from "@/app/admin/actions-needed-config/actions";
-import { updateActionsNeededConfigAction, updateAttendanceWindowSettingsAction } from "@/app/admin/actions-needed-config/actions";
+import type { ActionsNeededConfigRow, AppSettingsFormInput } from "@/app/admin/actions-needed-config/actions";
+import {
+  updateActionsNeededConfigAction,
+  updateAttendanceWindowSettingsAction,
+  updateAppSettingsAction,
+} from "@/app/admin/actions-needed-config/actions";
 import type { AttendanceWindowSettings } from "@/lib/app-settings";
 
 export function ActionsNeededConfigInteractive({
   initial,
   initialWindowSettings,
+  initialAppSettings,
 }: {
   initial: ActionsNeededConfigRow[];
   initialWindowSettings: AttendanceWindowSettings;
+  initialAppSettings: AppSettingsFormInput;
 }) {
   const [rows, setRows] = useState(initial);
   const [pending, startTransition] = useTransition();
@@ -20,6 +26,27 @@ export function ActionsNeededConfigInteractive({
   const [windowSettings, setWindowSettings] = useState(initialWindowSettings);
   const [windowSaved, setWindowSaved] = useState(false);
   const [windowError, setWindowError] = useState<string | null>(null);
+
+  const [appSettings, setAppSettings] = useState<AppSettingsFormInput>(initialAppSettings);
+  const [appSettingsSaved, setAppSettingsSaved] = useState(false);
+  const [appSettingsError, setAppSettingsError] = useState<string | null>(null);
+
+  function updateAppField<K extends keyof AppSettingsFormInput>(field: K, value: AppSettingsFormInput[K]) {
+    setAppSettings((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function handleSaveAppSettings() {
+    setAppSettingsError(null);
+    setAppSettingsSaved(false);
+    startTransition(async () => {
+      const res = await updateAppSettingsAction(appSettings);
+      if (res.error) {
+        setAppSettingsError(res.error);
+        return;
+      }
+      setAppSettingsSaved(true);
+    });
+  }
 
   function handleSaveWindows() {
     setWindowError(null);
@@ -53,6 +80,111 @@ export function ActionsNeededConfigInteractive({
 
   return (
     <div className="space-y-4">
+    <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+      <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">App Labels &amp; Branding</h2>
+      <p className="text-sm text-[#666] mb-4">
+        The app&rsquo;s identity and vocabulary, used everywhere it&rsquo;s displayed &mdash; e.g. Group Label
+        &ldquo;Youth&rdquo;, Ministry Label &ldquo;St Arsanius Youth Ministry&rdquo;.
+      </p>
+      {appSettingsError && <p className="mb-3 text-sm text-[#dc3545]">{appSettingsError}</p>}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+        <label className="text-xs text-[#666]">
+          Ministry Label (long title)
+          <input
+            value={appSettings.app_title_long}
+            onChange={(e) => updateAppField("app_title_long", e.target.value)}
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          />
+        </label>
+        <label className="text-xs text-[#666]">
+          Ministry Label (short title)
+          <input
+            value={appSettings.app_title_short}
+            onChange={(e) => updateAppField("app_title_short", e.target.value)}
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          />
+        </label>
+        <label className="text-xs text-[#666]">
+          Subtitle
+          <input
+            value={appSettings.app_subtitle}
+            onChange={(e) => updateAppField("app_subtitle", e.target.value)}
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          />
+        </label>
+        <label className="text-xs text-[#666]">
+          Group Label (e.g. &ldquo;Youth&rdquo;)
+          <input
+            value={appSettings.group_label}
+            onChange={(e) => updateAppField("group_label", e.target.value)}
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          />
+        </label>
+        <label className="text-xs text-[#666]">
+          Member Label (e.g. &ldquo;Member&rdquo;)
+          <input
+            value={appSettings.member_label}
+            onChange={(e) => updateAppField("member_label", e.target.value)}
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          />
+        </label>
+        <label className="text-xs text-[#666]">
+          Theme Color
+          <input
+            type="color"
+            value={appSettings.theme_color}
+            onChange={(e) => updateAppField("theme_color", e.target.value)}
+            className="mt-1 h-9 w-full rounded-md border border-[#ddd] px-2 py-1 focus:border-[#1e3a5f] focus:outline-none"
+          />
+        </label>
+        <label className="text-xs text-[#666] sm:col-span-2">
+          Logo URL (blank = no logo)
+          <input
+            value={appSettings.logo_url ?? ""}
+            onChange={(e) => updateAppField("logo_url", e.target.value === "" ? null : e.target.value)}
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          />
+        </label>
+      </div>
+      <h3 className="text-sm font-bold text-[#1e3a5f] mt-4 mb-1">Current Birthdays window</h3>
+      <p className="text-xs text-[#666] mb-2">
+        How many days before and after today a birthday counts as &ldquo;upcoming&rdquo; on the Dashboard.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+        <label className="text-xs text-[#666]">
+          Days before today
+          <input
+            type="number"
+            min={0}
+            value={appSettings.birthday_window_days_before}
+            onChange={(e) => updateAppField("birthday_window_days_before", Number(e.target.value))}
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          />
+        </label>
+        <label className="text-xs text-[#666]">
+          Days after today
+          <input
+            type="number"
+            min={0}
+            value={appSettings.birthday_window_days_after}
+            onChange={(e) => updateAppField("birthday_window_days_after", Number(e.target.value))}
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          />
+        </label>
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSaveAppSettings}
+          disabled={pending}
+          className="rounded-md bg-[#1e3a5f] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#152a45] disabled:opacity-60"
+        >
+          Save
+        </button>
+        {appSettingsSaved && <span className="text-xs text-[#155724]">Saved.</span>}
+      </div>
+    </div>
+
     <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
       <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Attendance Window Settings</h2>
       <p className="text-sm text-[#666] mb-1">How far back average-attendance % looks, as a rolling number of weeks.</p>
@@ -113,11 +245,14 @@ export function ActionsNeededConfigInteractive({
 
     <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
       <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Actions Needed Thresholds</h2>
+      <p className="text-sm text-[#666] mb-2">
+        Per-proximity thresholds for the Dashboard&rsquo;s &ldquo;Outreach Needed&rdquo; cards. A member is flagged
+        once, as of today, their current run of consecutive absences has reached the minimum below, and their most
+        recent outreach (or lack of any) is older than the outreach-staleness window.
+      </p>
       <p className="text-sm text-[#666] mb-4">
-        Per-proximity thresholds for the Dashboard&rsquo;s Actions Needed algorithm (REQUIREMENTS.md §7.1): a member
-        would be flagged once they meet the minimum presence count, minimum consecutive absences, AND their most
-        recent outreach is older than the outreach-staleness window, all at once. (The Dashboard section that
-        applies these is still a placeholder -- these thresholds are ready for whenever that&rsquo;s built.)
+        These cards clear themselves automatically &mdash; no one needs to dismiss them by hand. A card disappears
+        the moment the member shows up again, or as soon as any servant logs a new outreach entry for them.
       </p>
       {error && <p className="mb-3 text-sm text-[#dc3545]">{error}</p>}
 

@@ -52,7 +52,7 @@ export default async function ActionsNeededConfigPage() {
         <p className="mt-1 text-sm opacity-90">App Settings</p>
       </header>
       <main className="max-w-2xl mx-auto px-4 py-6">
-        <ActionsNeededConfigInteractive initial={config} initialWindowSettings={windowSettings} />
+        <ActionsNeededConfigInteractive initial={config} initialWindowSettings={windowSettings} initialAppSettings={settings} />
       </main>
     </div>
   );

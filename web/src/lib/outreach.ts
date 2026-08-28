@@ -75,3 +75,53 @@ export async function getOutreachEntries(groupId: string): Promise<OutreachEntry
     follow_up_due: r.follow_up_due,
   }));
 }
+
+export type FollowUpDueEntry = OutreachEntryFull & { member_photo_path: string | null };
+
+/** REQUIREMENTS.md §6.3/§6.6/§7.1 -- open follow-up reminders (`follow_up_due`
+ * on or before today, not yet dismissed) for one group, surfaced under the
+ * *entry's own creator* on the Dashboard's Actions Needed section -- the
+ * servant who set the reminder is the one being reminded, regardless of who
+ * the member is currently assigned to. Carries every field EditOutreachEntryModal
+ * needs so the Dashboard's "view original entry" link can open it without a
+ * second fetch. */
+export async function getFollowUpsDue(groupId: string): Promise<FollowUpDueEntry[]> {
+  const supabase = await createClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data } = await supabase
+    .from("outreach_entries")
+    .select(
+      "id, member_id, servant_id, occurred_at, type, notes, follow_up_due, member:members!inner(full_name, phone, photo_path, assigned_servant_id, group_id), servant:profiles(full_name)",
+    )
+    .eq("member.group_id", groupId)
+    .not("follow_up_due", "is", null)
+    .is("follow_up_dismissed_at", null)
+    .lte("follow_up_due", today)
+    .order("follow_up_due", { ascending: true });
+
+  return ((data ?? []) as unknown as {
+    id: string;
+    member_id: string;
+    servant_id: string;
+    occurred_at: string;
+    type: string | null;
+    notes: string | null;
+    follow_up_due: string | null;
+    member: { full_name: string; phone: string | null; photo_path: string | null; assigned_servant_id: string | null } | null;
+    servant: { full_name: string } | null;
+  }[]).map((r) => ({
+    id: r.id,
+    member_id: r.member_id,
+    member_name: r.member?.full_name ?? "Unknown",
+    member_phone: r.member?.phone ?? null,
+    member_photo_path: r.member?.photo_path ?? null,
+    assigned_servant_id: r.member?.assigned_servant_id ?? null,
+    servant_id: r.servant_id,
+    servant_name: r.servant?.full_name ?? "Unknown",
+    occurred_at: r.occurred_at,
+    type: r.type,
+    notes: r.notes,
+    follow_up_due: r.follow_up_due,
+  }));
+}

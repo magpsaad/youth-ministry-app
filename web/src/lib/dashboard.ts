@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAppSettings } from "@/lib/app-settings";
 
 export type MemberStatRow = {
   id: string;
@@ -19,6 +20,7 @@ export type BirthdayMember = {
   full_name: string;
   photo_path: string | null;
   date_of_birth: string;
+  phone: string | null;
   assigned_servant_id: string | null;
   assigned_servant: { full_name: string } | null;
 };
@@ -31,6 +33,23 @@ export type UnassignedMember = {
   program_of_study: string | null;
   university: { name: string } | null;
   gender: string | null;
+};
+
+/** REQUIREMENTS.md §6.3/§7.1 -- members recently assigned a servant who
+ * haven't been outreached yet (`is_new_assignment`, cleared automatically
+ * once an outreach entry is recorded for them -- migration 0029's trigger --
+ * or when a servant dismisses the card). Surfaced under the assigned
+ * servant's own list in the Dashboard's Actions Needed section. */
+export type NewlyAssignedMember = {
+  id: string;
+  full_name: string;
+  photo_path: string | null;
+  phone: string | null;
+  program_of_study: string | null;
+  university: { name: string } | null;
+  gender: string | null;
+  assigned_servant_id: string;
+  assignedServantName: string;
 };
 
 /** Lightweight, used by the nav shell header on every tab (not just Dashboard). */
@@ -113,15 +132,27 @@ export async function getDashboardStatsData(groupId: string): Promise<DashboardS
   return { rows, lastServiceDate, visitorCount: active.length - nonVisitors.length };
 }
 
-/** REQUIREMENTS.md §6.3 -- 7 days ago through 14 days ahead, wrapping the year boundary. */
+/** REQUIREMENTS.md §6.3 -- admin-configurable days-before/days-after window
+ * (default 7/14), wrapping the year boundary. Date-of-birth is an ISO
+ * date-only string ("YYYY-MM-DD"); `new Date(iso)` parses that as UTC
+ * midnight, so calling local getters on it shifts the date back a day in
+ * any timezone behind UTC -- parse the y/m/d components by hand instead
+ * (same fix already applied elsewhere, e.g. AttendanceInteractive's
+ * formatDate) rather than going through the UTC-anchored Date. */
 export async function getUpcomingBirthdays(groupId: string): Promise<BirthdayMember[]> {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("members")
-    .select("id, full_name, photo_path, date_of_birth, assigned_servant_id, assigned_servant:profiles(full_name)")
-    .eq("group_id", groupId)
-    .eq("status", "active")
-    .not("date_of_birth", "is", null);
+  const [{ data }, settings] = await Promise.all([
+    supabase
+      .from("members")
+      .select("id, full_name, photo_path, date_of_birth, phone, assigned_servant_id, assigned_servant:profiles(full_name)")
+      .eq("group_id", groupId)
+      .eq("status", "active")
+      .not("date_of_birth", "is", null),
+    getAppSettings(),
+  ]);
+
+  const daysBefore = settings.birthday_window_days_before;
+  const daysAfter = settings.birthday_window_days_after;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -132,13 +163,13 @@ export async function getUpcomingBirthdays(groupId: string): Promise<BirthdayMem
   const todayDoy = dayOfYear(today);
 
   return ((data ?? []) as unknown as BirthdayMember[]).filter((m) => {
-    const dob = new Date(m.date_of_birth);
-    const bdayThisYear = new Date(today.getFullYear(), dob.getMonth(), dob.getDate());
+    const [, month, day] = m.date_of_birth.split("-").map(Number);
+    const bdayThisYear = new Date(today.getFullYear(), month - 1, day);
     let diff = dayOfYear(bdayThisYear) - todayDoy;
     // wrap around the year boundary in both directions
-    if (diff < -7) diff += 365;
-    if (diff > 14) diff -= 365;
-    return diff >= -7 && diff <= 14;
+    if (diff < -daysBefore) diff += 365;
+    if (diff > daysAfter) diff -= 365;
+    return diff >= -daysBefore && diff <= daysAfter;
   });
 }
 
@@ -154,4 +185,45 @@ export async function getUnassignedMembers(groupId: string): Promise<UnassignedM
     .order("created_at", { ascending: false });
 
   return (data ?? []) as unknown as UnassignedMember[];
+}
+
+/** REQUIREMENTS.md §6.3/§7.1 -- members with `is_new_assignment = true`,
+ * i.e. assigned a servant recently enough that no outreach entry has been
+ * recorded for them yet (set by assignServantAction, auto-cleared by
+ * migration 0029's trigger the moment an outreach entry lands, or manually
+ * dismissed). Grouped by assigned servant on the Dashboard. */
+export async function getNewlyAssignedMembers(groupId: string): Promise<NewlyAssignedMember[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("members")
+    .select(
+      "id, full_name, photo_path, phone, program_of_study, gender, assigned_servant_id, university:universities(name), assigned_servant:profiles(full_name)",
+    )
+    .eq("group_id", groupId)
+    .eq("status", "active")
+    .eq("is_new_assignment", true)
+    .not("assigned_servant_id", "is", null)
+    .order("created_at", { ascending: false });
+
+  return ((data ?? []) as unknown as {
+    id: string;
+    full_name: string;
+    photo_path: string | null;
+    phone: string | null;
+    program_of_study: string | null;
+    gender: string | null;
+    assigned_servant_id: string;
+    university: { name: string } | null;
+    assigned_servant: { full_name: string } | null;
+  }[]).map((m) => ({
+    id: m.id,
+    full_name: m.full_name,
+    photo_path: m.photo_path,
+    phone: m.phone,
+    program_of_study: m.program_of_study,
+    gender: m.gender,
+    university: m.university,
+    assigned_servant_id: m.assigned_servant_id,
+    assignedServantName: m.assigned_servant?.full_name ?? "Unknown",
+  }));
 }

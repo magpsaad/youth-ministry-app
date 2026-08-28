@@ -1,20 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import type { University } from "@/lib/universities";
 import type { ServantOption } from "@/lib/servants";
-import type { BirthdayMember, DashboardStatsData, UnassignedMember } from "@/lib/dashboard";
+import type { BirthdayMember, DashboardStatsData, NewlyAssignedMember, UnassignedMember } from "@/lib/dashboard";
 import type { ActionsNeededMember } from "@/lib/actions-needed";
+import type { FollowUpDueEntry } from "@/lib/outreach";
 import { useMyAssigned } from "@/components/MyAssignedContext";
 import { memberPhotoUrl } from "@/lib/storage";
 import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { AssignServantSelect } from "@/components/members/AssignServantSelect";
 import { MemberDetailLink } from "@/components/members/MemberDetailLink";
 import { OutreachQuickLink } from "@/components/outreach/OutreachQuickLink";
+import { EditOutreachEntryModal } from "@/components/outreach/EditOutreachEntryModal";
 import { PhoneLink } from "@/components/PhoneLink";
 import { CakeIcon, UserPlusIcon } from "@/components/icons";
+import { dismissNewAssignmentAction } from "@/app/g/[groupId]/members/actions";
+import { dismissFollowUpAction } from "@/app/g/[groupId]/outreach/actions";
 
 type ActionsNeededConfigRow = {
   proximity: string;
@@ -23,13 +28,57 @@ type ActionsNeededConfigRow = {
   min_outreach_weeks: number;
 };
 
+type BirthdayWindowDays = { before: number; after: number };
+
+/** Date-of-birth and follow_up_due are ISO date-only strings ("YYYY-MM-DD").
+ * `new Date(iso)` parses that as UTC midnight, then local getters shift it
+ * back a day in any timezone behind UTC -- parse the components by hand
+ * instead (same fix as lib/dashboard.ts's getUpcomingBirthdays). */
+function formatBirthdayDate(iso: string) {
+  const [, month, day] = iso.split("-").map(Number);
+  return new Date(2000, month - 1, day).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function formatIsoDate(iso: string) {
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString();
+}
+
+function windowPhrase(days: number) {
+  if (days === 0) return "today";
+  if (days % 7 === 0) {
+    const weeks = days / 7;
+    return weeks === 1 ? "1 week" : `${weeks} weeks`;
+  }
+  return days === 1 ? "1 day" : `${days} days`;
+}
+
+function Avatar({ photoUrl, fullName }: { photoUrl: string | null; fullName: string }) {
+  return photoUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={photoUrl} alt={fullName} className="h-10 w-10 rounded-full object-cover shrink-0" />
+  ) : (
+    <div className="h-10 w-10 shrink-0 rounded-full bg-[#1e3a5f] text-white text-xs font-bold flex items-center justify-center">
+      {fullName.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+    </div>
+  );
+}
+
+type ActionsNeededCard =
+  | { kind: "outreach"; sortKey: string; data: ActionsNeededMember }
+  | { kind: "newly_assigned"; sortKey: string; data: NewlyAssignedMember }
+  | { kind: "follow_up"; sortKey: string; data: FollowUpDueEntry };
+
 export function DashboardInteractive({
   groupId,
   statsData,
   birthdays,
+  birthdayWindowDays,
   unassigned,
   actionsNeeded,
   actionsNeededConfig,
+  newlyAssigned,
+  followUpsDue,
   servants,
   universities,
   memberLabel,
@@ -40,9 +89,12 @@ export function DashboardInteractive({
   groupId: string;
   statsData: DashboardStatsData;
   birthdays: BirthdayMember[];
+  birthdayWindowDays: BirthdayWindowDays;
   unassigned: UnassignedMember[];
   actionsNeeded: ActionsNeededMember[];
   actionsNeededConfig: ActionsNeededConfigRow[];
+  newlyAssigned: NewlyAssignedMember[];
+  followUpsDue: FollowUpDueEntry[];
   servants: ServantOption[];
   universities: University[];
   memberLabel: string;
@@ -50,34 +102,24 @@ export function DashboardInteractive({
   currentUserId: string;
   currentUserName: string;
 }) {
+  const router = useRouter();
   const { myAssignedOnly, hydrated } = useMyAssigned();
   const applyFilter = hydrated && myAssignedOnly;
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const [dismissHydrated, setDismissHydrated] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const dismissKey = `actionsNeededDismissed:${groupId}`;
+  const [viewingEntry, setViewingEntry] = useState<FollowUpDueEntry | null>(null);
+  const [dismissPending, startDismiss] = useTransition();
 
-  useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(dismissKey);
-      if (raw) setDismissed(new Set(JSON.parse(raw)));
-    } catch {
-      // ignore
-    }
-    setDismissHydrated(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dismissKey]);
+  function handleDismissNewAssignment(memberId: string) {
+    startDismiss(async () => {
+      await dismissNewAssignmentAction(memberId, groupId);
+      router.refresh();
+    });
+  }
 
-  function dismiss(memberId: string) {
-    setDismissed((prev) => {
-      const next = new Set(prev);
-      next.add(memberId);
-      try {
-        sessionStorage.setItem(dismissKey, JSON.stringify(Array.from(next)));
-      } catch {
-        // ignore
-      }
-      return next;
+  function handleDismissFollowUp(entryId: string) {
+    startDismiss(async () => {
+      await dismissFollowUpAction(groupId, entryId);
+      router.refresh();
     });
   }
 
@@ -99,21 +141,38 @@ export function DashboardInteractive({
     ? unassigned.filter(() => false) // unassigned members can never be "mine"
     : unassigned;
 
-  const visibleActionsNeeded = useMemo(() => {
-    let rows = actionsNeeded.filter((m) => !dismissed.has(m.id));
-    if (applyFilter) rows = rows.filter((m) => m.assigned_servant_id === currentUserId);
-    return rows;
-  }, [actionsNeeded, dismissed, applyFilter, currentUserId]);
+  const visibleOutreachNeeded = useMemo(
+    () => (applyFilter ? actionsNeeded.filter((m) => m.assigned_servant_id === currentUserId) : actionsNeeded),
+    [actionsNeeded, applyFilter, currentUserId],
+  );
+  const visibleNewlyAssigned = useMemo(
+    () => (applyFilter ? newlyAssigned.filter((m) => m.assigned_servant_id === currentUserId) : newlyAssigned),
+    [newlyAssigned, applyFilter, currentUserId],
+  );
+  const visibleFollowUps = useMemo(
+    () => (applyFilter ? followUpsDue.filter((f) => f.servant_id === currentUserId) : followUpsDue),
+    [followUpsDue, applyFilter, currentUserId],
+  );
+  const totalActionsNeeded = visibleOutreachNeeded.length + visibleNewlyAssigned.length + visibleFollowUps.length;
 
   const actionsNeededByServant = useMemo(() => {
-    const groups = new Map<string, ActionsNeededMember[]>();
-    for (const m of visibleActionsNeeded) {
-      const key = m.assignedServantName ?? "Unassigned";
+    const groups = new Map<string, ActionsNeededCard[]>();
+    const push = (key: string, card: ActionsNeededCard) => {
       if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(m);
+      groups.get(key)!.push(card);
+    };
+    for (const m of visibleOutreachNeeded) {
+      push(m.assignedServantName ?? "Unassigned", { kind: "outreach", sortKey: m.full_name, data: m });
     }
+    for (const m of visibleNewlyAssigned) {
+      push(m.assignedServantName, { kind: "newly_assigned", sortKey: m.full_name, data: m });
+    }
+    for (const f of visibleFollowUps) {
+      push(f.servant_name, { kind: "follow_up", sortKey: f.member_name, data: f });
+    }
+    for (const cards of groups.values()) cards.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
     return Array.from(groups.entries()).sort(([a], [b]) => (a === "Unassigned" ? 1 : b === "Unassigned" ? -1 : a.localeCompare(b)));
-  }, [visibleActionsNeeded]);
+  }, [visibleOutreachNeeded, visibleNewlyAssigned, visibleFollowUps]);
 
   return (
     <div className="mt-4 space-y-6">
@@ -147,28 +206,26 @@ export function DashboardInteractive({
         )}
       </section>
 
-      {filteredBirthdays.length > 0 && (
-        <CollapsibleSection
-          id={`birthdays-${groupId}`}
-          title={
-            <span className="flex items-center gap-2">
-              <CakeIcon className="h-5 w-5" /> Current Birthdays
-            </span>
-          }
-        >
+      <CollapsibleSection
+        id={`birthdays-${groupId}`}
+        title={
+          <span className="flex items-center gap-2">
+            <CakeIcon className="h-5 w-5" /> Current Birthdays
+          </span>
+        }
+      >
+        {filteredBirthdays.length === 0 ? (
+          <p className="text-sm text-[#666]">
+            No birthdays in the last {windowPhrase(birthdayWindowDays.before)} or the next{" "}
+            {windowPhrase(birthdayWindowDays.after)}.
+          </p>
+        ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {filteredBirthdays.map((m) => {
               const photoUrl = memberPhotoUrl(m.photo_path);
               return (
                 <div key={m.id} className="rounded-lg bg-[#e2f0d9] p-3 flex items-center gap-3">
-                  {photoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={photoUrl} alt={m.full_name} className="h-10 w-10 rounded-full object-cover shrink-0" />
-                  ) : (
-                    <div className="h-10 w-10 shrink-0 rounded-full bg-[#1e3a5f] text-white text-xs font-bold flex items-center justify-center">
-                      {m.full_name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
-                    </div>
-                  )}
+                  <Avatar photoUrl={photoUrl} fullName={m.full_name} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <MemberDetailLink
@@ -184,7 +241,7 @@ export function DashboardInteractive({
                         {m.full_name}
                       </MemberDetailLink>
                       <span className="text-[#28a745] font-medium text-sm shrink-0">
-                        {new Date(m.date_of_birth).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                        {formatBirthdayDate(m.date_of_birth)}
                       </span>
                     </div>
                     <p className="text-xs text-[#666]">
@@ -194,6 +251,8 @@ export function DashboardInteractive({
                   <OutreachQuickLink
                     memberId={m.id}
                     memberName={m.full_name}
+                    memberPhone={m.phone}
+                    memberLabel={memberLabel}
                     groupId={groupId}
                     currentUserName={currentUserName}
                     className="shrink-0 rounded-md bg-[#1e3a5f] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#152a45]"
@@ -202,8 +261,8 @@ export function DashboardInteractive({
               );
             })}
           </div>
-        </CollapsibleSection>
-      )}
+        )}
+      </CollapsibleSection>
 
       <CollapsibleSection
         id={`unassigned-${groupId}`}
@@ -217,7 +276,7 @@ export function DashboardInteractive({
           <p className="text-sm text-[#666]">
             {applyFilter
               ? "No unassigned members can be “mine” — turn off My Assigned List to see them."
-              : "Everyone in this group has an assigned servant."}
+              : `All ${memberLabel.toLowerCase()}s have been assigned to servants.`}
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -225,14 +284,7 @@ export function DashboardInteractive({
               const photoUrl = memberPhotoUrl(m.photo_path);
               return (
                 <div key={m.id} className="rounded-lg bg-[#e3f2fd] p-3 flex items-center gap-3">
-                  {photoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={photoUrl} alt={m.full_name} className="h-10 w-10 rounded-full object-cover shrink-0" />
-                  ) : (
-                    <div className="h-10 w-10 shrink-0 rounded-full bg-[#1e3a5f] text-white text-xs font-bold flex items-center justify-center">
-                      {m.full_name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
-                    </div>
-                  )}
+                  <Avatar photoUrl={photoUrl} fullName={m.full_name} />
                   <div className="min-w-0 flex-1">
                     <MemberDetailLink
                       memberId={m.id}
@@ -276,61 +328,136 @@ export function DashboardInteractive({
           </span>
         }
       >
-        {!dismissHydrated || visibleActionsNeeded.length === 0 ? (
-          <p className="text-sm text-[#666]">
-            {actionsNeeded.length === 0
-              ? "Nothing to report — no one currently meets all three Actions Needed criteria."
-              : "Nothing to report — everything here has been dismissed for this session."}
-          </p>
+        {totalActionsNeeded === 0 ? (
+          <p className="text-sm text-[#666]">No outstanding Actions.</p>
         ) : (
           <div className="space-y-4">
-            {actionsNeededByServant.map(([servantName, rows]) => (
+            {actionsNeededByServant.map(([servantName, cards]) => (
               <div key={servantName}>
                 <h3 className="text-sm font-bold text-[#1e3a5f] mb-2">{servantName}</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {rows.map((m) => {
-                    const photoUrl = memberPhotoUrl(m.photo_path);
-                    return (
-                      <div key={m.id} className="rounded-lg bg-[#fff3cd] border-l-4 border-[#dc3545] p-3 flex items-start gap-3">
-                        {photoUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={photoUrl} alt={m.full_name} className="h-10 w-10 rounded-full object-cover shrink-0" />
-                        ) : (
-                          <div className="h-10 w-10 shrink-0 rounded-full bg-[#1e3a5f] text-white text-xs font-bold flex items-center justify-center">
-                            {m.full_name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+                  {cards.map((card) => {
+                    if (card.kind === "outreach") {
+                      const m = card.data;
+                      const photoUrl = memberPhotoUrl(m.photo_path);
+                      return (
+                        <div
+                          key={`outreach-${m.id}`}
+                          className="rounded-lg bg-[#fff3cd] border-l-4 border-[#dc3545] p-3 flex items-start gap-3"
+                        >
+                          <Avatar photoUrl={photoUrl} fullName={m.full_name} />
+                          <div className="min-w-0 flex-1">
+                            <MemberDetailLink
+                              memberId={m.id}
+                              groupId={groupId}
+                              universities={universities}
+                              servants={servants}
+                              memberLabel={memberLabel}
+                              canDelete={canDelete}
+                              currentUserName={currentUserName}
+                              className="font-semibold text-[#1e3a5f] hover:underline text-left truncate block"
+                            >
+                              {m.full_name}
+                            </MemberDetailLink>
+                            <p className="text-xs text-[#721c24]">
+                              Absent for {m.currentConsecutiveAbsences} week{m.currentConsecutiveAbsences === 1 ? "" : "s"}
+                            </p>
+                            <p className="text-xs text-[#666]">
+                              Last outreach: {m.lastOutreachDate ? new Date(m.lastOutreachDate).toLocaleDateString() : "Never"}
+                            </p>
+                            <div className="mt-1 flex items-center gap-2">
+                              <OutreachQuickLink
+                                memberId={m.id}
+                                memberName={m.full_name}
+                                memberPhone={m.phone}
+                                memberLabel={memberLabel}
+                                groupId={groupId}
+                                currentUserName={currentUserName}
+                                className="rounded-md bg-[#1e3a5f] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#152a45]"
+                              />
+                            </div>
                           </div>
-                        )}
+                        </div>
+                      );
+                    }
+
+                    if (card.kind === "newly_assigned") {
+                      const m = card.data;
+                      const photoUrl = memberPhotoUrl(m.photo_path);
+                      return (
+                        <div key={`newly-${m.id}`} className="rounded-lg bg-[#e3f2fd] p-3 flex items-start gap-3">
+                          <Avatar photoUrl={photoUrl} fullName={m.full_name} />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline gap-1.5 flex-wrap">
+                              <MemberDetailLink
+                                memberId={m.id}
+                                groupId={groupId}
+                                universities={universities}
+                                servants={servants}
+                                memberLabel={memberLabel}
+                                canDelete={canDelete}
+                                currentUserName={currentUserName}
+                                className="font-semibold text-[#1e3a5f] hover:underline text-left truncate"
+                              >
+                                {m.full_name}
+                              </MemberDetailLink>
+                              <span className="text-[10px] text-[#666]">has been assigned to you</span>
+                            </div>
+                            <p className="text-xs text-[#666] truncate">
+                              {m.university?.name ?? "—"}
+                              {m.program_of_study ? ` · ${m.program_of_study}` : ""}
+                            </p>
+                            {m.phone && <PhoneLink phone={m.phone} className="text-xs" />}
+                            <div className="mt-1 flex items-center gap-2">
+                              <OutreachQuickLink
+                                memberId={m.id}
+                                memberName={m.full_name}
+                                memberPhone={m.phone}
+                                memberLabel={memberLabel}
+                                groupId={groupId}
+                                currentUserName={currentUserName}
+                                className="rounded-md bg-[#1e3a5f] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#152a45]"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleDismissNewAssignment(m.id)}
+                                disabled={dismissPending}
+                                className="rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-[#666] border border-[#ddd] hover:bg-[#f5f5f5] disabled:opacity-60"
+                              >
+                                Dismiss
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    const f = card.data;
+                    const photoUrl = memberPhotoUrl(f.member_photo_path);
+                    return (
+                      <div
+                        key={`followup-${f.id}`}
+                        className="rounded-lg bg-[#f3e5f5] border-l-4 border-[#8e44ad] p-3 flex items-start gap-3"
+                      >
+                        <Avatar photoUrl={photoUrl} fullName={f.member_name} />
                         <div className="min-w-0 flex-1">
-                          <MemberDetailLink
-                            memberId={m.id}
-                            groupId={groupId}
-                            universities={universities}
-                            servants={servants}
-                            memberLabel={memberLabel}
-                            canDelete={canDelete}
-                            currentUserName={currentUserName}
-                            className="font-semibold text-[#1e3a5f] hover:underline text-left truncate block"
-                          >
-                            {m.full_name}
-                          </MemberDetailLink>
-                          <p className="text-xs text-[#721c24]">
-                            Absent {m.currentConsecutiveAbsences} week{m.currentConsecutiveAbsences === 1 ? "" : "s"} in a row
-                          </p>
-                          <p className="text-xs text-[#666]">
-                            Last outreach: {m.lastOutreachDate ? new Date(m.lastOutreachDate).toLocaleDateString() : "Never"}
+                          <p className="font-semibold text-[#1e3a5f] truncate">{f.member_name}</p>
+                          <p className="text-xs text-[#6a1b7a]">
+                            Your follow-up is due {f.follow_up_due ? formatIsoDate(f.follow_up_due) : "—"}
                           </p>
                           <div className="mt-1 flex items-center gap-2">
-                            <OutreachQuickLink
-                              memberId={m.id}
-                              memberName={m.full_name}
-                              groupId={groupId}
-                              currentUserName={currentUserName}
-                              className="rounded-md bg-[#1e3a5f] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#152a45]"
-                            />
                             <button
                               type="button"
-                              onClick={() => dismiss(m.id)}
-                              className="rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-[#666] border border-[#ddd] hover:bg-[#f5f5f5]"
+                              onClick={() => setViewingEntry(f)}
+                              className="rounded-md bg-[#1e3a5f] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#152a45]"
+                            >
+                              View entry
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDismissFollowUp(f.id)}
+                              disabled={dismissPending}
+                              className="rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-[#666] border border-[#ddd] hover:bg-[#f5f5f5] disabled:opacity-60"
                             >
                               Dismiss
                             </button>
@@ -352,11 +479,17 @@ export function DashboardInteractive({
         </Link>
       </div>
 
+      {viewingEntry &&
+        createPortal(
+          <EditOutreachEntryModal groupId={groupId} entry={viewingEntry} onClose={() => setViewingEntry(null)} onSaved={() => router.refresh()} />,
+          document.body,
+        )}
+
       {showHelp &&
         createPortal(
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowHelp(false)}>
             <div
-              className="w-full max-w-md rounded-xl bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.2)]"
+              className="w-full max-w-md rounded-xl bg-white p-6 shadow-[0_10px_40px_rgba(0,0,0,0.2)] max-h-[85vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between border-b-2 border-[#f0f0f0] pb-3 mb-4">
@@ -365,15 +498,26 @@ export function DashboardInteractive({
                   ×
                 </button>
               </div>
-              <p className="text-sm text-[#666] mb-3">
-                A {memberLabel.toLowerCase()} is flagged here once, using their trailing 12 months of history, <strong>all
-                three</strong> hold at once:
-              </p>
-              <ul className="list-disc pl-5 text-sm text-[#333] space-y-1 mb-4">
-                <li>They&rsquo;ve attended at least the minimum number of times for their proximity.</li>
-                <li>They&rsquo;re currently on a consecutive-absence streak at or beyond the minimum for their proximity.</li>
-                <li>Their most recent outreach (or lack of any) is older than the minimum for their proximity.</li>
+              <p className="text-sm text-[#666] mb-2">This section surfaces three kinds of cards, grouped by servant:</p>
+              <ul className="list-disc pl-5 text-sm text-[#333] space-y-2 mb-4">
+                <li>
+                  <strong>Outreach Needed</strong> (amber) — a {memberLabel.toLowerCase()} currently on a
+                  consecutive-absence streak at or beyond their proximity&rsquo;s minimum, whose most recent outreach
+                  (or lack of any) is older than the outreach-staleness window below. Clears itself automatically the
+                  moment they attend again or any servant logs a new outreach entry for them — there&rsquo;s no
+                  manual dismiss.
+                </li>
+                <li>
+                  <strong>Newly Assigned</strong> (blue) — a {memberLabel.toLowerCase()} recently assigned to you
+                  that hasn&rsquo;t been outreached yet. Clears automatically once you log an outreach entry for
+                  them, or you can dismiss it directly.
+                </li>
+                <li>
+                  <strong>Follow-up Due</strong> (mauve) — a reminder you set on a past outreach entry, now due.
+                  Dismiss it once you&rsquo;ve followed up.
+                </li>
               </ul>
+              <p className="text-xs text-[#666] mb-1 font-semibold">Outreach Needed thresholds, by proximity:</p>
               <div className="rounded-md bg-[#f5f5f5] p-3 text-xs text-[#333] space-y-1">
                 {actionsNeededConfig.map((c) => (
                   <p key={c.proximity}>

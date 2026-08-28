@@ -2,7 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getMemberOutreach, getOutreachEntries, type OutreachEntry, type OutreachEntryFull } from "@/lib/outreach";
+import {
+  getMemberOutreach,
+  getOutreachEntries,
+  getFollowUpsDue,
+  type OutreachEntry,
+  type OutreachEntryFull,
+  type FollowUpDueEntry,
+} from "@/lib/outreach";
 import { logAudit } from "@/lib/audit";
 
 export async function getMemberOutreachAction(memberId: string): Promise<OutreachEntry[]> {
@@ -11,6 +18,10 @@ export async function getMemberOutreachAction(memberId: string): Promise<Outreac
 
 export async function getOutreachEntriesAction(groupId: string): Promise<OutreachEntryFull[]> {
   return getOutreachEntries(groupId);
+}
+
+export async function getFollowUpsDueAction(groupId: string): Promise<FollowUpDueEntry[]> {
+  return getFollowUpsDue(groupId);
 }
 
 export type AddOutreachInput = {
@@ -74,6 +85,28 @@ export async function updateOutreachEntryAction(groupId: string, entryId: string
 
   if (user) await logAudit(user.id, "OUTREACH_UPDATED", { groupId, details: { entryId } });
   revalidatePath(`/g/${groupId}/outreach`);
+  return { error: null };
+}
+
+/** REQUIREMENTS.md §6.3/§7.1 -- dismisses one Follow-up Due Actions Needed
+ * card. Sets `follow_up_dismissed_at` rather than clearing `follow_up_due`
+ * itself, so the original entry's follow-up date stays visible as a record;
+ * only its "still needs action" state is cleared. Logged as OUTREACH_UPDATED
+ * -- this is an update to the outreach entry, not a distinct audit action
+ * type of its own. */
+export async function dismissFollowUpAction(groupId: string, entryId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { error } = await supabase
+    .from("outreach_entries")
+    .update({ follow_up_dismissed_at: new Date().toISOString() })
+    .eq("id", entryId);
+  if (error) return { error: error.message };
+
+  if (user) await logAudit(user.id, "OUTREACH_UPDATED", { groupId, details: { entryId, action: "follow_up_dismissed" } });
+  revalidatePath(`/g/${groupId}/dashboard`);
   return { error: null };
 }
 

@@ -10,12 +10,16 @@ import { AddOutreachModal } from "./AddOutreachModal";
 export function OutreachQuickLink({
   memberId,
   memberName,
+  memberPhone,
+  memberLabel,
   groupId,
   currentUserName,
   className,
 }: {
   memberId: string;
   memberName: string;
+  memberPhone?: string | null;
+  memberLabel?: string;
   groupId: string;
   currentUserName: string;
   className?: string;
@@ -32,6 +36,8 @@ export function OutreachQuickLink({
         <AddOutreachModal
           memberId={memberId}
           memberName={memberName}
+          memberPhone={memberPhone}
+          memberLabel={memberLabel}
           groupId={groupId}
           currentUserName={currentUserName}
           onClose={() => setOpen(false)}
