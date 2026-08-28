@@ -58,25 +58,34 @@ export function ServantAssignmentsInteractive({
     return assignable.filter((s) => s.full_name.toLowerCase().includes(q));
   }, [assignable, search]);
 
+  // Youngest-to-oldest cohort order (ladder_position ascending -- Yr 0
+  // through the terminal group), not alphabetical by name: a name like
+  // "2003 and earlier - Yr 5+" would otherwise sort before "2008 Cohort -
+  // Yr 0" and put the ladder backwards (owner-reported).
+  const ladderPositionByGroupId = useMemo(() => new Map(groups.map((g) => [g.id, g.ladder_position])), [groups]);
+
   const categorical = useMemo(() => {
     const unassigned = filtered.filter((s) => s.isUnassignedServant);
-    const byGroup = new Map<string, ServantDirectoryEntry[]>();
+    const byGroup = new Map<string, { label: string; entries: ServantDirectoryEntry[] }>();
     for (const s of filtered) {
       for (const g of s.servantGroups) {
-        if (!byGroup.has(g.name)) byGroup.set(g.name, []);
-        byGroup.get(g.name)!.push(s);
+        if (!byGroup.has(g.id)) byGroup.set(g.id, { label: g.name, entries: [] });
+        byGroup.get(g.id)!.entries.push(s);
       }
     }
-    const groupLabels = Array.from(byGroup.keys()).sort();
+    const groupIds = Array.from(byGroup.keys()).sort(
+      (a, b) => (ladderPositionByGroupId.get(a) ?? 0) - (ladderPositionByGroupId.get(b) ?? 0),
+    );
     const buckets: { label: string; entries: ServantDirectoryEntry[] }[] = [];
     if (unassigned.length > 0) {
       buckets.push({ label: "Unassigned", entries: unassigned.sort((a, b) => a.full_name.localeCompare(b.full_name)) });
     }
-    for (const label of groupLabels) {
-      buckets.push({ label, entries: byGroup.get(label)!.sort((a, b) => a.full_name.localeCompare(b.full_name)) });
+    for (const id of groupIds) {
+      const bucket = byGroup.get(id)!;
+      buckets.push({ label: bucket.label, entries: bucket.entries.sort((a, b) => a.full_name.localeCompare(b.full_name)) });
     }
     return buckets;
-  }, [filtered]);
+  }, [filtered, ladderPositionByGroupId]);
 
   const alphabetical = useMemo(() => [...filtered].sort((a, b) => a.full_name.localeCompare(b.full_name)), [filtered]);
 
