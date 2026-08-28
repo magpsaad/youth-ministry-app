@@ -117,17 +117,23 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
           ))}
         </div>
 
+        {!preview.canTransition && (
+          <div className="rounded-md bg-[#f8d7da] text-[#721c24] text-sm px-3 py-2 mb-4">
+            <p>{preview.blockedReason}</p>
+          </div>
+        )}
+
         {preview.newTerminalGroupName && (
           <div className="rounded-md bg-[#fff3cd] text-[#856404] text-sm px-3 py-2 mb-4">
             <p>
-              Yr 4 becomes the new Yr 5+, keeping its own color, name pattern, and its own servants — just like every
-              other year advancing.
+              Yr {preview.currentNewTerminalPosition} becomes the new Yr {preview.currentTerminalPosition}+, keeping
+              its own color, name pattern, and its own servants — just like every other year advancing.
               {preview.oldTerminalGroupName && (
                 <>
                   {" "}
-                  <strong>{preview.oldTerminalGroupName}</strong> (the current Yr 5+) is absorbed into it and
-                  archived: its members join the new Yr 5+ roster, and its Servants/Sub-Coordinators/Read-Only roll
-                  back to serve the new Yr 1 instead.
+                  <strong>{preview.oldTerminalGroupName}</strong> (the current Yr {preview.currentTerminalPosition}+)
+                  is absorbed into it and archived: its members join the new terminal roster, and its
+                  Servants/Sub-Coordinators/Read-Only roll back to serve the new Yr 1 instead.
                 </>
               )}
             </p>
@@ -151,7 +157,8 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
             <button
               type="button"
               onClick={() => setStage("confirming")}
-              className="rounded-md bg-[#dc3545] px-4 py-2 text-sm font-semibold text-white hover:bg-[#c82333]"
+              disabled={!preview.canTransition}
+              className="rounded-md bg-[#dc3545] px-4 py-2 text-sm font-semibold text-white hover:bg-[#c82333] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Transition Groups…
             </button>
