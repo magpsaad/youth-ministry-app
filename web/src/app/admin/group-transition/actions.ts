@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getTransitionPreview, type TransitionPreview } from "@/lib/group-transition";
-import { getServantDirectory, type ServantDirectoryEntry } from "@/lib/servant-directory";
+import { getServantAssignmentsRoster, type AssignmentPerson } from "@/lib/servant-assignments";
 import { getAccessibleGroups } from "@/lib/groups";
 import type { GroupSummary } from "@/lib/groups";
 
@@ -11,11 +11,11 @@ import type { GroupSummary } from "@/lib/groups";
  * fresh (not passed down from the pre-transition page load), since group
  * assignments just changed. */
 export async function getPostTransitionReviewDataAction(): Promise<{
-  servants: ServantDirectoryEntry[];
+  people: AssignmentPerson[];
   groups: GroupSummary[];
 }> {
-  const [servants, groups] = await Promise.all([getServantDirectory(), getAccessibleGroups()]);
-  return { servants, groups: groups.filter((g) => g.ladder_position > 0) };
+  const [people, groups] = await Promise.all([getServantAssignmentsRoster(), getAccessibleGroups()]);
+  return { people, groups: groups.filter((g) => g.ladder_position > 0) };
 }
 
 export async function getTransitionPreviewAction(): Promise<TransitionPreview> {

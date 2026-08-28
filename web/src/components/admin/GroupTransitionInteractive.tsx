@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import type { TransitionPreview } from "@/lib/group-transition";
-import type { ServantDirectoryEntry } from "@/lib/servant-directory";
+import type { AssignmentPerson } from "@/lib/servant-assignments";
 import type { GroupSummary } from "@/lib/groups";
 import {
   runGroupTransitionAction,
@@ -24,9 +24,7 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [affectedGroupNames, setAffectedGroupNames] = useState<string[]>([]);
-  const [reviewData, setReviewData] = useState<{ servants: ServantDirectoryEntry[]; groups: GroupSummary[] } | null>(
-    null,
-  );
+  const [reviewData, setReviewData] = useState<{ people: AssignmentPerson[]; groups: GroupSummary[] } | null>(null);
   const [showReview, setShowReview] = useState(false);
 
   const advancing = preview.groups.filter((g) => g.nextName && g.nextName !== g.name);
@@ -95,7 +93,7 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
           ) : !reviewData ? (
             <p className="text-sm text-[#666]">Loading…</p>
           ) : (
-            <ServantAssignmentsInteractive servants={reviewData.servants} groups={reviewData.groups} canManageServants />
+            <ServantAssignmentsInteractive people={reviewData.people} groups={reviewData.groups} canManageServants />
           )}
         </div>
       </div>

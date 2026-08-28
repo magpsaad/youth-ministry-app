@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings } from "@/lib/app-settings";
-import { getServantDirectory } from "@/lib/servant-directory";
+import { getServantAssignmentsRoster } from "@/lib/servant-assignments";
 import { getAccessibleGroups } from "@/lib/groups";
 import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon } from "@/components/icons";
@@ -26,9 +26,9 @@ export default async function ServantAssignmentsPage() {
     );
   }
 
-  const [settings, servants, groups] = await Promise.all([
+  const [settings, roster, groups] = await Promise.all([
     getAppSettings(),
-    getServantDirectory(),
+    getServantAssignmentsRoster(),
     getAccessibleGroups(),
   ]);
   const servingGroups = groups.filter((g) => g.ladder_position > 0);
@@ -57,7 +57,7 @@ export default async function ServantAssignmentsPage() {
       </header>
       <main className="max-w-3xl mx-auto px-4 py-6">
         <ServantAssignmentsInteractive
-          servants={servants}
+          people={roster}
           groups={servingGroups}
           canManageServants={access.isAdmin || access.isGeneralCoordinator}
         />
