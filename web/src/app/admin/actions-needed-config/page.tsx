@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings, getAttendanceWindowSettings } from "@/lib/app-settings";
-import { getActionsNeededConfigAction } from "@/app/admin/actions-needed-config/actions";
+import { getActionsNeededConfigAction, getGroupsForAdminAction } from "@/app/admin/actions-needed-config/actions";
 import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon } from "@/components/icons";
 import { SignOutButton } from "@/components/SignOutButton";
@@ -23,10 +23,11 @@ export default async function ActionsNeededConfigPage() {
     );
   }
 
-  const [settings, config, windowSettings] = await Promise.all([
+  const [settings, config, windowSettings, groups] = await Promise.all([
     getAppSettings(),
     getActionsNeededConfigAction(),
     getAttendanceWindowSettings(),
+    getGroupsForAdminAction(),
   ]);
 
   return (
@@ -52,7 +53,12 @@ export default async function ActionsNeededConfigPage() {
         <p className="mt-1 text-sm opacity-90">App Settings</p>
       </header>
       <main className="max-w-2xl mx-auto px-4 py-6">
-        <ActionsNeededConfigInteractive initial={config} initialWindowSettings={windowSettings} initialAppSettings={settings} />
+        <ActionsNeededConfigInteractive
+          initial={config}
+          initialWindowSettings={windowSettings}
+          initialAppSettings={settings}
+          initialGroups={groups}
+        />
       </main>
     </div>
   );

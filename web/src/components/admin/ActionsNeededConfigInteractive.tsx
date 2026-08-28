@@ -1,22 +1,25 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { ActionsNeededConfigRow, AppSettingsFormInput } from "@/app/admin/actions-needed-config/actions";
+import type { ActionsNeededConfigRow, AppSettingsFormInput, AdminGroupRow } from "@/app/admin/actions-needed-config/actions";
 import {
   updateActionsNeededConfigAction,
   updateAttendanceWindowSettingsAction,
   updateAppSettingsAction,
 } from "@/app/admin/actions-needed-config/actions";
 import type { AttendanceWindowSettings } from "@/lib/app-settings";
+import { GroupNamesInteractive } from "@/components/admin/GroupNamesInteractive";
 
 export function ActionsNeededConfigInteractive({
   initial,
   initialWindowSettings,
   initialAppSettings,
+  initialGroups,
 }: {
   initial: ActionsNeededConfigRow[];
   initialWindowSettings: AttendanceWindowSettings;
   initialAppSettings: AppSettingsFormInput;
+  initialGroups: AdminGroupRow[];
 }) {
   const [rows, setRows] = useState(initial);
   const [pending, startTransition] = useTransition();
@@ -105,7 +108,7 @@ export function ActionsNeededConfigInteractive({
           />
         </label>
         <label className="text-xs text-[#666]">
-          Subtitle
+          Dashboard Subtitle
           <input
             value={appSettings.app_subtitle}
             onChange={(e) => updateAppField("app_subtitle", e.target.value)}
@@ -113,7 +116,7 @@ export function ActionsNeededConfigInteractive({
           />
         </label>
         <label className="text-xs text-[#666]">
-          Group Label (e.g. &ldquo;Youth&rdquo;)
+          Group Label (e.g. &ldquo;Cohort&rdquo;)
           <input
             value={appSettings.group_label}
             onChange={(e) => updateAppField("group_label", e.target.value)}
@@ -121,7 +124,7 @@ export function ActionsNeededConfigInteractive({
           />
         </label>
         <label className="text-xs text-[#666]">
-          Member Label (e.g. &ldquo;Member&rdquo;)
+          Member Label (e.g. &ldquo;Youth&rdquo;)
           <input
             value={appSettings.member_label}
             onChange={(e) => updateAppField("member_label", e.target.value)}
@@ -146,10 +149,27 @@ export function ActionsNeededConfigInteractive({
           />
         </label>
       </div>
-      <h3 className="text-sm font-bold text-[#1e3a5f] mt-4 mb-1">Current Birthdays window</h3>
-      <p className="text-xs text-[#666] mb-2">
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSaveAppSettings}
+          disabled={pending}
+          className="rounded-md bg-[#1e3a5f] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#152a45] disabled:opacity-60"
+        >
+          Save
+        </button>
+        {appSettingsSaved && <span className="text-xs text-[#155724]">Saved.</span>}
+      </div>
+    </div>
+
+    <GroupNamesInteractive initial={initialGroups} />
+
+    <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+      <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Current Birthdays Window</h2>
+      <p className="text-sm text-[#666] mb-4">
         How many days before and after today a birthday counts as &ldquo;upcoming&rdquo; on the Dashboard.
       </p>
+      {appSettingsError && <p className="mb-3 text-sm text-[#dc3545]">{appSettingsError}</p>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <label className="text-xs text-[#666]">
           Days before today

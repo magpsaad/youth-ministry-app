@@ -11,17 +11,31 @@ export type TransitionPreviewGroup = {
 export type TransitionPreview = {
   groups: TransitionPreviewGroup[];
   oldTerminalGroupName: string | null; // absorbed and archived this transition, if it exists
-  newTerminalGroupName: string | null; // Yr 4's row, becoming the new terminal -- its computed next name
+  newTerminalGroupName: string | null; // the row one below terminal, becoming the new terminal -- its computed next name
   suggestedNewCohortYear: number;
+  /** The row one below terminal's *current* ladder position (its "Yr N"
+   * label right now, before this transition) and the terminal position it's
+   * about to become ("Yr N+1+") -- both admin-configurable via Add/Remove
+   * Group (§6.9), so the UI can't hardcode "Yr 4"/"Yr 5+" text anymore. */
+  currentNewTerminalPosition: number | null;
+  currentTerminalPosition: number | null;
+  /** False when the active ladder is too short to run a transition (fewer
+   * than one active tier between pre-entry and terminal) -- see
+   * run_group_transition()'s own guard, migration 0030. */
+  canTransition: boolean;
+  blockedReason: string | null;
 };
 
 /** REQUIREMENTS.md §5 -- everything the Group Transition confirmation
  * screen needs to show before the Admin commits: every group's current vs.
  * next-name preview, which old terminal-tier row (if any) is about to be
  * absorbed and archived, and a suggested year for the new incoming
- * pre-entry cohort. Mirrors run_group_transition() (migration 0028)
- * exactly: Yr 4's row becomes the new terminal row (same row, aggregate
- * name); the OLD terminal row is what merges in and archives. */
+ * pre-entry cohort. Mirrors run_group_transition() (migration 0028/0030)
+ * exactly: the row one below terminal becomes the new terminal row (same
+ * row, aggregate name); the OLD terminal row is what merges in and
+ * archives. Terminal position is now derived from the actual data (the
+ * highest active ladder_position), not hardcoded to 5, since the ladder
+ * length is admin-configurable (§6.9). */
 export async function getTransitionPreview(): Promise<TransitionPreview> {
   const supabase = await createClient();
 
@@ -36,6 +50,10 @@ export async function getTransitionPreview(): Promise<TransitionPreview> {
 
   const template = settings?.group_name_template ?? "{cohort_year} Cohort - Yr {position_label}";
   const rows = groupRows ?? [];
+  const positions = rows.map((g) => g.ladder_position);
+  const terminalPosition = positions.length > 0 ? Math.max(...positions) : null;
+  const newTerminalPosition = terminalPosition !== null ? terminalPosition - 1 : null;
+  const canTransition = terminalPosition !== null && newTerminalPosition !== null && newTerminalPosition >= 1;
 
   function renderName(cohortYear: number | null, positionLabel: string) {
     if (cohortYear === null) return null;
@@ -43,30 +61,35 @@ export async function getTransitionPreview(): Promise<TransitionPreview> {
   }
 
   const groups: TransitionPreviewGroup[] = rows.map((g) => {
-    if (g.ladder_position === 5) {
-      // The OLD terminal row -- absorbed into Yr 4's row and archived this transition.
+    if (g.ladder_position === terminalPosition) {
+      // The OLD terminal row -- absorbed into the row one below it and archived this transition.
       return { id: g.id, name: g.name, cohortYear: g.cohort_year, ladderPosition: g.ladder_position, nextName: null };
     }
-    if (g.ladder_position === 4) {
+    if (g.ladder_position === newTerminalPosition) {
       // Becomes the NEW terminal row -- aggregate name, not the normal template.
-      const nextName = g.cohort_year !== null ? `${g.cohort_year} and earlier - Yr 5+` : null;
+      const nextName = g.cohort_year !== null ? `${g.cohort_year} and earlier - Yr ${terminalPosition}+` : null;
       return { id: g.id, name: g.name, cohortYear: g.cohort_year, ladderPosition: g.ladder_position, nextName };
     }
     const nextName = renderName(g.cohort_year, String(g.ladder_position + 1));
     return { id: g.id, name: g.name, cohortYear: g.cohort_year, ladderPosition: g.ladder_position, nextName };
   });
 
-  const oldTerminal = rows.find((g) => g.ladder_position === 5);
-  const newTerminal = rows.find((g) => g.ladder_position === 4);
+  const oldTerminal = rows.find((g) => g.ladder_position === terminalPosition);
+  const newTerminal = rows.find((g) => g.ladder_position === newTerminalPosition);
   const currentPreEntry = rows.find((g) => g.ladder_position === 0);
   const suggestedNewCohortYear = currentPreEntry?.cohort_year ? currentPreEntry.cohort_year + 1 : new Date().getFullYear();
 
   return {
     groups,
-    oldTerminalGroupName: oldTerminal?.name ?? null,
-    newTerminalGroupName: newTerminal?.cohort_year !== undefined && newTerminal?.cohort_year !== null
-      ? `${newTerminal.cohort_year} and earlier - Yr 5+`
-      : null,
+    oldTerminalGroupName: canTransition ? (oldTerminal?.name ?? null) : null,
+    newTerminalGroupName:
+      canTransition && newTerminal?.cohort_year != null ? `${newTerminal.cohort_year} and earlier - Yr ${terminalPosition}+` : null,
     suggestedNewCohortYear,
+    currentNewTerminalPosition: newTerminalPosition,
+    currentTerminalPosition: terminalPosition,
+    canTransition,
+    blockedReason: canTransition
+      ? null
+      : "The active ladder needs at least one tier between the pre-entry group and the terminal group before a Group Transition can run -- use Add Group on the App Settings screen first.",
   };
 }

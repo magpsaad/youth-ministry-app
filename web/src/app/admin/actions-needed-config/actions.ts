@@ -38,6 +38,70 @@ export async function updateActionsNeededConfigAction(row: ActionsNeededConfigRo
 
 export { getAttendanceWindowSettings };
 
+export type AdminGroupRow = {
+  id: string;
+  name: string;
+  cohort_year: number | null;
+  ladder_position: number;
+  qr_color: string | null;
+};
+
+/** REQUIREMENTS.md §6.9 -- every active (non-archived) group, for the App
+ * Settings "Group Names" panel. Includes the pre-entry group (ladder
+ * position 0) same as the raw table -- the UI itself decides what's
+ * editable/deletable there, the RPCs underneath refuse unsafe operations
+ * regardless (rename_group/add_group_tier/delete_group_tier, migration 0030). */
+export async function getGroupsForAdminAction(): Promise<AdminGroupRow[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("groups")
+    .select("id, name, cohort_year, ladder_position, qr_color")
+    .eq("is_archived", false)
+    .order("ladder_position");
+  return data ?? [];
+}
+
+export async function renameGroupAction(groupId: string, name: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("rename_group", { p_group_id: groupId, p_name: name });
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/actions-needed-config");
+  revalidatePath("/", "layout");
+  return { error: null };
+}
+
+export type AddGroupTierInput = { cohortYear: number | null; name: string | null; qrColor: string };
+
+/** Extends the active ladder by one tier, inserted just below the current
+ * terminal group (which shifts up to make room -- migration 0030). */
+export async function addGroupTierAction(input: AddGroupTierInput) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("add_group_tier", {
+    p_cohort_year: input.cohortYear,
+    p_name: input.name,
+    p_qr_color: input.qrColor,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/actions-needed-config");
+  revalidatePath("/", "layout");
+  return { error: null };
+}
+
+/** Archives one mid-ladder group and closes the gap (migration 0030). The
+ * RPC itself refuses to touch the pre-entry or terminal group, or a group
+ * that still has active members/role grants attached. */
+export async function deleteGroupTierAction(groupId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("delete_group_tier", { p_group_id: groupId });
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/actions-needed-config");
+  revalidatePath("/", "layout");
+  return { error: null };
+}
+
 export type AppSettingsFormInput = Omit<AppSettings, "app_version">;
 
 /** REQUIREMENTS.md §2/§6.3/§6.14 -- editable form for the app's identity/

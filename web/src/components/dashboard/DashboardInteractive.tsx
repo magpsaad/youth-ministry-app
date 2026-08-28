@@ -15,7 +15,8 @@ import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { AssignServantSelect } from "@/components/members/AssignServantSelect";
 import { MemberDetailLink } from "@/components/members/MemberDetailLink";
 import { OutreachQuickLink } from "@/components/outreach/OutreachQuickLink";
-import { EditOutreachEntryModal } from "@/components/outreach/EditOutreachEntryModal";
+import { ViewOutreachEntryModal } from "@/components/outreach/ViewOutreachEntryModal";
+import { AddOutreachModal } from "@/components/outreach/AddOutreachModal";
 import { PhoneLink } from "@/components/PhoneLink";
 import { CakeIcon, UserPlusIcon } from "@/components/icons";
 import { dismissNewAssignmentAction } from "@/app/g/[groupId]/members/actions";
@@ -107,6 +108,7 @@ export function DashboardInteractive({
   const applyFilter = hydrated && myAssignedOnly;
   const [showHelp, setShowHelp] = useState(false);
   const [viewingEntry, setViewingEntry] = useState<FollowUpDueEntry | null>(null);
+  const [outreachForFollowUp, setOutreachForFollowUp] = useState<FollowUpDueEntry | null>(null);
   const [dismissPending, startDismiss] = useTransition();
 
   function handleDismissNewAssignment(memberId: string) {
@@ -224,7 +226,7 @@ export function DashboardInteractive({
             {filteredBirthdays.map((m) => {
               const photoUrl = memberPhotoUrl(m.photo_path);
               return (
-                <div key={m.id} className="rounded-lg bg-[#e2f0d9] p-3 flex items-center gap-3">
+                <div key={m.id} className="rounded-lg bg-[#e2f0d9] border-l-4 border-[#28a745] p-3 flex items-center gap-3">
                   <Avatar photoUrl={photoUrl} fullName={m.full_name} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -283,7 +285,7 @@ export function DashboardInteractive({
             {filteredUnassigned.map((m) => {
               const photoUrl = memberPhotoUrl(m.photo_path);
               return (
-                <div key={m.id} className="rounded-lg bg-[#e3f2fd] p-3 flex items-center gap-3">
+                <div key={m.id} className="rounded-lg bg-[#e3f2fd] border-l-4 border-[#1976d2] p-3 flex items-center gap-3">
                   <Avatar photoUrl={photoUrl} fullName={m.full_name} />
                   <div className="min-w-0 flex-1">
                     <MemberDetailLink
@@ -385,7 +387,10 @@ export function DashboardInteractive({
                       const m = card.data;
                       const photoUrl = memberPhotoUrl(m.photo_path);
                       return (
-                        <div key={`newly-${m.id}`} className="rounded-lg bg-[#e3f2fd] p-3 flex items-start gap-3">
+                        <div
+                          key={`newly-${m.id}`}
+                          className="rounded-lg bg-[#e3f2fd] border-l-4 border-[#1976d2] p-3 flex items-start gap-3"
+                        >
                           <Avatar photoUrl={photoUrl} fullName={m.full_name} />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-baseline gap-1.5 flex-wrap">
@@ -445,13 +450,20 @@ export function DashboardInteractive({
                           <p className="text-xs text-[#6a1b7a]">
                             Your follow-up is due {f.follow_up_due ? formatIsoDate(f.follow_up_due) : "—"}
                           </p>
-                          <div className="mt-1 flex items-center gap-2">
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
                             <button
                               type="button"
                               onClick={() => setViewingEntry(f)}
+                              className="rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-[#6a1b7a] border border-[#8e44ad] hover:bg-[#f3e5f5]"
+                            >
+                              View original entry
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setOutreachForFollowUp(f)}
                               className="rounded-md bg-[#1e3a5f] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#152a45]"
                             >
-                              View entry
+                              Outreach
                             </button>
                             <button
                               type="button"
@@ -480,8 +492,26 @@ export function DashboardInteractive({
       </div>
 
       {viewingEntry &&
+        createPortal(<ViewOutreachEntryModal entry={viewingEntry} onClose={() => setViewingEntry(null)} />, document.body)}
+
+      {outreachForFollowUp &&
         createPortal(
-          <EditOutreachEntryModal groupId={groupId} entry={viewingEntry} onClose={() => setViewingEntry(null)} onSaved={() => router.refresh()} />,
+          <AddOutreachModal
+            memberId={outreachForFollowUp.member_id}
+            memberName={outreachForFollowUp.member_name}
+            memberPhone={outreachForFollowUp.member_phone}
+            memberLabel={memberLabel}
+            groupId={groupId}
+            currentUserName={currentUserName}
+            onClose={() => setOutreachForFollowUp(null)}
+            onSaved={() => {
+              // A new outreach entry was just logged for this member -- the
+              // follow-up reminder that prompted it is now handled, so
+              // dismiss it automatically instead of leaving it for a
+              // separate manual Dismiss click.
+              handleDismissFollowUp(outreachForFollowUp.id);
+            }}
+          />,
           document.body,
         )}
 
