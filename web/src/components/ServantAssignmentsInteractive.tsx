@@ -104,7 +104,7 @@ export function ServantAssignmentsInteractive({
           s.id === servantId
             ? {
                 ...s,
-                servantGroups: newGroup ? [{ id: newGroup.id, name: newGroup.name }] : [],
+                servantGroups: newGroup ? [{ id: newGroup.id, name: newGroup.name, ladder_position: newGroup.ladder_position }] : [],
                 isUnassignedServant: !newGroup,
               }
             : s,
