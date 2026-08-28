@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { ServantDirectoryEntry } from "@/lib/servant-directory";
 import type { GroupSummary } from "@/lib/groups";
@@ -35,9 +35,22 @@ export function ServantAssignmentsInteractive({
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
+  // Own local copy of `servants`, updated immediately on a successful
+  // reassignment rather than waiting on `router.refresh()` -- that only
+  // re-supplies fresh props on the standalone Servant Assignments *page*.
+  // Embedded elsewhere (e.g. Group Transition's post-transition review,
+  // whose data is fetched once into local client state, not page props),
+  // router.refresh() has nothing to refresh, so the dropdown would silently
+  // snap back to the old value even though the reassignment succeeded.
+  const [localServants, setLocalServants] = useState(servants);
+  useEffect(() => setLocalServants(servants), [servants]);
+
   // Only people who actually need a cohort assignment -- holds a 'servant'
   // role (assigned or unassigned), not a General-Coordinator-only user.
-  const assignable = useMemo(() => servants.filter((s) => s.servantGroups.length > 0 || s.isUnassignedServant), [servants]);
+  const assignable = useMemo(
+    () => localServants.filter((s) => s.servantGroups.length > 0 || s.isUnassignedServant),
+    [localServants],
+  );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -76,6 +89,20 @@ export function ServantAssignmentsInteractive({
         alert(res.error);
         return;
       }
+      const newGroup = newGroupId ? (groups.find((g) => g.id === newGroupId) ?? null) : null;
+      setLocalServants((prev) =>
+        prev.map((s) =>
+          s.id === servantId
+            ? {
+                ...s,
+                servantGroups: newGroup ? [{ id: newGroup.id, name: newGroup.name }] : [],
+                isUnassignedServant: !newGroup,
+              }
+            : s,
+        ),
+      );
+      // Also refresh the route's own server-fetched data, for the standalone
+      // Servant Assignments page (harmless no-op anywhere else).
       router.refresh();
     });
   }

@@ -51,7 +51,7 @@ export function GroupNavShell({
           <AppLogo logoUrl={logoUrl} title={appTitleShort} size={32} circular={false} />
           <h1 className="text-2xl font-bold">{appTitleShort}</h1>
         </Link>
-        <p className="mt-1 text-sm opacity-90">{groupName} Servant Dashboard</p>
+        <p className="mt-1 text-sm opacity-90">{groupName}</p>
 
         <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">
           <SignOutButton className="text-white/70 hover:text-white transition-colors" />

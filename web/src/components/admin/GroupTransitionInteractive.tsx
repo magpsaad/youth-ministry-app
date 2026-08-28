@@ -68,9 +68,11 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
           </ul>
           <Link
             href="/qr-codes"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-block rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45]"
           >
-            Go to Print QR Codes
+            Go to Print QR Codes (opens in a new tab)
           </Link>
         </div>
 
