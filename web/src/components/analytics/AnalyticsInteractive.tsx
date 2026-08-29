@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { AnalyticsRawData } from "@/lib/analytics";
 import type { ServantOption } from "@/lib/servants";
 import { useMyAssigned } from "@/components/MyAssignedContext";
+import { ClipboardCheckIcon, UsersIcon, ChartBarIcon } from "@/components/icons";
 
 type SortKey = "name" | "gender" | "caseload";
 
@@ -111,7 +112,9 @@ export function AnalyticsInteractive({
   return (
     <div className="mt-4 space-y-6">
       <section className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
-        <h2 className="text-lg font-bold text-[#1e3a5f] mb-4">Data Completeness</h2>
+        <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
+          <ClipboardCheckIcon className="h-5 w-5" /> Data Completeness
+        </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           <StatCard label="Assigned to Servants" value={completeness.pctAssignedServant} />
           <StatCard label="Has Phone" value={completeness.pctPhone} />
@@ -128,7 +131,9 @@ export function AnalyticsInteractive({
       </section>
 
       <section className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
-        <h2 className="text-lg font-bold text-[#1e3a5f] mb-4">Servant Assignments</h2>
+        <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
+          <UsersIcon className="h-5 w-5" /> Servant Assignments
+        </h2>
         <div className="overflow-hidden rounded-lg border border-[#f0f0f0]">
           <table className="w-full text-sm">
             <thead>
@@ -177,7 +182,9 @@ export function AnalyticsInteractive({
       </section>
 
       <section className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
-        <h2 className="text-lg font-bold text-[#1e3a5f] mb-4">Average Attendance by Month</h2>
+        <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
+          <ChartBarIcon className="h-5 w-5" /> Average Attendance by Month
+        </h2>
         {monthly.length === 0 ? (
           <p className="text-sm text-[#666]">No tracked service dates yet.</p>
         ) : (
