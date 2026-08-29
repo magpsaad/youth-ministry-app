@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
-import { getAppSettings, getAttendanceWindowSettings } from "@/lib/app-settings";
+import { getAppSettings, getAttendanceWindowSettings, weekdayName } from "@/lib/app-settings";
 import { getServantDirectory } from "@/lib/servant-directory";
 import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon } from "@/components/icons";
@@ -52,7 +52,11 @@ export default async function ServantsDirectoryPage() {
         <p className="mt-1 text-sm opacity-90">Servant Directory</p>
       </header>
       <main className="max-w-4xl mx-auto px-4 py-6">
-        <ServantsDirectoryInteractive servants={servants} windowWeeks={windowSettings.servant_attendance_window_weeks} />
+        <ServantsDirectoryInteractive
+          servants={servants}
+          windowWeeks={windowSettings.servant_attendance_window_weeks}
+          dayName={weekdayName(windowSettings.service_weekday)}
+        />
       </main>
     </div>
   );

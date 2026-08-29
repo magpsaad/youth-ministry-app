@@ -111,6 +111,16 @@ export function isOnServiceWeekday(dateISO: string, serviceWeekday: number): boo
   return isoDay === serviceWeekday;
 }
 
+const WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+/** ISO weekday (1..7) -> its name, e.g. for the average-attendance-%
+ * captions ("...counting only Fridays"). Shared with the App Settings
+ * screen's Service Day dropdown so the wording always matches whatever's
+ * actually configured, not a hardcoded "Friday." */
+export function weekdayName(serviceWeekday: number): string {
+  return WEEKDAY_NAMES[serviceWeekday - 1] ?? "Friday";
+}
+
 /**
  * The shared "since" cutoff for an average-attendance-% calculation: the
  * later of (today - windowWeeks) and the person's own join date, so the
