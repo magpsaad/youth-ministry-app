@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getAttendanceWindowSettings, resolveAttendanceSince } from "@/lib/app-settings";
+import { getAttendanceWindowSettings, resolveAttendanceSince, isOnServiceWeekday } from "@/lib/app-settings";
 
 export type MemberListItem = {
   id: string;
@@ -52,9 +52,12 @@ const LIST_SELECT =
  * dates since the member's `join_date` (their earliest attendance record --
  * §3.3, distinct from `created_at`, which is just when the row was
  * inserted and would read wrong for migrated data), capped to a rolling
- * window (`youth_attendance_window_weeks`, admin-configurable). Returns
- * null (not 0%) when there's no tracked date yet to divide by, including
- * when the member has never attended at all (join_date is null).
+ * window (`youth_attendance_window_weeks`, admin-configurable). Only counts
+ * dates on the configured service weekday (Friday by default) -- an
+ * off-day attendance row (a retreat, a trip) stays visible everywhere else,
+ * it just doesn't move this percentage. Returns null (not 0%) when there's
+ * no tracked date yet to divide by, including when the member has never
+ * attended at all (join_date is null).
  */
 export async function getGroupMembers(groupId: string): Promise<MemberListItem[]> {
   const supabase = await createClient();
@@ -73,7 +76,9 @@ export async function getGroupMembers(groupId: string): Promise<MemberListItem[]
     .eq("attendee_type", "member")
     .in("member_id", memberIds);
 
-  const trackedDates = Array.from(new Set((attendance ?? []).map((a) => a.service_date))).sort();
+  const trackedDates = Array.from(new Set((attendance ?? []).map((a) => a.service_date)))
+    .filter((d) => isOnServiceWeekday(d, windowSettings.service_weekday))
+    .sort();
   const presentByMember = new Map<string, Set<string>>();
   for (const a of attendance ?? []) {
     if (!a.member_id) continue;
