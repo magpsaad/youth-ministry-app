@@ -8,7 +8,11 @@ import { renameGroupAction, addGroupTierAction, deleteGroupTierAction } from "@/
  * and extend/shrink the active ladder by a tier. Add/Delete go through
  * add_group_tier()/delete_group_tier() (migration 0030), which keep
  * ladder_position contiguous -- required for run_group_transition() (also
- * generalized in 0030) to keep working for any ladder length. */
+ * generalized in 0030) to keep working for any ladder length. Name is
+ * always required when adding a group (migration 0033) -- no auto-naming
+ * from group_name_template, since a cohort's naming convention might look
+ * completely different in future years than whatever the template says
+ * today (owner's call). */
 export function GroupNamesInteractive({ initial }: { initial: AdminGroupRow[] }) {
   const [groups, setGroups] = useState(initial);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -17,7 +21,7 @@ export function GroupNamesInteractive({ initial }: { initial: AdminGroupRow[] })
   const [error, setError] = useState<string | null>(null);
 
   const [showAddForm, setShowAddForm] = useState(false);
-  const [addForm, setAddForm] = useState<AddGroupTierInput>({ cohortYear: null, name: null, qrColor: "#999999" });
+  const [addForm, setAddForm] = useState<AddGroupTierInput>({ cohortYear: null, name: "", qrColor: "#999999" });
 
   const terminalPosition = groups.length > 0 ? Math.max(...groups.map((g) => g.ladder_position)) : null;
 
@@ -41,6 +45,10 @@ export function GroupNamesInteractive({ initial }: { initial: AdminGroupRow[] })
   }
 
   function handleAdd() {
+    if (!addForm.name.trim()) {
+      setError("Name is required.");
+      return;
+    }
     setError(null);
     startTransition(async () => {
       const res = await addGroupTierAction(addForm);
@@ -49,7 +57,7 @@ export function GroupNamesInteractive({ initial }: { initial: AdminGroupRow[] })
         return;
       }
       setShowAddForm(false);
-      setAddForm({ cohortYear: null, name: null, qrColor: "#999999" });
+      setAddForm({ cohortYear: null, name: "", qrColor: "#999999" });
       // The shift/insert changes multiple rows at once (terminal renumbers,
       // possibly renames) -- simplest to just re-fetch rather than
       // hand-patch local state for every affected row.
@@ -155,10 +163,10 @@ export function GroupNamesInteractive({ initial }: { initial: AdminGroupRow[] })
               />
             </label>
             <label className="text-xs text-[#666]">
-              Name (optional — auto-generated if blank)
+              Name (required)
               <input
-                value={addForm.name ?? ""}
-                onChange={(e) => setAddForm((prev) => ({ ...prev, name: e.target.value === "" ? null : e.target.value }))}
+                value={addForm.name}
+                onChange={(e) => setAddForm((prev) => ({ ...prev, name: e.target.value }))}
                 className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
               />
             </label>

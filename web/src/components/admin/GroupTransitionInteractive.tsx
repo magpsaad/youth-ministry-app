@@ -127,7 +127,7 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
           <div className="rounded-md bg-[#fff3cd] text-[#856404] text-sm px-3 py-2 mb-4">
             <p>
               Yr {preview.currentNewTerminalPosition} becomes the new Yr {preview.currentTerminalPosition}+, keeping
-              its own color, name pattern, and its own servants — just like every other year advancing.
+              its own name, color, and its own servants unchanged — just like every other year advancing.
               {preview.oldTerminalGroupName && (
                 <>
                   {" "}

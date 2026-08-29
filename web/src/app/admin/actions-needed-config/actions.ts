@@ -71,10 +71,11 @@ export async function renameGroupAction(groupId: string, name: string) {
   return { error: null };
 }
 
-export type AddGroupTierInput = { cohortYear: number | null; name: string | null; qrColor: string };
+export type AddGroupTierInput = { cohortYear: number | null; name: string; qrColor: string };
 
 /** Extends the active ladder by one tier, inserted just below the current
- * terminal group (which shifts up to make room -- migration 0030). */
+ * terminal group (which shifts up to make room -- migration 0030). Name is
+ * required (migration 0033) -- no auto-naming from group_name_template. */
 export async function addGroupTierAction(input: AddGroupTierInput) {
   const supabase = await createClient();
   const { error } = await supabase.rpc("add_group_tier", {

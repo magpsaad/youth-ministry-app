@@ -30,9 +30,9 @@ export type TransitionPreview = {
  * screen needs to show before the Admin commits: every group's current vs.
  * next-name preview, which old terminal-tier row (if any) is about to be
  * absorbed and archived, and a suggested year for the new incoming
- * pre-entry cohort. Mirrors run_group_transition() (migration 0028/0030)
+ * pre-entry cohort. Mirrors run_group_transition() (migration 0028/0030/0033)
  * exactly: the row one below terminal becomes the new terminal row (same
- * row, aggregate name); the OLD terminal row is what merges in and
+ * row, name left unchanged); the OLD terminal row is what merges in and
  * archives. Terminal position is now derived from the actual data (the
  * highest active ladder_position), not hardcoded to 5, since the ladder
  * length is admin-configurable (§6.9). */
@@ -66,9 +66,9 @@ export async function getTransitionPreview(): Promise<TransitionPreview> {
       return { id: g.id, name: g.name, cohortYear: g.cohort_year, ladderPosition: g.ladder_position, nextName: null };
     }
     if (g.ladder_position === newTerminalPosition) {
-      // Becomes the NEW terminal row -- aggregate name, not the normal template.
-      const nextName = g.cohort_year !== null ? `${g.cohort_year} and earlier - Yr ${terminalPosition}+` : null;
-      return { id: g.id, name: g.name, cohortYear: g.cohort_year, ladderPosition: g.ladder_position, nextName };
+      // Becomes the NEW terminal row -- keeps its current name unchanged
+      // (owner's call, migration 0033: no formula assumed to still apply).
+      return { id: g.id, name: g.name, cohortYear: g.cohort_year, ladderPosition: g.ladder_position, nextName: g.name };
     }
     const nextName = renderName(g.cohort_year, String(g.ladder_position + 1));
     return { id: g.id, name: g.name, cohortYear: g.cohort_year, ladderPosition: g.ladder_position, nextName };
@@ -82,8 +82,7 @@ export async function getTransitionPreview(): Promise<TransitionPreview> {
   return {
     groups,
     oldTerminalGroupName: canTransition ? (oldTerminal?.name ?? null) : null,
-    newTerminalGroupName:
-      canTransition && newTerminal?.cohort_year != null ? `${newTerminal.cohort_year} and earlier - Yr ${terminalPosition}+` : null,
+    newTerminalGroupName: canTransition ? (newTerminal?.name ?? null) : null,
     suggestedNewCohortYear,
     currentNewTerminalPosition: newTerminalPosition,
     currentTerminalPosition: terminalPosition,
