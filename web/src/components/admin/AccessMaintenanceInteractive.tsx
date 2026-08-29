@@ -14,11 +14,11 @@ const ROLE_LABELS: Record<AccessRoleRow["role"], string> = {
 };
 
 const ROLE_DESCRIPTIONS: Record<AccessRoleRow["role"], string> = {
-  admin: "Everything, everywhere — every group's data plus every admin-only screen (this one included).",
-  general_coordinator: "Full read/write on every group's data and the Coordinator Corner, but no admin-only screens.",
-  sub_coordinator: "Same read/write access as General Coordinator, scoped to just one group. Can't reassign a servant's group or remove a servant.",
-  servant: "The base role. Scoped to one group (or Unassigned) — sees only that group's data and appears in its assignment lists. Purely administrative servants can stay Unassigned.",
-  read_only: "View-only for one group — no edits, and never appears in that group's assignment dropdown. Meant to sit alongside someone's real primary role, not as their only grant.",
+  admin: "Can: everything, everywhere — every group's data, plus every admin-only screen (this one included). Cannot be restricted from anything.",
+  general_coordinator: "Can: full read/write on every group's data, and the Coordinator Corner. Cannot open admin-only screens, unless also separately granted Admin.",
+  sub_coordinator: "Can: full read/write, same as General Coordinator, but scoped to just one group. Cannot reassign a servant's group, remove a servant, or see/edit any other group's data.",
+  servant: "Can: view/edit their one assigned group's data (or none at all, if Unassigned), and appear in that group's assignment lists. Cannot see or edit any other group's data.",
+  read_only: "Can: view one group's data — members, attendance, outreach. Cannot make any edit there, and never appears in that group's assignment dropdown. Meant to sit alongside someone's real primary role, not as their only grant.",
 };
 
 const ROLES_REQUIRING_GROUP: AccessRoleRow["role"][] = ["sub_coordinator", "read_only"];
@@ -97,7 +97,7 @@ export function AccessMaintenanceInteractive({
   return (
     <div className="space-y-4">
       <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
-        <h2 className="text-sm font-bold text-[#1e3a5f] mb-2">What each role can do</h2>
+        <h2 className="text-sm font-bold text-[#1e3a5f] mb-2">What each role can and cannot do</h2>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs">
           {(Object.keys(ROLE_LABELS) as AccessRoleRow["role"][]).map((r) => (
             <div key={r}>
