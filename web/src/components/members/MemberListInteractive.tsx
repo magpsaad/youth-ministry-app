@@ -18,6 +18,8 @@ export function MemberListInteractive({
   canDelete,
   currentUserId,
   currentUserName,
+  windowWeeks,
+  dayName,
 }: {
   members: MemberListItem[];
   groupId: string;
@@ -27,6 +29,8 @@ export function MemberListInteractive({
   canDelete: boolean;
   currentUserId: string;
   currentUserName: string;
+  windowWeeks: number | null;
+  dayName: string;
 }) {
   const { myAssignedOnly, hydrated } = useMyAssigned();
   const [q, setQ] = useState("");
@@ -209,6 +213,12 @@ export function MemberListInteractive({
           </div>
         </div>
       )}
+
+      <p className="mt-3 text-xs text-[#666]">
+        {windowWeeks === null
+          ? `Attendance % is calculated over each ${memberLabel.toLowerCase()}'s entire history since their Join Date, counting only ${dayName}s.`
+          : `Attendance % is a rolling trailing ${windowWeeks} week${windowWeeks === 1 ? "" : "s"}, counting only ${dayName}s, never counting weeks before someone joined.`}
+      </p>
 
       <MemberGrid
         members={filtered}

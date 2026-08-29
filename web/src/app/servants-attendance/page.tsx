@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
-import { getAppSettings, getAttendanceWindowSettings } from "@/lib/app-settings";
+import { getAppSettings, getAttendanceWindowSettings, weekdayName } from "@/lib/app-settings";
 import { getServantAttendanceBundle } from "@/lib/servant-attendance";
 import { logAudit } from "@/lib/audit";
 import { AppLogo } from "@/components/AppLogo";
@@ -54,7 +54,11 @@ export default async function ServantsAttendancePage() {
         <p className="mt-1 text-sm opacity-90">Servants Attendance</p>
       </header>
       <main className="max-w-3xl mx-auto px-4 py-6">
-        <ServantsAttendanceInteractive bundle={bundle} windowWeeks={windowSettings.servant_attendance_window_weeks} />
+        <ServantsAttendanceInteractive
+          bundle={bundle}
+          windowWeeks={windowSettings.servant_attendance_window_weeks}
+          dayName={weekdayName(windowSettings.service_weekday)}
+        />
       </main>
     </div>
   );

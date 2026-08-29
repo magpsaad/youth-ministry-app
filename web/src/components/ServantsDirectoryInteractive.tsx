@@ -21,9 +21,11 @@ type Bucket = { label: string; entries: ServantDirectoryEntry[] };
 export function ServantsDirectoryInteractive({
   servants,
   windowWeeks,
+  dayName,
 }: {
   servants: ServantDirectoryEntry[];
   windowWeeks: number | null;
+  dayName: string;
 }) {
   const [viewMode, setViewMode] = useState<"categorical" | "alphabetical">("categorical");
   const [search, setSearch] = useState("");
@@ -75,8 +77,8 @@ export function ServantsDirectoryInteractive({
     <div className="space-y-4">
       <p className="text-xs text-[#666]">
         {windowWeeks === null
-          ? "Attendance % is calculated over each servant's entire history since their Join Date."
-          : `Attendance % is a rolling trailing ${windowWeeks} week${windowWeeks === 1 ? "" : "s"}, never counting weeks before someone joined.`}
+          ? `Attendance % is calculated over each servant's entire history since their Join Date, counting only ${dayName}s.`
+          : `Attendance % is a rolling trailing ${windowWeeks} week${windowWeeks === 1 ? "" : "s"}, counting only ${dayName}s, never counting weeks before someone joined.`}
       </p>
 
       <div className="flex flex-wrap items-center gap-3">

@@ -15,9 +15,11 @@ function formatDate(iso: string): string {
 export function ServantsAttendanceInteractive({
   bundle,
   windowWeeks,
+  dayName,
 }: {
   bundle: ServantAttendanceBundle;
   windowWeeks: number | null;
+  dayName: string;
 }) {
   const [attendanceByServant, setAttendanceByServant] = useState(bundle.attendanceByServant);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -135,8 +137,8 @@ export function ServantsAttendanceInteractive({
 
       <p className="text-xs text-[#666]">
         {windowWeeks === null
-          ? "Attendance % is calculated over each servant's entire history since their Join Date."
-          : `Attendance % is a rolling trailing ${windowWeeks} week${windowWeeks === 1 ? "" : "s"}, never counting weeks before someone joined.`}
+          ? `Attendance % is calculated over each servant's entire history since their Join Date, counting only ${dayName}s.`
+          : `Attendance % is a rolling trailing ${windowWeeks} week${windowWeeks === 1 ? "" : "s"}, counting only ${dayName}s, never counting weeks before someone joined.`}
       </p>
 
       <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden overflow-x-auto">
