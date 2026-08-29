@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getAttendanceWindowSettings, resolveAttendanceSince } from "@/lib/app-settings";
+import { getAttendanceWindowSettings, resolveAttendanceSince, isOnServiceWeekday } from "@/lib/app-settings";
 
 export type ServantDirectoryEntry = {
   id: string;
@@ -18,14 +18,15 @@ export type ServantDirectoryEntry = {
 
 /**
  * REQUIREMENTS.md §6.13 -- the cross-group servant roster used by Servant
- * Directory, Servant Profiles, Servant Assignments, and Servants
- * Attendance. Includes anyone holding a 'servant' or 'general_coordinator'
- * role row (Sub-Coordinators/Admins-only-with-no-servant-role aren't
- * "servants" for this listing). Average attendance % is a rolling window
- * (`servant_attendance_window_weeks`, admin-configurable, owner's explicit
- * choice distinct from members' rule in §7.2), floored at the servant's
- * `join_date` (their earliest attendance record -- §3.5) so the window
- * never reaches before they actually joined.
+ * Directory and Servant Profiles (Servant Assignments has its own richer
+ * roster, lib/servant-assignments.ts, since it needs every role grant, not
+ * just 'servant'). Includes anyone holding a 'servant' or
+ * 'general_coordinator' role row (Sub-Coordinators/Admins-only-with-no-
+ * servant-role aren't "servants" for this listing). Average attendance % is
+ * a rolling window (`servant_attendance_window_weeks`, admin-configurable,
+ * owner's explicit choice distinct from members' rule in §7.2), floored at
+ * the servant's `join_date` (their earliest attendance record -- §3.5), and
+ * only counts dates on the configured service weekday (Friday by default).
  */
 export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
   const supabase = await createClient();
@@ -92,7 +93,7 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
     presentByServant.get(row.servant_id)!.add(row.service_date);
     allTrackedDates.add(row.service_date);
   }
-  const trackedDates = Array.from(allTrackedDates);
+  const trackedDates = Array.from(allTrackedDates).filter((d) => isOnServiceWeekday(d, windowSettings.service_weekday));
 
   const entries: ServantDirectoryEntry[] = [];
   for (const [userId, acc] of byUser) {

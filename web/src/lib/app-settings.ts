@@ -50,29 +50,51 @@ export type AttendanceWindowSettings = {
   /** null = no rolling cap -- calculate over the person's entire attendance history since their Join Date. */
   youth_attendance_window_weeks: number | null;
   servant_attendance_window_weeks: number | null;
+  /** ISO weekday (Monday=1..Sunday=7), same numbering as the is_service_day()
+   * Postgres function -- the regular service day, Friday (5) by default for
+   * this deployment. */
+  service_weekday: number;
 };
 
 const ATTENDANCE_WINDOW_FALLBACK: AttendanceWindowSettings = {
   youth_attendance_window_weeks: 52,
   servant_attendance_window_weeks: 52,
+  service_weekday: 5,
 };
 
 /**
  * REQUIREMENTS.md §7.2/§6.13 -- the two independent, admin-configurable
  * rolling-attendance-window settings (owner's explicit choice: weeks,
- * floored at each person's `join_date`). Kept separate from
- * getAppSettings() -- that one is called on nearly every page for
- * branding, and these two fields are only ever needed by the handful of
- * screens that actually compute average attendance %.
+ * floored at each person's `join_date`), plus the configured service
+ * weekday. Kept separate from getAppSettings() -- that one is called on
+ * nearly every page for branding, and these fields are only ever needed by
+ * the handful of screens that actually compute average attendance %.
  */
 export async function getAttendanceWindowSettings(): Promise<AttendanceWindowSettings> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("app_settings")
-    .select("youth_attendance_window_weeks, servant_attendance_window_weeks")
+    .select("youth_attendance_window_weeks, servant_attendance_window_weeks, service_weekday")
     .single();
 
   return data ?? ATTENDANCE_WINDOW_FALLBACK;
+}
+
+/**
+ * REQUIREMENTS.md §7.2 -- true if the given ISO date-only string
+ * ("YYYY-MM-DD") falls on the configured service weekday. Every average-
+ * attendance-% calculation (members and servants alike) only counts
+ * service-weekday dates, both as "tracked" opportunities and as presence --
+ * an off-day attendance row (a retreat, a trip) is real and stays visible
+ * everywhere else, it just shouldn't move this specific percentage. Manual
+ * y/m/d parsing avoids the UTC-midnight-parse timezone bug `new Date(iso)`
+ * has for a date-only string.
+ */
+export function isOnServiceWeekday(dateISO: string, serviceWeekday: number): boolean {
+  const [y, m, d] = dateISO.split("-").map(Number);
+  const jsDay = new Date(y, m - 1, d).getDay(); // 0 = Sunday .. 6 = Saturday
+  const isoDay = jsDay === 0 ? 7 : jsDay;
+  return isoDay === serviceWeekday;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getAttendanceWindowSettings, resolveAttendanceSince } from "@/lib/app-settings";
+import { getAttendanceWindowSettings, resolveAttendanceSince, isOnServiceWeekday } from "@/lib/app-settings";
 
 export type ServantAttendanceMember = {
   id: string;
@@ -92,7 +92,12 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
   const todayHasRows = trackedDatesSet.has(todayDate);
   const cutoffPassed = timeMinutes >= toMinutes(cutoff);
 
-  const allDates = Array.from(trackedDatesSet);
+  // Only service-weekday dates count toward average attendance % -- the
+  // date-picker (`trackedDates`, above) still shows every date, including
+  // off-day special events, since a servant can deliberately record
+  // attendance for those (REQUIREMENTS.md §6.5); they just shouldn't move
+  // this percentage.
+  const allDates = Array.from(trackedDatesSet).filter((d) => isOnServiceWeekday(d, windowSettings.service_weekday));
 
   const members: ServantAttendanceMember[] = ids.map((id) => {
     const info = byUser.get(id)!;
