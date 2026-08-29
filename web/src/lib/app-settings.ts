@@ -20,6 +20,11 @@ export type AppSettings = {
    * count toward average attendance % (§7.2). Now admin-editable here
    * too, alongside every other App Labels & Branding field. */
   service_weekday: number;
+  /** "HH:MM:SS" -- same-day cutoff time for the Attendance tab's "Today
+   * becomes available" rule (§7.2), paired with `timezone` below. */
+  same_day_cutoff_time: string;
+  /** IANA timezone the cutoff time (and self-check-in gating) is evaluated in. */
+  timezone: string;
 };
 
 const FALLBACK: AppSettings = {
@@ -34,6 +39,8 @@ const FALLBACK: AppSettings = {
   birthday_window_days_before: 7,
   birthday_window_days_after: 14,
   service_weekday: 5,
+  same_day_cutoff_time: "21:00:00",
+  timezone: "America/New_York",
 };
 
 /**
@@ -46,7 +53,7 @@ export async function getAppSettings(): Promise<AppSettings> {
   const { data } = await supabase
     .from("app_settings")
     .select(
-      "app_title_long, app_title_short, app_subtitle, logo_url, theme_color, group_label, member_label, app_version, birthday_window_days_before, birthday_window_days_after, service_weekday",
+      "app_title_long, app_title_short, app_subtitle, logo_url, theme_color, group_label, member_label, app_version, birthday_window_days_before, birthday_window_days_after, service_weekday, same_day_cutoff_time, timezone",
     )
     .single();
 

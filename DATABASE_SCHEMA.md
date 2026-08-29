@@ -43,7 +43,6 @@ create table app_settings (
   member_label            text not null default 'Member',     -- "Youth" for this deployment
 
   group_name_template     text default '{cohort_year} Cohort - Yr {position_label}',
-  current_service_year_label text,                             -- e.g. "25-26", used in QR labels
 
   app_version             text not null default '4.0',
 
