@@ -18,7 +18,15 @@ import { OutreachQuickLink } from "@/components/outreach/OutreachQuickLink";
 import { ViewOutreachEntryModal } from "@/components/outreach/ViewOutreachEntryModal";
 import { AddOutreachModal } from "@/components/outreach/AddOutreachModal";
 import { PhoneLink } from "@/components/PhoneLink";
-import { CakeIcon, UserPlusIcon } from "@/components/icons";
+import {
+  CakeIcon,
+  UserPlusIcon,
+  UsersIcon,
+  UserXIcon,
+  CalendarCheckIcon,
+  CalendarXIcon,
+  MapPinIcon,
+} from "@/components/icons";
 import { dismissNewAssignmentAction } from "@/app/g/[groupId]/members/actions";
 import { dismissFollowUpAction } from "@/app/g/[groupId]/outreach/actions";
 
@@ -179,12 +187,14 @@ export function DashboardInteractive({
   return (
     <div className="mt-4 space-y-6">
       <section className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
-        <h2 className="text-lg font-bold text-[#1e3a5f] mb-4">Overview</h2>
+        <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
+          <UsersIcon className="h-5 w-5" /> Overview
+        </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard label={`Total ${memberLabel}s`} value={stats.totalMembers} />
-          <StatCard label="Present Last Service" value={stats.presentLastServiceDate ?? "—"} />
-          <StatCard label="Absent Last Service" value={stats.absentLastServiceDate ?? "—"} />
-          <StatCard label="Never Attended" value={stats.neverAttended} />
+          <StatCard icon={<UsersIcon className="h-3.5 w-3.5" />} label={`Total ${memberLabel}s`} value={stats.totalMembers} />
+          <StatCard icon={<CalendarCheckIcon className="h-3.5 w-3.5" />} label="Present Last Service" value={stats.presentLastServiceDate ?? "—"} />
+          <StatCard icon={<CalendarXIcon className="h-3.5 w-3.5" />} label="Absent Last Service" value={stats.absentLastServiceDate ?? "—"} />
+          <StatCard icon={<UserXIcon className="h-3.5 w-3.5" />} label="Never Attended" value={stats.neverAttended} />
         </div>
         {statsData.visitorCount > 0 && (
           <p className="mt-3 text-xs text-[#666]">
@@ -194,7 +204,9 @@ export function DashboardInteractive({
       </section>
 
       <section className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
-        <h2 className="text-lg font-bold text-[#1e3a5f] mb-4">Proximity</h2>
+        <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
+          <MapPinIcon className="h-5 w-5" /> Proximity
+        </h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <StatCard label="Local" value={stats.proximity.Local} small />
           <StatCard label="Regional" value={stats.proximity.Regional} small />
@@ -570,10 +582,23 @@ export function DashboardInteractive({
   );
 }
 
-function StatCard({ label, value, small }: { label: string; value: number | string; small?: boolean }) {
+function StatCard({
+  label,
+  value,
+  small,
+  icon,
+}: {
+  label: string;
+  value: number | string;
+  small?: boolean;
+  icon?: React.ReactNode;
+}) {
   return (
     <div className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] border-t-4 border-[#1e3a5f] p-4">
-      <h3 className="text-[11px] uppercase tracking-wide text-[#666] font-semibold">{label}</h3>
+      <h3 className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-[#666] font-semibold">
+        {icon}
+        {label}
+      </h3>
       <p className={`mt-1 font-bold text-[#1e3a5f] ${small ? "text-xl" : "text-3xl"}`}>{value}</p>
     </div>
   );
