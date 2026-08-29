@@ -135,15 +135,6 @@ export function ActionsNeededConfigInteractive({
           />
         </label>
         <label className="text-xs text-[#666]">
-          Theme Color
-          <input
-            type="color"
-            value={appSettings.theme_color}
-            onChange={(e) => updateAppField("theme_color", e.target.value)}
-            className="mt-1 h-9 w-full rounded-md border border-[#ddd] px-2 py-1 focus:border-[#1e3a5f] focus:outline-none"
-          />
-        </label>
-        <label className="text-xs text-[#666]">
           Service Day
           <select
             value={appSettings.service_weekday}
@@ -157,6 +148,24 @@ export function ActionsNeededConfigInteractive({
             ))}
           </select>
         </label>
+        <label className="text-xs text-[#666]">
+          Same-Day Cutoff Time
+          <input
+            type="time"
+            value={appSettings.same_day_cutoff_time.slice(0, 5)}
+            onChange={(e) => updateAppField("same_day_cutoff_time", e.target.value)}
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          />
+        </label>
+        <label className="text-xs text-[#666]">
+          Timezone (IANA name)
+          <input
+            value={appSettings.timezone}
+            onChange={(e) => updateAppField("timezone", e.target.value)}
+            placeholder="America/New_York"
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          />
+        </label>
         <label className="text-xs text-[#666] sm:col-span-2">
           Logo URL (blank = no logo)
           <input
@@ -167,8 +176,10 @@ export function ActionsNeededConfigInteractive({
         </label>
       </div>
       <p className="text-xs text-[#666] mb-3">
-        Service Day drives self-check-in gating, the Attendance tab&rsquo;s same-day cutoff, and which dates count
-        toward average attendance % — changing it takes effect immediately, everywhere.
+        Service Day drives self-check-in gating and which dates count toward average attendance %. The Cutoff Time
+        and Timezone together control when &ldquo;Today&rdquo; becomes available in the Attendance tab — it opens as
+        soon as either someone has checked in, or the cutoff time passes, whichever comes first. All three take
+        effect immediately, everywhere.
       </p>
       <div className="flex items-center gap-3">
         <button
