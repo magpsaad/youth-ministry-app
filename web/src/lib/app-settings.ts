@@ -14,6 +14,12 @@ export type AppSettings = {
    * Was hardcoded 7/14; now admin-editable on the App Settings screen. */
   birthday_window_days_before: number;
   birthday_window_days_after: number;
+  /** ISO weekday (Monday=1..Sunday=7) of the regular service -- Friday (5)
+   * by default for this deployment. Drives self-check-in gating (§6.11),
+   * the Attendance tab's cutoff rule (§7.2), and which attendance dates
+   * count toward average attendance % (§7.2). Now admin-editable here
+   * too, alongside every other App Labels & Branding field. */
+  service_weekday: number;
 };
 
 const FALLBACK: AppSettings = {
@@ -27,6 +33,7 @@ const FALLBACK: AppSettings = {
   app_version: "4.0",
   birthday_window_days_before: 7,
   birthday_window_days_after: 14,
+  service_weekday: 5,
 };
 
 /**
@@ -39,7 +46,7 @@ export async function getAppSettings(): Promise<AppSettings> {
   const { data } = await supabase
     .from("app_settings")
     .select(
-      "app_title_long, app_title_short, app_subtitle, logo_url, theme_color, group_label, member_label, app_version, birthday_window_days_before, birthday_window_days_after",
+      "app_title_long, app_title_short, app_subtitle, logo_url, theme_color, group_label, member_label, app_version, birthday_window_days_before, birthday_window_days_after, service_weekday",
     )
     .single();
 

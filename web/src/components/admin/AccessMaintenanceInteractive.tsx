@@ -13,6 +13,14 @@ const ROLE_LABELS: Record<AccessRoleRow["role"], string> = {
   read_only: "Read-Only (exception access)",
 };
 
+const ROLE_DESCRIPTIONS: Record<AccessRoleRow["role"], string> = {
+  admin: "Everything, everywhere — every group's data plus every admin-only screen (this one included).",
+  general_coordinator: "Full read/write on every group's data and the Coordinator Corner, but no admin-only screens.",
+  sub_coordinator: "Same read/write access as General Coordinator, scoped to just one group. Can't reassign a servant's group or remove a servant.",
+  servant: "The base role. Scoped to one group (or Unassigned) — sees only that group's data and appears in its assignment lists. Purely administrative servants can stay Unassigned.",
+  read_only: "View-only for one group — no edits, and never appears in that group's assignment dropdown. Meant to sit alongside someone's real primary role, not as their only grant.",
+};
+
 const ROLES_REQUIRING_GROUP: AccessRoleRow["role"][] = ["sub_coordinator", "read_only"];
 const ROLES_ALLOWING_GROUP: AccessRoleRow["role"][] = ["sub_coordinator", "servant", "read_only"];
 
@@ -87,7 +95,20 @@ export function AccessMaintenanceInteractive({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-4">
+      <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+        <h2 className="text-sm font-bold text-[#1e3a5f] mb-2">What each role can do</h2>
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs">
+          {(Object.keys(ROLE_LABELS) as AccessRoleRow["role"][]).map((r) => (
+            <div key={r}>
+              <dt className="font-semibold text-[#333]">{ROLE_LABELS[r]}</dt>
+              <dd className="text-[#666]">{ROLE_DESCRIPTIONS[r]}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
         <h2 className="text-lg font-bold text-[#1e3a5f] mb-3">Find a Person</h2>
         <p className="text-xs text-[#666] mb-3">
@@ -185,6 +206,7 @@ export function AccessMaintenanceInteractive({
             </div>
           </>
         )}
+      </div>
       </div>
     </div>
   );
