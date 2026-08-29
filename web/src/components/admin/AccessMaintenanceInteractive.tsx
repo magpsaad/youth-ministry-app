@@ -17,7 +17,7 @@ const ROLE_DESCRIPTIONS: Record<AccessRoleRow["role"], string> = {
   admin: "Can: everything, everywhere — every group's data, plus every admin-only screen (this one included). Cannot be restricted from anything.",
   general_coordinator: "Can: full read/write on every group's data, and the Coordinator Corner. Cannot open admin-only screens, unless also separately granted Admin.",
   sub_coordinator: "Can: full read/write, same as General Coordinator, but scoped to just one group. Cannot reassign a servant's group, remove a servant, or see/edit any other group's data.",
-  servant: "Can: view/edit their one assigned group's data (or none at all, if Unassigned), and appear in that group's assignment lists. Cannot see or edit any other group's data.",
+  servant: "Can: view/edit their one assigned group's data (or none at all, if Unassigned), and appear in that group's assignment list — the only role that does, even though Sub-Coordinators/Read-Only can also access that group's data. Cannot see or edit any other group's data.",
   read_only: "Can: view one group's data — members, attendance, outreach. Cannot make any edit there, and never appears in that group's assignment dropdown. Meant to sit alongside someone's real primary role, not as their only grant.",
 };
 
