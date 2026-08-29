@@ -10,6 +10,9 @@ import {
 import type { AttendanceWindowSettings } from "@/lib/app-settings";
 import { GroupNamesInteractive } from "@/components/admin/GroupNamesInteractive";
 
+// ISO weekday numbering (Monday=1..Sunday=7), matching app_settings.service_weekday.
+const WEEKDAY_LABELS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
 export function ActionsNeededConfigInteractive({
   initial,
   initialWindowSettings,
@@ -140,6 +143,20 @@ export function ActionsNeededConfigInteractive({
             className="mt-1 h-9 w-full rounded-md border border-[#ddd] px-2 py-1 focus:border-[#1e3a5f] focus:outline-none"
           />
         </label>
+        <label className="text-xs text-[#666]">
+          Service Day
+          <select
+            value={appSettings.service_weekday}
+            onChange={(e) => updateAppField("service_weekday", Number(e.target.value))}
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          >
+            {WEEKDAY_LABELS.map((label, i) => (
+              <option key={label} value={i + 1}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="text-xs text-[#666] sm:col-span-2">
           Logo URL (blank = no logo)
           <input
@@ -149,6 +166,10 @@ export function ActionsNeededConfigInteractive({
           />
         </label>
       </div>
+      <p className="text-xs text-[#666] mb-3">
+        Service Day drives self-check-in gating, the Attendance tab&rsquo;s same-day cutoff, and which dates count
+        toward average attendance % — changing it takes effect immediately, everywhere.
+      </p>
       <div className="flex items-center gap-3">
         <button
           type="button"
