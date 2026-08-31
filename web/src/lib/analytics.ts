@@ -6,6 +6,7 @@ export type MemberAnalyticsRow = {
   assigned_servant_id: string | null;
   is_visitor: boolean;
   join_date: string | null;
+  proximity: "Local" | "Regional" | "Abroad" | "Unknown";
   hasPhone: boolean;
   hasEmail: boolean;
   hasDob: boolean;
@@ -21,18 +22,22 @@ export type AnalyticsRawData = {
 };
 
 /**
- * REQUIREMENTS.md §6.7/§6.2 -- raw per-member rows rather than pre-
+ * REQUIREMENTS.md §6.7/§6.2/§8.1 -- raw per-member rows rather than pre-
  * aggregated stats, so the Analytics tab's client-side "My Assigned List"
- * toggle can recompute Data Completeness and Average Attendance by Month
- * from the same fetch instead of round-tripping to the server -- same
- * architecture as the Dashboard's stats (lib/dashboard.ts).
+ * toggle can recompute Data Completeness, Proximity, and Average Attendance
+ * by Month from the same fetch instead of round-tripping to the server --
+ * same architecture as the Dashboard's stats (lib/dashboard.ts). Proximity
+ * added for the Phase H donut chart -- previously only the Dashboard had
+ * this data; Analytics didn't carry it at all.
  */
 export async function getAnalyticsRawData(groupId: string): Promise<AnalyticsRawData> {
   const supabase = await createClient();
 
   const { data: memberRows } = await supabase
     .from("members")
-    .select("id, assigned_servant_id, is_visitor, join_date, phone, email, date_of_birth, father_of_confession, photo_path")
+    .select(
+      "id, assigned_servant_id, is_visitor, join_date, phone, email, date_of_birth, father_of_confession, photo_path, university:universities(proximity)",
+    )
     .eq("group_id", groupId)
     .eq("status", "active");
 
@@ -41,6 +46,7 @@ export async function getAnalyticsRawData(groupId: string): Promise<AnalyticsRaw
     assigned_servant_id: m.assigned_servant_id,
     is_visitor: m.is_visitor,
     join_date: m.join_date,
+    proximity: ((m.university as unknown as { proximity?: string } | null)?.proximity ?? "Unknown") as MemberAnalyticsRow["proximity"],
     hasPhone: !!m.phone,
     hasEmail: !!m.email,
     hasDob: !!m.date_of_birth,

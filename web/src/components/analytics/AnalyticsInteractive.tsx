@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import type { AnalyticsRawData } from "@/lib/analytics";
 import type { ServantOption } from "@/lib/servants";
 import { useMyAssigned } from "@/components/MyAssignedContext";
-import { ClipboardCheckIcon, UsersIcon, ChartBarIcon } from "@/components/icons";
+import { ClipboardCheckIcon, UsersIcon, ChartBarIcon, MapPinIcon } from "@/components/icons";
+import { ProximityDonut } from "@/components/charts/ProximityDonut";
+import { AttendanceTrendChart } from "@/components/charts/AttendanceTrendChart";
 
 type SortKey = "name" | "gender" | "caseload";
 
@@ -49,6 +51,12 @@ export function AnalyticsInteractive({
     };
   }, [filteredMembers]);
 
+  const proximity = useMemo(() => {
+    const counts = { Local: 0, Regional: 0, Abroad: 0, Unknown: 0 };
+    for (const m of filteredMembers) counts[m.proximity] += 1;
+    return counts;
+  }, [filteredMembers]);
+
   const monthly = useMemo(() => {
     const filteredIds = new Set(filteredMembers.map((m) => m.id));
     const relevantAttendance = raw.attendance.filter((a) => filteredIds.has(a.memberId));
@@ -85,8 +93,6 @@ export function AnalyticsInteractive({
         return { month, label, avgPercent };
       });
   }, [filteredMembers, raw.attendance]);
-
-  const maxAvg = Math.max(1, ...monthly.map((m) => m.avgPercent));
 
   const sortedServants = useMemo(() => {
     return [...servants].sort((a, b) => {
@@ -127,6 +133,23 @@ export function AnalyticsInteractive({
           Based on {completeness.total} active {memberLabel.toLowerCase()}
           {completeness.total === 1 ? "" : "s"} (visitors excluded{applyFilter ? ", filtered to your assigned list" : ""}
           ).
+        </p>
+      </section>
+
+      <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
+          <MapPinIcon className="h-5 w-5" /> Proximity
+        </h2>
+        <ProximityDonut
+          local={proximity.Local}
+          regional={proximity.Regional}
+          abroad={proximity.Abroad}
+          unknown={proximity.Unknown}
+          centerLabel={`${memberLabel}s`}
+        />
+        <p className="mt-3 text-xs text-[#666]">
+          {completeness.total} active {memberLabel.toLowerCase()}
+          {completeness.total === 1 ? "" : "s"} (visitors excluded{applyFilter ? ", filtered to your assigned list" : ""}).
         </p>
       </section>
 
@@ -188,21 +211,8 @@ export function AnalyticsInteractive({
         {monthly.length === 0 ? (
           <p className="text-sm text-[#666]">No tracked service dates yet.</p>
         ) : (
-          <div className="space-y-2">
-            {monthly.map((m) => (
-              <div key={m.month} className="flex items-center gap-3">
-                <span className="w-32 shrink-0 text-sm text-[#333]">{m.label}</span>
-                <div className="flex-1 h-4 rounded-full bg-[#f0f0f0] overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-[#1e3a5f]"
-                    style={{ width: `${(m.avgPercent / maxAvg) * 100}%` }}
-                  />
-                </div>
-                <span className="w-12 shrink-0 text-right text-sm font-semibold text-[#1e3a5f]">
-                  {m.avgPercent}%
-                </span>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <AttendanceTrendChart data={[...monthly].reverse()} />
           </div>
         )}
       </section>
