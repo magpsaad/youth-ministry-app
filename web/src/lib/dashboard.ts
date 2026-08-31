@@ -4,7 +4,6 @@ import { getAppSettings } from "@/lib/app-settings";
 export type MemberStatRow = {
   id: string;
   assigned_servant_id: string | null;
-  proximity: "Local" | "Regional" | "Abroad" | "Unknown";
   everAttended: boolean;
   presentLastService: boolean;
 };
@@ -68,9 +67,11 @@ export async function getLastServiceDate(): Promise<string | null> {
 /**
  * REQUIREMENTS.md §6.3/§7.2/§6.2. Returns per-member raw rows rather than
  * pre-aggregated counts, so the Dashboard's client-side "My Assigned List"
- * toggle can recompute Overview/Proximity from the same fetch instead of
- * round-tripping to the server -- same client-side-filter architecture as
- * the Member List. "Tracked" service dates are whichever dates actually have
+ * toggle can recompute Overview from the same fetch instead of round-
+ * tripping to the server -- same client-side-filter architecture as the
+ * Member List. (Proximity moved to Analytics-only, §8.1 -- no longer
+ * computed or joined here.) "Tracked" service dates are whichever dates
+ * actually have
  * at least one attendance row -- there are none yet, since the Attendance tab
  * (Phase C) hasn't been built, so `lastServiceDate` correctly comes back null
  * rather than a misleading 0 for present/absent counts.
@@ -80,7 +81,7 @@ export async function getDashboardStatsData(groupId: string): Promise<DashboardS
 
   const { data: members } = await supabase
     .from("members")
-    .select("id, is_visitor, assigned_servant_id, university:universities(proximity)")
+    .select("id, is_visitor, assigned_servant_id")
     .eq("group_id", groupId)
     .eq("status", "active");
 
@@ -124,7 +125,6 @@ export async function getDashboardStatsData(groupId: string): Promise<DashboardS
   const rows: MemberStatRow[] = nonVisitors.map((m) => ({
     id: m.id,
     assigned_servant_id: m.assigned_servant_id,
-    proximity: ((m.university as unknown as { proximity?: string } | null)?.proximity ?? "Unknown") as MemberStatRow["proximity"],
     everAttended: everAttendedSet.has(m.id),
     presentLastService: presentLastServiceSet.has(m.id),
   }));
