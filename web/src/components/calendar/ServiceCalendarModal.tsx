@@ -9,6 +9,7 @@ import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon } from "@/components/icons";
 import { SignOutButton } from "@/components/SignOutButton";
 import { EventForm } from "./EventForm";
+import { HeaderPattern } from "@/components/HeaderPattern";
 
 type View = "month" | "week" | "list" | "fridays";
 
@@ -246,6 +247,7 @@ export function ServiceCalendarModal({
   return createPortal(
     <div className="fixed inset-0 z-[70] bg-[#f5f5f5] flex flex-col">
       <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative shrink-0">
+        <HeaderPattern />
         <button
           onClick={onClose}
           title="Home"
