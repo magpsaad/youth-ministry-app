@@ -11,6 +11,7 @@ import { LoadGroupPanel } from "@/components/LoadGroupPanel";
 import { AppLogo } from "@/components/AppLogo";
 import { SignOutButton } from "@/components/SignOutButton";
 import { ServiceCalendarButton } from "@/components/calendar/ServiceCalendarButton";
+import { HeaderPattern } from "@/components/HeaderPattern";
 
 export default async function LandingPage() {
   const user = await getCurrentUser();
@@ -36,6 +37,7 @@ export default async function LandingPage() {
   return (
     <div className="min-h-full flex flex-col bg-[#f5f5f5]">
       <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-6 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative">
+        <HeaderPattern />
         <div className="flex justify-center">
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={60} />
         </div>

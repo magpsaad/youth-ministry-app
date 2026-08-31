@@ -8,6 +8,7 @@ import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon } from "@/components/icons";
 import { SignOutButton } from "@/components/SignOutButton";
 import { PendingServantRow } from "@/components/admin/PendingServantRow";
+import { HeaderPattern } from "@/components/HeaderPattern";
 
 /** Minimal Admin/General Coordinator screen to review servants who self-
  * registered via the "Servants" QR code (0014_servant_self_registration.sql)
@@ -31,6 +32,7 @@ export default async function PendingServantsPage() {
   return (
     <div className="min-h-full bg-[#f5f5f5]">
       <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative">
+        <HeaderPattern />
         <Link
           href="/"
           title="Home"
