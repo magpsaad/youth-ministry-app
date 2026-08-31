@@ -39,16 +39,36 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        {/* iOS Safari doesn't apply the CSS `:active` pseudo-class on tap at all
-         * -- a long-standing WebKit quirk -- unless *some* element on the page
-         * has a touch event listener registered. This is the standard no-op
-         * fix: it makes iOS treat the page as "touch-interactive" so buttons'
-         * `active:` press-down styling (the 2.5D button treatment, §8.1) shows
-         * up on a real tap, not just a mouse click. Harmless everywhere else.
-         * `next/script` (not a raw <script> tag) so it actually re-runs after
-         * client-side route transitions, not just the very first page load. */}
-        <Script id="ios-active-fix" strategy="afterInteractive">
-          {`document.addEventListener("touchstart", function () {}, { passive: true });`}
+        {/* REQUIREMENTS.md §8.1 -- 2.5D buttons' press-down feel on touch (2nd
+         * round). The first fix (a no-op touchstart listener, the standard
+         * workaround for iOS Safari's :active-doesn't-fire-on-tap quirk)
+         * wasn't enough -- owner still saw no movement on a real phone. Not
+         * chasing that pseudo-class any further: this delegates real
+         * pointerdown/pointerup events to stamp `data-pressed="true"` on
+         * whichever button/link was actually touched (see the matching
+         * `[data-pressed="true"]` rule in globals.css), which fires
+         * identically and reliably on iOS, Android, and desktop alike,
+         * since it isn't going through `:active` at all. One listener here
+         * covers every current and future button/link app-wide -- no need
+         * to touch each of the ~75 buttons individually.
+         * `next/script` (not a raw <script> tag) so it survives client-side
+         * route transitions, not just the very first page load. */}
+        <Script id="press-feedback" strategy="afterInteractive">
+          {`(function () {
+            function target(el) { return el && el.closest ? el.closest("button, a[href]") : null; }
+            function clearAll() {
+              document.querySelectorAll('[data-pressed="true"]').forEach(function (el) {
+                el.removeAttribute("data-pressed");
+              });
+            }
+            document.addEventListener("pointerdown", function (e) {
+              var t = target(e.target);
+              if (t) t.setAttribute("data-pressed", "true");
+            }, { passive: true });
+            ["pointerup", "pointercancel", "pointerleave"].forEach(function (type) {
+              document.addEventListener(type, clearAll, { passive: true });
+            });
+          })();`}
         </Script>
         {children}
       </body>
