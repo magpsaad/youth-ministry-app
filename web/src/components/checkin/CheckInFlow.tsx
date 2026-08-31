@@ -136,7 +136,7 @@ export function CheckInFlow({
       <button
         type="button"
         onClick={() => setView(isServant ? "servant-intake" : "member-intake")}
-        className="mt-3 w-full rounded-md bg-[#f0f0f0] px-4 py-3 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0]"
+        className="mt-3 w-full rounded-md bg-[#f0f0f0] px-4 py-3 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
       >
         Don&rsquo;t see your name? Register here
       </button>
