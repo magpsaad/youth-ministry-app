@@ -83,7 +83,7 @@ export function VersesMaintenanceInteractive({ initial }: { initial: Verse[] }) 
   }
 
   return (
-    <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+    <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
       <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Bible Verses</h2>
       <p className="text-sm text-[#666] mb-3">
         A random active verse is shown while a group&rsquo;s data loads. Uncheck a verse to keep it without showing it.

@@ -111,13 +111,13 @@ export function ServantsDirectoryInteractive({
 
       {viewMode === "categorical"
         ? buckets.map((bucket) => (
-            <div key={bucket.label} className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-4">
+            <div key={bucket.label} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
               <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">{bucket.label}</h3>
               <ServantCards entries={bucket.entries} />
             </div>
           ))
         : filtered.length > 0 && (
-            <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-4">
+            <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
               <ServantCards entries={alphabetical} />
             </div>
           )}

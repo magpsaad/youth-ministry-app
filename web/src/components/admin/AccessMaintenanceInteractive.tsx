@@ -96,7 +96,7 @@ export function AccessMaintenanceInteractive({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+      <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         <h2 className="text-sm font-bold text-[#1e3a5f] mb-2">What each role can and cannot do</h2>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-xs">
           {(Object.keys(ROLE_LABELS) as AccessRoleRow["role"][]).map((r) => (
@@ -109,7 +109,7 @@ export function AccessMaintenanceInteractive({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+      <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         <h2 className="text-lg font-bold text-[#1e3a5f] mb-3">Find a Person</h2>
         <p className="text-xs text-[#666] mb-3">
           Only people who&rsquo;ve signed in at least once appear here -- there&rsquo;s no account yet to grant a
@@ -140,7 +140,7 @@ export function AccessMaintenanceInteractive({
         </div>
       </div>
 
-      <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+      <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         {!selectedProfile ? (
           <p className="text-sm text-[#666]">Select a person to view/edit their roles.</p>
         ) : (

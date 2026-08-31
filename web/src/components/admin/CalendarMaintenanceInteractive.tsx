@@ -118,7 +118,7 @@ export function CalendarMaintenanceInteractive({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+      <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         <h2 className="text-lg font-bold text-[#1e3a5f] mb-3">Preload Holidays &amp; Feast Days</h2>
         <p className="text-sm text-[#666] mb-3">
           Computes the sets below for the selected year (fixed feasts, Pascha-relative movable feasts, and any
@@ -161,7 +161,7 @@ export function CalendarMaintenanceInteractive({
         )}
       </div>
 
-      <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+      <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">Preview for {year}</h3>
         <div className="divide-y divide-[#f0f0f0]">
           {preview.map((h) => (
@@ -174,7 +174,7 @@ export function CalendarMaintenanceInteractive({
         </div>
       </div>
 
-      <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+      <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         <h3 className="text-sm font-bold text-[#1e3a5f] mb-1">Custom Feasts &amp; Fasts</h3>
         <p className="text-xs text-[#666] mb-3">
           Add a feast or fast (e.g. St. Mary&rsquo;s Fast) and its date will be computed automatically every year --

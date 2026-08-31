@@ -73,7 +73,7 @@ export function UniversitiesMaintenanceInteractive({ initial }: { initial: Unive
   }
 
   return (
-    <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+    <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
       <h2 className="text-lg font-bold text-[#1e3a5f] mb-3">Universities / Affiliations</h2>
       {error && <p className="mb-3 text-sm text-[#dc3545]">{error}</p>}
 

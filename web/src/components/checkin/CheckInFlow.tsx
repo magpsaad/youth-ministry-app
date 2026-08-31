@@ -70,7 +70,7 @@ export function CheckInFlow({
 
   if (view === "success") {
     return (
-      <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-6 text-center">
+      <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-6 text-center">
         <p className="text-3xl">{attendanceRecorded ? "✅" : "👋"}</p>
         <h2 className="mt-2 text-lg font-bold text-[#1e3a5f]">
           {attendanceRecorded ? `You’re checked in, ${successName}!` : `Thanks, ${successName}!`}
@@ -109,7 +109,7 @@ export function CheckInFlow({
   }
 
   return (
-    <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-4">
+    <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
       <input
         autoFocus
         type="text"

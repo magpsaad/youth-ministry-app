@@ -50,7 +50,7 @@ export default async function LandingPage() {
 
       <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-6 space-y-6">
         {/* Servant Corner -- always visible */}
-        <section className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+        <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
           <h2 className="text-lg font-bold text-[#1e3a5f] mb-4">Servant Corner</h2>
           <LoadGroupPanel
             groups={selectableGroups}
@@ -76,7 +76,7 @@ export default async function LandingPage() {
 
         {/* Coordinator Corner -- General or Sub-Coordinators (and Admins) */}
         {(access.isCoordinator || access.isAdmin) && (
-          <section className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+          <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
             <h2 className="text-lg font-bold text-[#1e3a5f] mb-4">Coordinator Corner</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <Link
@@ -116,7 +116,7 @@ export default async function LandingPage() {
 
         {/* Admin Corner -- Admins only */}
         {access.isAdmin && (
-          <section className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+          <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
             <h2 className="text-lg font-bold text-[#1e3a5f] mb-4">Admin Corner</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {yr0Group && (

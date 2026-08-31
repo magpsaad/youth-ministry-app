@@ -38,7 +38,7 @@ export function PendingServantRow({ servant }: { servant: PendingServant }) {
   if (removed) return null;
 
   return (
-    <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-4 flex flex-wrap items-center justify-between gap-3">
+    <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4 flex flex-wrap items-center justify-between gap-3">
       <div className="min-w-0">
         <p className="font-semibold text-[#1e3a5f]">{servant.full_name}</p>
         <p className="text-xs text-[#666]">
