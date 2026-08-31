@@ -9,7 +9,6 @@ import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon } from "@/components/icons";
 import { SignOutButton } from "@/components/SignOutButton";
 import { ServantProfilesInteractive } from "@/components/ServantProfilesInteractive";
-import { HeaderPattern } from "@/components/HeaderPattern";
 
 /** REQUIREMENTS.md §6.1/§6.13 -- Coordinator Corner, General/Sub-Coordinators
  * and Admins. Profile viewing/editing only -- cohort assignment lives on the
@@ -34,7 +33,6 @@ export default async function ServantProfilesPage() {
   return (
     <div className="min-h-full bg-[#f5f5f5]">
       <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative">
-        <HeaderPattern />
         <Link
           href="/"
           title="Home"

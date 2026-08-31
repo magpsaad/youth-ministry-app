@@ -2,9 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { getRandomVerseAction, logGroupSelectedAction } from "@/app/actions";
+import { logGroupSelectedAction } from "@/app/actions";
 import type { GroupSummary } from "@/lib/groups";
 
+/** REQUIREMENTS.md §6.1 -- no artificial delay here anymore (owner request):
+ * this used to also fetch a random verse and pause ~1.4s so it was readable
+ * before navigating, matching the old app's load time. The new app loads
+ * fast enough that the pause was pure overhead with nothing to show for it
+ * -- the verse is now a permanent landing-page fixture instead (see
+ * app/page.tsx), unrelated to loading a group's data. */
 export function LoadGroupPanel({
   groups,
   groupLabel,
@@ -17,17 +23,11 @@ export function LoadGroupPanel({
   const router = useRouter();
   const [selectedId, setSelectedId] = useState(groups[0]?.id ?? "");
   const [loading, setLoading] = useState(false);
-  const [verse, setVerse] = useState<{ text: string; reference: string | null } | null>(null);
 
   async function handleLoad() {
     if (!selectedId) return;
     setLoading(true);
-    const v = await getRandomVerseAction();
-    setVerse(v);
     void logGroupSelectedAction(selectedId);
-    // Brief pause so the verse is actually readable, matching the current
-    // app's loading-transition behavior (REQUIREMENTS.md §6.1).
-    await new Promise((resolve) => setTimeout(resolve, 1400));
     router.push(`/g/${selectedId}/dashboard`);
   }
 
@@ -67,19 +67,6 @@ export function LoadGroupPanel({
       >
         {loading ? "Loading…" : `Load ${memberLabel} Data`}
       </button>
-
-      {loading && (
-        <div className="rounded-md border-l-4 border-[#ffc107] bg-[#fff3cd] px-4 py-3 text-sm text-[#856404]">
-          {verse ? (
-            <>
-              <p className="italic">&ldquo;{verse.text}&rdquo;</p>
-              {verse.reference && <p className="mt-1 font-semibold">— {verse.reference}</p>}
-            </>
-          ) : (
-            <p>Loading…</p>
-          )}
-        </div>
-      )}
     </div>
   );
 }
