@@ -54,7 +54,7 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
   if (stage === "done") {
     return (
       <div className="space-y-4">
-        <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+        <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
           <h2 className="text-lg font-bold text-[#155724] mb-2">Transition Complete</h2>
           <p className="text-sm text-[#666] mb-3">
             Group labels have changed — reprint QR codes for:
@@ -74,7 +74,7 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
           </Link>
         </div>
 
-        <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+        <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
           <h2 className="text-lg font-bold text-[#1e3a5f] mb-2">Review Servant Assignments (optional)</h2>
           <p className="text-sm text-[#666] mb-3">
             Servants and Sub-Coordinators who were scoped to the <em>old</em> Yr 5+ group have already been reassigned
@@ -102,7 +102,7 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+      <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">What Will Happen</h2>
         <p className="text-sm text-[#666] mb-4">
           This runs atomically — if anything fails partway through, nothing is changed.

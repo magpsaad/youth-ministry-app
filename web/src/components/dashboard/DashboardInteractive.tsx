@@ -26,6 +26,7 @@ import {
   CalendarCheckIcon,
   CalendarXIcon,
   MapPinIcon,
+  AlertTriangleIcon,
 } from "@/components/icons";
 import { dismissNewAssignmentAction } from "@/app/g/[groupId]/members/actions";
 import { dismissFollowUpAction } from "@/app/g/[groupId]/outreach/actions";
@@ -186,7 +187,7 @@ export function DashboardInteractive({
 
   return (
     <div className="mt-4 space-y-6">
-      <section className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+      <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
           <UsersIcon className="h-5 w-5" /> Overview
         </h2>
@@ -203,7 +204,7 @@ export function DashboardInteractive({
         )}
       </section>
 
-      <section className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+      <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
           <MapPinIcon className="h-5 w-5" /> Proximity
         </h2>
@@ -330,7 +331,7 @@ export function DashboardInteractive({
         id={`actions-needed-${groupId}`}
         title={
           <span className="flex items-center gap-2">
-            ⚠️ Actions Needed
+            <AlertTriangleIcon className="h-5 w-5" /> Actions Needed
             <button
               type="button"
               onClick={() => setShowHelp(true)}
@@ -594,7 +595,7 @@ function StatCard({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] border-t-4 border-[#1e3a5f] p-4">
+    <div className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] border-t-4 border-[#1e3a5f] p-4">
       <h3 className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-[#666] font-semibold">
         {icon}
         {label}

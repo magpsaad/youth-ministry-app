@@ -75,7 +75,7 @@ export function ServantIntakeForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-4 space-y-3">
+    <form onSubmit={handleSubmit} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4 space-y-3">
       <h2 className="text-base font-bold text-[#1e3a5f]">New Servant Registration</h2>
       <p className="text-xs text-[#666]">
         Your info will be recorded. A coordinator will follow up to give you app access.

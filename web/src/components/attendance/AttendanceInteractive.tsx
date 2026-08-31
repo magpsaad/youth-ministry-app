@@ -119,7 +119,7 @@ export function AttendanceInteractive({
 
   if (dateOptions.length === 0) {
     return (
-      <div className="mt-4 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-6 text-center text-sm text-[#666]">
+      <div className="mt-4 rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-6 text-center text-sm text-[#666]">
         No service dates are tracked yet for this group, and today isn&rsquo;t open for attendance until the
         configured cutoff time (or until someone checks in via the QR code).
       </div>
@@ -143,7 +143,7 @@ export function AttendanceInteractive({
         </select>
       </div>
 
-      <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] overflow-hidden overflow-x-auto">
+      <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] overflow-hidden overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-[#f5f5f5] text-left text-[#666]">

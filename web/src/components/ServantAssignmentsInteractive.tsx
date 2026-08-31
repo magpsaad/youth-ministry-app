@@ -337,7 +337,7 @@ export function ServantAssignmentsInteractive({
           )}
 
           {categoricalBuckets.cohorts.map((bucket) => (
-            <div key={bucket.key} className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-4">
+            <div key={bucket.key} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
               <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">{bucket.label}</h3>
               <div className="divide-y divide-[#f0f0f0]">
                 {bucket.rows.map(({ person, grants }) => (
@@ -379,7 +379,7 @@ export function ServantAssignmentsInteractive({
           )}
         </div>
       ) : (
-        <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-4 divide-y divide-[#f0f0f0]">
+        <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4 divide-y divide-[#f0f0f0]">
           {alphabetical.map((person) => (
             <div key={person.id} className="py-2.5 flex items-center gap-3">
               <Avatar person={person} />
@@ -423,7 +423,7 @@ function BucketCard({
   renderAddRoleControl: (person: AssignmentPerson) => React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-4">
+    <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
       <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">{label}</h3>
       <div className="divide-y divide-[#f0f0f0]">
         {rows.map(({ person, grants }) => (

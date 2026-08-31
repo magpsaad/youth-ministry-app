@@ -36,7 +36,7 @@ export default async function LoginPage({
           <p className="mt-1 text-sm text-[#666] text-center">{settings.app_subtitle}</p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-6">
+        <div className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-6">
           {error && (
             <div className="mb-4 rounded-md bg-[#f8d7da] text-[#721c24] text-sm px-3 py-2">
               {error}

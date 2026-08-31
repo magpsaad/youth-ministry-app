@@ -105,13 +105,13 @@ export function ServantProfilesInteractive({
 
       {viewMode === "categorical"
         ? categorical.map((bucket) => (
-            <div key={bucket.label} className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-4">
+            <div key={bucket.label} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
               <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">{bucket.label}</h3>
               <ServantRows entries={bucket.entries} onSelect={setSelected} />
             </div>
           ))
         : (
-            <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-4">
+            <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
               <ServantRows entries={alphabetical} onSelect={setSelected} />
             </div>
           )}

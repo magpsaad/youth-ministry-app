@@ -111,7 +111,7 @@ export function AnalyticsInteractive({
 
   return (
     <div className="mt-4 space-y-6">
-      <section className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+      <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
           <ClipboardCheckIcon className="h-5 w-5" /> Data Completeness
         </h2>
@@ -130,7 +130,7 @@ export function AnalyticsInteractive({
         </p>
       </section>
 
-      <section className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+      <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
           <UsersIcon className="h-5 w-5" /> Servant Assignments
         </h2>
@@ -181,7 +181,7 @@ export function AnalyticsInteractive({
         </div>
       </section>
 
-      <section className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+      <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
           <ChartBarIcon className="h-5 w-5" /> Average Attendance by Month
         </h2>
@@ -212,7 +212,7 @@ export function AnalyticsInteractive({
 
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
-    <div className="bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] border-t-4 border-[#1e3a5f] p-4">
+    <div className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] border-t-4 border-[#1e3a5f] p-4">
       <h3 className="text-[11px] uppercase tracking-wide text-[#666] font-semibold">{label}</h3>
       <p className="mt-1 text-3xl font-bold text-[#1e3a5f]">{value}%</p>
     </div>

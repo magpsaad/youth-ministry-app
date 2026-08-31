@@ -14,7 +14,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
   if (!flow) {
     return (
       <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] p-4">
-        <div className="max-w-sm w-full text-center bg-white rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-6">
+        <div className="max-w-sm w-full text-center bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-6">
           <h1 className="text-lg font-bold text-[#dc3545]">Invalid Check-In Code</h1>
           <p className="mt-2 text-sm text-[#666]">This QR code isn&rsquo;t recognized. Please ask a servant for help.</p>
         </div>

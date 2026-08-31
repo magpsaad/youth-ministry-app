@@ -21,7 +21,7 @@ export default function GroupSegmentError({
   }, [error]);
 
   return (
-    <div className="mt-4 rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-6">
+    <div className="mt-4 rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-6">
       <h2 className="text-lg font-bold text-[#dc3545]">Something went wrong loading this page</h2>
       <p className="mt-2 text-sm text-[#333] font-mono break-words">{error.message}</p>
       {error.digest && <p className="mt-1 text-xs text-[#999]">Digest: {error.digest}</p>}

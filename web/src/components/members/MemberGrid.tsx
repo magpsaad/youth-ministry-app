@@ -41,7 +41,7 @@ export function MemberGrid({
         return (
           <div
             key={m.id}
-            className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] border-l-4 border-[#1e3a5f] p-4 hover:-translate-y-1 hover:shadow-[0_4px_15px_rgba(0,0,0,0.15)] transition-all"
+            className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] border-l-4 border-[#1e3a5f] p-4 hover:-translate-y-1 hover:shadow-[0_4px_15px_rgba(0,0,0,0.15)] transition-all"
           >
             <div className="flex items-center gap-3">
               <div className="h-[50px] w-[50px] shrink-0 rounded-full bg-[#1e3a5f] text-white font-bold flex items-center justify-center overflow-hidden">

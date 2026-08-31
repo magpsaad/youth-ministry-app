@@ -79,7 +79,7 @@ export function GroupNamesInteractive({ initial }: { initial: AdminGroupRow[] })
   }
 
   return (
-    <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+    <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
       <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Group Names</h2>
       <p className="text-sm text-[#666] mb-4">
         Every active group in the cohort ladder, position 0 (pre-entry) through the terminal group. Rename any of

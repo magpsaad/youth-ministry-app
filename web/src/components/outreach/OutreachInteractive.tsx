@@ -137,7 +137,7 @@ export function OutreachInteractive({
         {filtered.map((entry) => {
           const canEdit = entry.servant_id === currentUserId;
           return (
-            <div key={entry.id} className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-4">
+            <div key={entry.id} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="font-semibold text-[#1e3a5f]">

@@ -39,7 +39,7 @@ export function AuditReportInteractive({ initial, users }: { initial: AuditRepor
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+      <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         <label className="text-xs text-[#666]">
           User
           <select
@@ -60,7 +60,7 @@ export function AuditReportInteractive({ initial, users }: { initial: AuditRepor
 
       <div className="space-y-3">
         {byDay.map(({ day, users: dayUsers }) => (
-          <div key={day} className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+          <div key={day} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
             <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">{formatDay(day)}</h3>
             <div className="divide-y divide-[#f0f0f0]">
               {dayUsers.map(([label, count]) => (
@@ -73,7 +73,7 @@ export function AuditReportInteractive({ initial, users }: { initial: AuditRepor
           </div>
         ))}
         {byDay.length === 0 && (
-          <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5 text-center text-sm text-[#666]">
+          <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5 text-center text-sm text-[#666]">
             No activity to show.
           </div>
         )}

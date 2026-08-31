@@ -86,7 +86,7 @@ export function ActionsNeededConfigInteractive({
 
   return (
     <div className="space-y-4">
-    <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+    <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
       <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">App Labels &amp; Branding</h2>
       <p className="text-sm text-[#666] mb-4">
         The app&rsquo;s identity and vocabulary, used everywhere it&rsquo;s displayed &mdash; e.g. Group Label
@@ -196,7 +196,7 @@ export function ActionsNeededConfigInteractive({
 
     <GroupNamesInteractive initial={initialGroups} />
 
-    <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+    <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
       <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Current Birthdays Window</h2>
       <p className="text-sm text-[#666] mb-4">
         How many days before and after today a birthday counts as &ldquo;upcoming&rdquo; on the Dashboard.
@@ -237,7 +237,7 @@ export function ActionsNeededConfigInteractive({
       </div>
     </div>
 
-    <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+    <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
       <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Attendance Window Settings</h2>
       <p className="text-sm text-[#666] mb-1">How far back average-attendance % looks, as a rolling number of weeks.</p>
       <ul className="text-sm text-[#666] mb-4 list-disc pl-5 space-y-0.5">
@@ -295,7 +295,7 @@ export function ActionsNeededConfigInteractive({
       </div>
     </div>
 
-    <div className="rounded-lg bg-white shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-5">
+    <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
       <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Actions Needed Thresholds</h2>
       <p className="text-sm text-[#666] mb-2">
         Per-proximity thresholds for the Dashboard&rsquo;s &ldquo;Outreach Needed&rdquo; cards. A member is flagged
