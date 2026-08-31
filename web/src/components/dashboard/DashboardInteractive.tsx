@@ -18,7 +18,6 @@ import { OutreachQuickLink } from "@/components/outreach/OutreachQuickLink";
 import { ViewOutreachEntryModal } from "@/components/outreach/ViewOutreachEntryModal";
 import { AddOutreachModal } from "@/components/outreach/AddOutreachModal";
 import { PhoneLink } from "@/components/PhoneLink";
-import { ProximityDonut } from "@/components/charts/ProximityDonut";
 import {
   CakeIcon,
   UserPlusIcon,
@@ -26,7 +25,6 @@ import {
   UserXIcon,
   CalendarCheckIcon,
   CalendarXIcon,
-  MapPinIcon,
   AlertTriangleIcon,
 } from "@/components/icons";
 import { dismissNewAssignmentAction } from "@/app/g/[groupId]/members/actions";
@@ -141,9 +139,7 @@ export function DashboardInteractive({
     const neverAttended = rows.filter((r) => !r.everAttended).length;
     const presentLastServiceDate = statsData.lastServiceDate ? rows.filter((r) => r.presentLastService).length : null;
     const absentLastServiceDate = statsData.lastServiceDate ? totalMembers - (presentLastServiceDate ?? 0) : null;
-    const proximity = { Local: 0, Regional: 0, Abroad: 0, Unknown: 0 };
-    for (const r of rows) proximity[r.proximity] += 1;
-    return { totalMembers, neverAttended, presentLastServiceDate, absentLastServiceDate, proximity };
+    return { totalMembers, neverAttended, presentLastServiceDate, absentLastServiceDate };
   }, [statsData, applyFilter, currentUserId]);
 
   const filteredBirthdays = applyFilter
@@ -198,24 +194,6 @@ export function DashboardInteractive({
           <StatCard icon={<CalendarXIcon className="h-3.5 w-3.5" />} label="Absent Last Service" value={stats.absentLastServiceDate ?? "—"} />
           <StatCard icon={<UserXIcon className="h-3.5 w-3.5" />} label="Never Attended" value={stats.neverAttended} />
         </div>
-        {statsData.visitorCount > 0 && (
-          <p className="mt-3 text-xs text-[#666]">
-            The above counts exclude {statsData.visitorCount} visitor{statsData.visitorCount === 1 ? "" : "s"}.
-          </p>
-        )}
-      </section>
-
-      <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
-          <MapPinIcon className="h-5 w-5" /> Proximity
-        </h2>
-        <ProximityDonut
-          local={stats.proximity.Local}
-          regional={stats.proximity.Regional}
-          abroad={stats.proximity.Abroad}
-          unknown={stats.proximity.Unknown}
-          centerLabel={`${memberLabel}s`}
-        />
         {statsData.visitorCount > 0 && (
           <p className="mt-3 text-xs text-[#666]">
             The above counts exclude {statsData.visitorCount} visitor{statsData.visitorCount === 1 ? "" : "s"}.

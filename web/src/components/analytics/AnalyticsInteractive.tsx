@@ -155,6 +155,19 @@ export function AnalyticsInteractive({
 
       <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
+          <ChartBarIcon className="h-5 w-5" /> Average Attendance by Month
+        </h2>
+        {monthly.length === 0 ? (
+          <p className="text-sm text-[#666]">No tracked service dates yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <AttendanceTrendChart data={[...monthly].reverse()} />
+          </div>
+        )}
+      </section>
+
+      <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
           <UsersIcon className="h-5 w-5" /> Servant Assignments
         </h2>
         <div className="overflow-hidden rounded-lg border border-[#f0f0f0]">
@@ -202,19 +215,6 @@ export function AnalyticsInteractive({
             </tbody>
           </table>
         </div>
-      </section>
-
-      <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
-          <ChartBarIcon className="h-5 w-5" /> Average Attendance by Month
-        </h2>
-        {monthly.length === 0 ? (
-          <p className="text-sm text-[#666]">No tracked service dates yet.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <AttendanceTrendChart data={[...monthly].reverse()} />
-          </div>
-        )}
       </section>
     </div>
   );
