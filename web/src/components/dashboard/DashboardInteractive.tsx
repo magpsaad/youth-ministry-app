@@ -18,6 +18,7 @@ import { OutreachQuickLink } from "@/components/outreach/OutreachQuickLink";
 import { ViewOutreachEntryModal } from "@/components/outreach/ViewOutreachEntryModal";
 import { AddOutreachModal } from "@/components/outreach/AddOutreachModal";
 import { PhoneLink } from "@/components/PhoneLink";
+import { ProximityDonut } from "@/components/charts/ProximityDonut";
 import {
   CakeIcon,
   UserPlusIcon,
@@ -208,12 +209,13 @@ export function DashboardInteractive({
         <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
           <MapPinIcon className="h-5 w-5" /> Proximity
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard label="Local" value={stats.proximity.Local} small />
-          <StatCard label="Regional" value={stats.proximity.Regional} small />
-          <StatCard label="Abroad" value={stats.proximity.Abroad} small />
-          <StatCard label="Unknown" value={stats.proximity.Unknown} small />
-        </div>
+        <ProximityDonut
+          local={stats.proximity.Local}
+          regional={stats.proximity.Regional}
+          abroad={stats.proximity.Abroad}
+          unknown={stats.proximity.Unknown}
+          centerLabel={`${memberLabel}s`}
+        />
         {statsData.visitorCount > 0 && (
           <p className="mt-3 text-xs text-[#666]">
             The above counts exclude {statsData.visitorCount} visitor{statsData.visitorCount === 1 ? "" : "s"}.
