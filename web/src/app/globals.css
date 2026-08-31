@@ -36,3 +36,31 @@ body {
     -webkit-print-color-adjust: exact !important;
   }
 }
+
+/* REQUIREMENTS.md §8.1 -- 2.5D buttons, mobile follow-up (2nd round).
+   Tailwind's `active:` utilities depend on the CSS `:active` pseudo-class,
+   which is unreliable on real touch taps (most notoriously on iOS Safari,
+   which has a long-standing WebKit quirk where `:active` doesn't fire on tap
+   without a page-level touch listener -- see layout.tsx). Rather than keep
+   chasing per-browser `:active` quirks, the press-down feel is additionally
+   driven straight from JS pointer events (layout.tsx's delegated
+   pointerdown/pointerup listener, which stamps `data-pressed="true"` on the
+   tapped button/link) -- this fires identically and reliably on every
+   platform, since it isn't going through a pseudo-class at all. Kept as a
+   flat translateY + shadow-shrink (not per-color-family) since the shared
+   goal here is just "does it visibly move when pressed," not matching each
+   button family's exact resting shadow alpha. */
+[data-pressed="true"] {
+  transform: translateY(0) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) !important;
+  transition: transform 0.08s ease-out, box-shadow 0.08s ease-out !important;
+}
+
+/* Removes the default gray/blue tap-flash overlay some mobile browsers paint
+   on any tap -- it was visually competing with (and partly masking) the
+   press-down effect above. */
+a,
+button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
