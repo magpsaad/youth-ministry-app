@@ -119,7 +119,7 @@ export function AuditLogsInteractive({
           <button
             type="button"
             onClick={() => setShowDateFilter(true)}
-            className="flex items-center gap-1 rounded-md border border-[#ddd] px-3 py-2 text-sm text-[#333] hover:bg-[#f5f5f5]"
+            className="flex items-center gap-1 rounded-md border border-[#ddd] px-3 py-2 text-sm text-[#333] hover:bg-[#f5f5f5] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
           >
             Date Filter
             {dateFilterActive && <span className="rounded-full bg-[#1e3a5f] text-white text-[10px] px-1.5 py-0.5">1</span>}
@@ -128,7 +128,7 @@ export function AuditLogsInteractive({
           <button
             type="button"
             onClick={() => setShowConfig((v) => !v)}
-            className="ml-auto rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0]"
+            className="ml-auto rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
           >
             {showConfig ? "Hide" : "Select Logged Actions"}
           </button>

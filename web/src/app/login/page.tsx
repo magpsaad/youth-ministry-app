@@ -51,7 +51,7 @@ export default async function LoginPage({
           <form action={signInWithGoogle}>
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 rounded-md bg-[#1e3a5f] py-3 text-sm font-semibold text-white transition-colors hover:bg-[#152a45]"
+              className="w-full flex items-center justify-center gap-2 rounded-md bg-[#1e3a5f] py-3 text-sm font-semibold text-white hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
             >
               <GoogleIcon />
               Continue with Google
@@ -106,7 +106,7 @@ export default async function LoginPage({
             </div>
             <button
               type="submit"
-              className="w-full rounded-md border border-[#1e3a5f] bg-white py-3 text-sm font-semibold text-[#1e3a5f] transition-colors hover:bg-[#f0f4f8]"
+              className="w-full rounded-md border border-[#1e3a5f] bg-white py-3 text-sm font-semibold text-[#1e3a5f] hover:bg-[#f0f4f8] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
             >
               {isSignUp ? "Create account" : "Sign in"}
             </button>

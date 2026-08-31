@@ -68,7 +68,7 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
             href="/qr-codes"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45]"
+            className="inline-block rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
           >
             Go to Print QR Codes (opens in a new tab)
           </Link>
@@ -86,7 +86,7 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
             <button
               type="button"
               onClick={handleShowReview}
-              className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45]"
+              className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
             >
               Review Now
             </button>
@@ -158,7 +158,7 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
               type="button"
               onClick={() => setStage("confirming")}
               disabled={!preview.canTransition}
-              className="rounded-md bg-[#dc3545] px-4 py-2 text-sm font-semibold text-white hover:bg-[#c82333] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-md bg-[#dc3545] px-4 py-2 text-sm font-semibold text-white hover:bg-[#c82333] disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
             >
               Transition Groups…
             </button>
@@ -172,14 +172,14 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
                   type="button"
                   onClick={handleConfirm}
                   disabled={pending}
-                  className="rounded-md bg-[#dc3545] px-4 py-2 text-sm font-semibold text-white hover:bg-[#c82333] disabled:opacity-60"
+                  className="rounded-md bg-[#dc3545] px-4 py-2 text-sm font-semibold text-white hover:bg-[#c82333] disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
                 >
                   {pending ? "Running…" : "Yes, Transition Groups"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setStage("preview")}
-                  className="rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0]"
+                  className="rounded-md bg-[#f0f0f0] px-4 py-2 text-sm font-semibold text-[#333] hover:bg-[#e0e0e0] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
                 >
                   Cancel
                 </button>

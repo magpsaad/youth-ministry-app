@@ -64,7 +64,7 @@ export function PendingServantRow({ servant }: { servant: PendingServant }) {
             type="button"
             onClick={handleApprove}
             disabled={pending}
-            className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60"
+            className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
           >
             {pending ? "Approving…" : "Approve"}
           </button>
@@ -73,7 +73,7 @@ export function PendingServantRow({ servant }: { servant: PendingServant }) {
           type="button"
           onClick={handleRemove}
           disabled={pending}
-          className="rounded-md bg-[#f0f0f0] px-3 py-2 text-sm font-semibold text-[#dc3545] hover:bg-[#f8d7da] disabled:opacity-60"
+          className="rounded-md bg-[#f0f0f0] px-3 py-2 text-sm font-semibold text-[#dc3545] hover:bg-[#f8d7da] disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
         >
           Remove
         </button>
