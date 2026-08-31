@@ -6,7 +6,6 @@ import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon } from "@/components/icons";
 import { useMyAssigned } from "@/components/MyAssignedContext";
 import { SignOutButton } from "@/components/SignOutButton";
-import { HeaderPattern } from "@/components/HeaderPattern";
 
 const TABS = (memberLabel: string) => [
   { slug: "dashboard", label: "Dashboard" },
@@ -48,7 +47,6 @@ export function GroupNavShell({
             : "bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b]"
         }`}
       >
-        <HeaderPattern />
         <Link href="/" className="inline-flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
           <AppLogo logoUrl={logoUrl} title={appTitleShort} size={32} circular={false} />
           <h1 className="text-2xl font-bold">{appTitleShort}</h1>

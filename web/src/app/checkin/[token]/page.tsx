@@ -2,7 +2,6 @@ import { getCheckInFlow, listCheckInMembers, listCheckInServants } from "@/lib/c
 import { getUniversities } from "@/lib/universities";
 import { getAppSettings } from "@/lib/app-settings";
 import { AppLogo } from "@/components/AppLogo";
-import { HeaderPattern } from "@/components/HeaderPattern";
 import { CheckInFlow } from "@/components/checkin/CheckInFlow";
 
 /** REQUIREMENTS.md §6.11/§6.12 -- public, no-login check-in/intake page.
@@ -30,8 +29,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
-      <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-6 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative">
-        <HeaderPattern />
+      <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-6 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)]">
         <div className="flex justify-center">
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={56} />
         </div>

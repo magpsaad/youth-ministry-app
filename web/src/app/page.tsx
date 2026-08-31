@@ -7,11 +7,11 @@ import { getPendingServantsCount } from "@/lib/pending-servants";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { ensureProfile } from "@/lib/supabase/ensure-profile";
 import { logAudit } from "@/lib/audit";
+import { getRandomVerseAction } from "@/app/actions";
 import { LoadGroupPanel } from "@/components/LoadGroupPanel";
 import { AppLogo } from "@/components/AppLogo";
 import { SignOutButton } from "@/components/SignOutButton";
 import { ServiceCalendarButton } from "@/components/calendar/ServiceCalendarButton";
-import { HeaderPattern } from "@/components/HeaderPattern";
 
 export default async function LandingPage() {
   const user = await getCurrentUser();
@@ -20,11 +20,12 @@ export default async function LandingPage() {
   await ensureProfile(user);
   void logAudit(user.id, "APP_ACCESS");
 
-  const [settings, access, groups, pendingServantsCount] = await Promise.all([
+  const [settings, access, groups, pendingServantsCount, verse] = await Promise.all([
     getAppSettings(),
     getAccessSummary(user.id),
     getAccessibleGroups(),
     getPendingServantsCount(),
+    getRandomVerseAction(),
   ]);
 
   // The hidden position-0 pre-entry group is Admin-only everywhere in the
@@ -37,7 +38,6 @@ export default async function LandingPage() {
   return (
     <div className="min-h-full flex flex-col bg-[#f5f5f5]">
       <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-6 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative">
-        <HeaderPattern />
         <div className="flex justify-center">
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={60} />
         </div>
@@ -75,6 +75,20 @@ export default async function LandingPage() {
             </Link>
           </div>
         </section>
+
+        {/* Bible verse -- a fixed, always-visible fixture on the landing
+            page (REQUIREMENTS.md §6.1). No longer tied to "Load [Member]
+            Data" -- it used to display while that data loaded, back when
+            the old app's load time was slow enough to need something to
+            read; the new app is fast enough that the deliberate pause was
+            just adding delay for no benefit, so it's a permanent landing-
+            page fixture instead, picked once per page load. */}
+        {verse && (
+          <div className="rounded-md border-l-4 border-[#ffc107] bg-[#fff3cd] px-4 py-3 text-sm text-[#856404]">
+            <p className="italic">&ldquo;{verse.text}&rdquo;</p>
+            {verse.reference && <p className="mt-1 font-semibold">— {verse.reference}</p>}
+          </div>
+        )}
 
         {/* Coordinator Corner -- General or Sub-Coordinators (and Admins) */}
         {(access.isCoordinator || access.isAdmin) && (

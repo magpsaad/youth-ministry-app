@@ -9,7 +9,6 @@ import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon } from "@/components/icons";
 import { SignOutButton } from "@/components/SignOutButton";
 import { AccessMaintenanceInteractive } from "@/components/admin/AccessMaintenanceInteractive";
-import { HeaderPattern } from "@/components/HeaderPattern";
 
 /** REQUIREMENTS.md §6.14/§6.1/§4 -- Admin Corner, Admins only. */
 export default async function AccessMaintenancePage() {
@@ -36,7 +35,6 @@ export default async function AccessMaintenancePage() {
   return (
     <div className="min-h-full bg-[#f5f5f5]">
       <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative">
-        <HeaderPattern />
         <Link
           href="/"
           title="Home"
