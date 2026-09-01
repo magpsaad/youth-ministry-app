@@ -505,6 +505,8 @@ Target: the weekend following the last Friday meeting of the Coptic year, **Sept
 5. Send the new app's link to all users.
 6. Users log into the new app and begin normal use; the old Google Sheets app is retired.
 
+**QA doesn't get retired or paused at cutover.** Owner-confirmed: `qa` stays live indefinitely afterward as the ongoing pre-Production testing ground for future work, same as before cutover — the corrected `qa`-first-then-explicit-promotion workflow (§13) keeps applying, it just matters more once Production has real users on it. **A handful of real servants have (and keep) `qa` access to help test** future changes before they're promoted, alongside the owner — not just the owner testing alone. Since `qa` and Production are two different websites sharing one login system (§1.1), a servant with access to both needs a way to tell them apart at a glance: **the QA deployment shows a permanent, impossible-to-miss bright-orange banner** ("QA Testing Environment — Not the Real App," `web/src/app/layout.tsx`, env-gated on `NEXT_PUBLIC_APP_ENV`) at the top of every screen, never shown on Production. **Removing a servant's access (or a whole account grant) in `qa` never touches Production** — every access-management action in the app (Access Maintenance, Pending Servants, `remove_servant` and every other role RPC) only ever writes to schema-scoped tables (`user_roles`, `members`, `profiles`), never to the shared `auth.users` login table itself, so `qa` and Production access are safely independent to edit.
+
 ---
 
 ## 11. Explicitly Out of Scope / Dropped from the Rebuild
@@ -533,5 +535,7 @@ Target: the weekend following the last Friday meeting of the Coptic year, **Sept
 ## 13. Working Agreement for This Project (versioning workflow added)
 
 Whenever the app owner reports a bug or questions a decision in the *rebuilt* app: respond with a plan to fix/change it, get explicit approval, implement the change, and then **update this requirements document** so it stays the single, current source of truth for how the app is supposed to behave.
+
+**Git/deployment workflow (corrected)**: `qa` branch first, always. Commit and push to `qa` (→ the QA Vercel deployment) as the default result of ordinary approval ("go," "proceed," etc.) — `main` (→ Production) is **never** touched by that same approval. Promoting a change to `main`/Production requires the owner's own separate, explicit instruction to do so, every time — this matters most once real cutover (§10.2) has happened and Production has real users on it, but applies from now on, not just after cutover. (Corrected from earlier practice in this project, where every change was committed to `main` first and merged into `qa` second — backwards from this, and from what this section already said before that correction.)
 
 **App version numbering (new)**: the app's own displayed version number (header corner, §2.1) is independent of Vercel's deployment history — it starts at **4.0**. Every time a change ships, you'll be prompted to decide the new version number: **+0.1 for a small change or fix** (e.g., 4.0 → 4.1), or **the next whole integer for a major release** (e.g., 4.x → 5.0). The chosen version is written to `app_settings.app_version` and reflected in the header, and this document is updated to note the change alongside its version number.

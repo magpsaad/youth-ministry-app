@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
 import { getAppSettings } from "@/lib/app-settings";
+import { AlertTriangleIcon } from "@/components/icons";
 import "./globals.css";
 
 const inter = Inter({
@@ -39,6 +40,25 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
+        {/* Deliberate one-off exception to "no colored/alarming UI" -- this
+         * banner's whole job is to be impossible to miss, not to blend in.
+         * REQUIREMENTS.md §10.2/MIGRATION_PLAN.md -- QA and Production are
+         * two different websites sharing one login system (§1.1), and real
+         * servants will have QA access to help test before each change is
+         * promoted to prod (owner-confirmed, not just the owner testing
+         * alone) -- a plain identical-looking header gave nobody a way to
+         * notice they'd landed on the wrong one. Bright orange + explicit
+         * wording, owner's exact spec. Env-gated (`NEXT_PUBLIC_APP_ENV`),
+         * so it only ever renders on the QA deployment, never prod -- and
+         * `sticky` so it stays visible on scroll, not just at the top. */}
+        {process.env.NEXT_PUBLIC_APP_ENV === "qa" && (
+          <div className="sticky top-0 z-50 flex items-center justify-center gap-2 bg-[#ff6a00] px-4 py-2.5 text-center shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
+            <AlertTriangleIcon className="h-5 w-5 shrink-0 text-white" />
+            <p className="text-sm sm:text-lg font-extrabold uppercase tracking-wide text-white">
+              QA Testing Environment — Not the Real App
+            </p>
+          </div>
+        )}
         {/* REQUIREMENTS.md §8.1 -- 2.5D buttons' press-down feel on touch (2nd
          * round). The first fix (a no-op touchstart listener, the standard
          * workaround for iOS Safari's :active-doesn't-fire-on-tap quirk)
