@@ -39,7 +39,6 @@ export async function migrateMembers(
       }
 
       return {
-        legacyRef: `${file.fileId}:${TABS.roster}:${fullName}`,
         full_name: fullName,
         phone: normalizePhone(r["Phone Number"]),
         email: r["Email Address"]?.trim() || null,
