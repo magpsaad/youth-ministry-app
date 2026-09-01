@@ -571,25 +571,26 @@ actions_needed_config, audit_config, audit_log, verses, app_settings — standal
 
 REQUIREMENTS.md §10.1 confirms the current Google Sheets app remains the **sole source of truth** throughout the testing period — the sync is one-way (Sheets → this database). Each refresh makes the *operational* tables an exact mirror of current Sheets content; *configuration* tables are seeded once and then excluded from the ongoing sweep (revised in v5 to broaden this exclusion beyond just role assignments). No separate tracking table is needed — just a `legacy_source_ref` column on every operational table.
 
-**Operational tables — swept on every refresh.** Add `legacy_source_ref` to each:
+**Operational tables — wipe-and-reload on every refresh (revised during Phase I planning, owner's explicit instruction — simpler than the diff-based sync originally specified below).** Add `legacy_source_ref` to each:
 ```sql
 alter table <table_name> add column legacy_source_ref text;
 create unique index uq_<table_name>_legacy_ref on <table_name> (legacy_source_ref)
   where legacy_source_ref is not null;
 ```
-Applies to: `members` (already declared directly in its `create table`, §3 above — shown here as the general pattern), `attendance_records`, `outreach_entries`, `service_calendar_events`, and `profiles` (contact-info fields only).
+Applies to: `members` (already declared directly in its `create table`, §3 above — shown here as the general pattern), `attendance_records`, `outreach_entries`, `service_calendar_events`, and — added during Phase I planning, migration 0034 — `audit_log` (see below; it originally had no `legacy_source_ref` column at all, since it wasn't in scope for migration until this revision). `profiles` is **not** wipe-and-reloaded — servant accounts are pre-provisioned via a separate idempotent step, see MIGRATION_PLAN.md §3.5.
 
 **Refresh algorithm** (run by an external migration tool via the Sheets API, not by the app at runtime), per operational table:
 1. Read the current contents of the corresponding sheet/tab.
-2. `insert ... on conflict (legacy_source_ref) do update` — upsert every current Sheets row, keyed by `legacy_source_ref`. New Sheets rows get inserted; existing ones get updated to match the Sheets values exactly.
-3. `delete from <table> where legacy_source_ref is not null and legacy_source_ref not in (<refs seen in this refresh>)` — removes rows whose Sheets source disappeared.
-4. `delete from <table> where legacy_source_ref is null` — removes any row created directly in the new app (no Sheets origin at all), i.e. disposable test data from exploring the app between refreshes.
+2. Clear the table (scoped to whichever schema — `qa`/`prod` — the run targets).
+3. Insert every current Sheets row fresh, tagged with `legacy_source_ref` for traceability.
 
-**Configuration tables — excluded from the ongoing sweep (broadened in v5).** `universities`, `verses`, `actions_needed_config`, and `audit_config` still get a `legacy_source_ref` column and are populated once from their current Sheets values during the **initial** migration only — never revisited by a subsequent refresh. Each has its own admin maintenance screen in the new app (§6.14, §6.9, §6.1), and edits made there are meant to stick, not get overwritten on the next "refresh the data" request. Trade-off: a brand-new university or verse added on the Sheets side after initial migration won't auto-appear via refresh — it needs to be added directly through the new app's own maintenance screen instead.
+(The originally-specified insert/update/delete diff — upsert by `legacy_source_ref`, delete anything whose source row disappeared, delete anything with no `legacy_source_ref` at all — has the same net effect for these tables, but wipe-and-reload is simpler to get right and was the owner's explicit choice during Phase I planning.)
 
-`user_roles` is likewise **not** synced this way — it's a new-app-native concept (§4, §6), set up once via Access Maintenance and expected to diverge permanently from the old Permissions sheet, not mirrored from it.
+**Configuration tables — excluded from the ongoing sweep (broadened in v5).** `universities`, `verses`, and `audit_config` still get a `legacy_source_ref` column and are populated once from their current Sheets values during the **initial** migration only — never revisited by a subsequent refresh. Each has its own admin maintenance screen in the new app (§6.14, §6.9, §6.1), and edits made there are meant to stick, not get overwritten on the next "refresh the data" request. Trade-off: a brand-new university or verse added on the Sheets side after initial migration won't auto-appear via refresh — it needs to be added directly through the new app's own maintenance screen instead. **`actions_needed_config` is excluded even from the initial seed** (revised during Phase I planning) — the owner configured it directly in the new app; the migration tool never touches this table at all.
 
-`groups`, `app_settings`, `qr_codes`, and `audit_log` have no Sheets equivalent at all and are outside this refresh process entirely — they're set up once and evolve only through the app's own tools.
+`user_roles` is likewise **not** synced this way — it's a new-app-native concept (§4, §6), pre-provisioned once from the old Permissions sheet (MIGRATION_PLAN.md §3.5) and expected to diverge permanently from it afterward, not kept in sync with it.
+
+`groups`, `app_settings`, and `qr_codes` have no Sheets equivalent at all and are outside this refresh process entirely — they're set up once and evolve only through the app's own tools. **`audit_log` was originally in this same "no Sheets equivalent" category but is now migrated and refreshed** (revised during Phase I planning, owner's explicit instruction) — see MIGRATION_PLAN.md §3.10 for the old→new `audit_action_type` mapping.
 
 ---
 
