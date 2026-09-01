@@ -156,7 +156,9 @@ Unchanged: any row that can't be confidently resolved — an Assigned Servant na
 
 ## 8. Tool shape
 
-Unchanged: standalone TypeScript script (`npm run migrate -- --schema=qa --dry-run` / `--schema=qa --run`), Supabase service-role key + Google service account for Sheets API read access. Dry-run produces the report without writing; `--run` is a separate, explicit step. Never targets `prod` without saying so explicitly.
+Built (`migration/`, see its README for setup): standalone TypeScript script, target schema set via `MIGRATE_SCHEMA` in `.env` (not a CLI flag), run as `npm run migrate -- --dry-run` / `-- --run`. Supabase service-role key + Google service account for Sheets API read access. Dry-run produces the report without writing; `--run` is a separate, explicit step. Refuses to target `prod` unless `MIGRATE_CONFIRM_PROD=yes` is also set.
+
+**Cutover (REQUIREMENTS.md §10.2) is Sheets → Prod directly, never Qa → Prod.** `qa` and `prod` are independent schemas (§1.1) -- running this tool against each is two entirely separate migrations from the same Sheets source, not a promotion of `qa`'s data into `prod`. The one cross-cutting detail: Supabase Auth accounts are shared project-wide, not schema-scoped, so a servant already provisioned during `qa` testing already has a real login account by the time the `prod` run happens -- the tool reuses it rather than erroring, and only adds the `prod`-schema `profiles`/`user_roles` rows.
 
 ---
 
