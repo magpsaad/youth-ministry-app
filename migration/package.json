@@ -1,0 +1,19 @@
+{
+  "name": "say-migration-tool",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Standalone Phase I data migration tool -- reads the legacy Google Sheets app and writes into the new app's Supabase schema. See ../MIGRATION_PLAN.md for the full design. Run manually by the app owner; never deployed, never runs inside the app itself.",
+  "type": "module",
+  "scripts": {
+    "migrate": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.4",
+    "googleapis": "^144.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "tsx": "^4.19.0",
+    "typescript": "^5"
+  }
+}
