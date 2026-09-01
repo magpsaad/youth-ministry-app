@@ -23,7 +23,8 @@ export async function migrateAuditLog(groupsByPosition: Map<number, string>, ser
   console.log(`Audit Log: ${rows.length} rows found.`);
 
   const records = [];
-  for (const r of rows) {
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
     const oldActionType = (r["Action Type"] ?? "").trim();
     const newActionType = AUDIT_ACTION_TYPE_MAP[oldActionType];
     const timestamp = (r["Timestamp"] ?? "").trim();
@@ -69,7 +70,11 @@ export async function migrateAuditLog(groupsByPosition: Map<number, string>, ser
       action_type: newActionType,
       group_id: groupId,
       details,
-      legacy_source_ref: `${CALENDAR_FILE_ID}:${TABS.auditLog}:${timestamp}:${oldActionType}:${userEmail}`,
+      // Row index, not timestamp/actionType/email -- real data has multiple
+      // audit rows sharing all three (e.g. the same failed-login attempt
+      // logged more than once), which collided against uq_audit_log_legacy_ref.
+      // Row position is trivially unique regardless of that.
+      legacy_source_ref: `${CALENDAR_FILE_ID}:${TABS.auditLog}:row${i}`,
     });
   }
 
