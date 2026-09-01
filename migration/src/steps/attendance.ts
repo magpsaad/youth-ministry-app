@@ -4,14 +4,14 @@ import { readTabAsRows } from "../sheets.js";
 import { COHORT_FILES, SERVANTS_FILE_ID, TABS } from "../sheetIds.js";
 import { serviceDateFromTimestamp } from "../normalize.js";
 import { count, flagUnmatched } from "../report.js";
-import type { ServantLookup } from "../lookups.js";
+import { resolveByName, type ServantLookup } from "../lookups.js";
 
 const CHECKIN_NAME_COL = "Select your name from the list";
 
 /** MIGRATION_PLAN.md §3.8 -- current-year raw check-in log only (the
  * formula-derived weekly-grid/computed-roster tabs are NOT read here -- the
  * new app computes those same numbers dynamically, same as new data). */
-export async function migrateAttendance(memberIdsByFile: Map<string, Map<string, string>>, servants: ServantLookup): Promise<void> {
+export async function migrateAttendance(memberIdsByFile: Map<string, Map<string, string[]>>, servants: ServantLookup): Promise<void> {
   // Clearing happens once, upfront, in clear.ts -- see its comment for why.
   let total = 0;
 
@@ -24,16 +24,17 @@ export async function migrateAttendance(memberIdsByFile: Map<string, Map<string,
 
     for (const r of rows) {
       const name = (r[CHECKIN_NAME_COL] ?? "").trim();
-      const memberId = memberIds.get(name.toLowerCase());
+      const resolved = resolveByName(memberIds, name, "member");
       const serviceDate = serviceDateFromTimestamp(r["Timestamp"] ?? "");
-      if (!memberId) {
-        flagUnmatched("attendance_records", `${name} (${file.label})`, "check-in name not found in that cohort's roster");
+      if (!resolved.id) {
+        flagUnmatched("attendance_records", `${name} (${file.label})`, resolved.reason ?? "check-in name not found in that cohort's roster");
         continue;
       }
       if (!serviceDate) {
         flagUnmatched("attendance_records", `${name} (${file.label})`, `unparseable timestamp "${r["Timestamp"]}"`);
         continue;
       }
+      const memberId = resolved.id;
       const key = `${memberId}|${serviceDate}`;
       if (seen.has(key)) continue; // multiple check-ins same day -- keep one
       seen.add(key);

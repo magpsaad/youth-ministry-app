@@ -40,14 +40,26 @@ export function buildServantLookup(entries: { id: string; full_name: string; ema
   return { byEmail, byName };
 }
 
+/** Generic name->id[] resolver: returns the single match, or null with a
+ * reason if it's ambiguous/missing -- callers flag the reason via
+ * report.flagUnmatched rather than guess. `kind` is just for the wording
+ * ("servant", "member", ...). Real data has already produced a genuine
+ * same-name collision (two different people, same Full Name, one cohort
+ * file) -- silently picking "whichever came last" would misattribute one
+ * of them's records to the other, so an array-valued map + this resolver
+ * is used everywhere a person is looked up by name, not just servants. */
+export function resolveByName(byName: Map<string, string[]>, name: string, kind: string): { id: string | null; reason?: string } {
+  const key = name.trim().toLowerCase();
+  if (!key) return { id: null, reason: "blank name" };
+  const matches = byName.get(key);
+  if (!matches || matches.length === 0) return { id: null, reason: `no ${kind} named "${name}"` };
+  if (matches.length > 1) return { id: null, reason: `"${name}" matches ${matches.length} different ${kind}s` };
+  return { id: matches[0] };
+}
+
 /** Returns the single matching profile id, or null with a reason if it's
  * ambiguous/missing -- callers flag the reason via report.flagUnmatched
  * rather than guess. */
 export function resolveServantByName(lookup: ServantLookup, name: string): { id: string | null; reason?: string } {
-  const key = name.trim().toLowerCase();
-  if (!key) return { id: null, reason: "blank name" };
-  const matches = lookup.byName.get(key);
-  if (!matches || matches.length === 0) return { id: null, reason: `no servant named "${name}"` };
-  if (matches.length > 1) return { id: null, reason: `"${name}" matches ${matches.length} different servants` };
-  return { id: matches[0] };
+  return resolveByName(lookup.byName, name, "servant");
 }
