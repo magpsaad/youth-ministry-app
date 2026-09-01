@@ -113,8 +113,16 @@ async function buildPlan(groupsByPosition: Map<number, string>): Promise<Planned
 /** Finds this person's existing profiles.id by email if already provisioned
  * (idempotent re-run), otherwise creates a real auth.users row (no email
  * sent -- admin.createUser only sends one if you pass invite-specific
- * options, which this doesn't) and its matching profiles row. */
-async function ensureProfile(person: PlannedPerson): Promise<string> {
+ * options, which this doesn't) and its matching profiles row.
+ *
+ * `existingAuthUsersByEmail` is fetched ONCE upfront (see migrateServants)
+ * rather than discovered by pattern-matching createUser's error after the
+ * fact -- a real run surfaced that Supabase doesn't reliably return a
+ * distinguishable "already exists" error code/message here (got a generic
+ * "Database error creating new user" for a real pre-existing account, which
+ * didn't match the expected email_exists code or wording at all). Checking
+ * the real list first sidesteps guessing at Supabase's error format entirely. */
+async function ensureProfile(person: PlannedPerson, existingAuthUsersByEmail: Map<string, string>): Promise<string> {
   const { data: existing } = await supabase.from("profiles").select("id").eq("email", person.email).maybeSingle();
   if (existing) {
     await supabase
@@ -131,25 +139,23 @@ async function ensureProfile(person: PlannedPerson): Promise<string> {
 
   // auth.users is shared across the WHOLE Supabase project, not per-schema
   // (REQUIREMENTS.md §1.1) -- profiles is schema-scoped, so the "existing"
-  // check above only sees this schema's own profiles. Running this tool
-  // against qa and later against prod for the same people means the second
-  // run's createUser call hits an account that already exists globally --
-  // that's expected, not an error, and gets reused rather than failing.
+  // check above only sees this schema's own profiles. Someone who already
+  // has a real account (either from actually signing in during testing, or
+  // from a prior run of this tool against another schema) gets reused here,
+  // never recreated.
   let authUserId: string;
-  const { data: created, error } = await supabase.auth.admin.createUser({
-    email: person.email,
-    email_confirm: true, // pre-confirmed -- no confirmation email sent
-  });
-  if (created?.user) {
-    authUserId = created.user.id;
-  } else if (error?.code === "email_exists" || error?.message?.toLowerCase().includes("already been registered")) {
-    const { data: list, error: listErr } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-    if (listErr) throw new Error(`Failed to look up existing auth user for ${person.email}: ${listErr.message}`);
-    const match = list.users.find((u) => u.email?.toLowerCase() === person.email);
-    if (!match) throw new Error(`${person.email} already has an auth account per createUser, but couldn't find it via listUsers`);
-    authUserId = match.id;
+  const preExisting = existingAuthUsersByEmail.get(person.email);
+  if (preExisting) {
+    authUserId = preExisting;
   } else {
-    throw new Error(`Failed to create auth user for ${person.email}: ${error?.message ?? "unknown error"}`);
+    const { data: created, error } = await supabase.auth.admin.createUser({
+      email: person.email,
+      email_confirm: true, // pre-confirmed -- no confirmation email sent
+    });
+    if (!created?.user) {
+      throw new Error(`Failed to create auth user for ${person.email}: ${error?.message ?? "unknown error"}`);
+    }
+    authUserId = created.user.id;
   }
 
   const { error: profileErr } = await supabase.from("profiles").insert({
@@ -173,6 +179,18 @@ export async function migrateServants(groupsByPosition: Map<number, string>): Pr
   const plan = await buildPlan(groupsByPosition);
   console.log(`Servants/coordinators/admin: ${plan.length} people planned from Permissions.`);
 
+  // Fetched once upfront -- see ensureProfile's comment for why this
+  // replaces trying to detect "already exists" from createUser's error.
+  const existingAuthUsersByEmail = new Map<string, string>();
+  if (!config.dryRun) {
+    const { data: list, error: listErr } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+    if (listErr) throw new Error(`Failed to list existing auth users: ${listErr.message}`);
+    for (const u of list.users) {
+      if (u.email) existingAuthUsersByEmail.set(u.email.toLowerCase(), u.id);
+    }
+    console.log(`Found ${existingAuthUsersByEmail.size} existing auth account(s) project-wide.`);
+  }
+
   const byEmail = new Map<string, string>();
   const byName = new Map<string, string[]>();
 
@@ -181,7 +199,7 @@ export async function migrateServants(groupsByPosition: Map<number, string>): Pr
     if (config.dryRun) {
       profileId = `dry:${person.email}`;
     } else {
-      profileId = await ensureProfile(person);
+      profileId = await ensureProfile(person, existingAuthUsersByEmail);
       for (const grant of person.grants) {
         const { error } = await supabase
           .from("user_roles")
