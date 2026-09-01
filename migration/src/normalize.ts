@@ -36,8 +36,15 @@ export function isKnownCalendarEventType(raw: string): boolean {
 }
 
 /** Old audit_action_type -> new audit_action_type, MIGRATION_PLAN.md §3.10.
- * Old values with no mapping here have no historical equivalent and are
- * flagged as unmatched rather than dropped silently. */
+ * The original 14-entry map came from the Admin sheet's "Action Types"
+ * registry tab -- turned out to only reflect the CURRENT/latest togglable
+ * set, not every string that actually appears in real historical Audit Log
+ * rows. A real dry run surfaced 6 more (ATTENDANCE_ADDED, OUTREACH_UPDATED,
+ * OUTREACH_DELETED, CALENDAR_EVENT_CREATED/UPDATED/DELETED) that the old app
+ * was already logging under the exact same names the new app uses, so
+ * they're identity-mapped below rather than needing a rename. Old values
+ * with no mapping here have no historical equivalent and are flagged as
+ * unmatched rather than dropped silently. */
 export const AUDIT_ACTION_TYPE_MAP: Record<string, string> = {
   APP_ACCESS: "APP_ACCESS",
   YEAR_SELECTED: "GROUP_SELECTED",
@@ -53,6 +60,15 @@ export const AUDIT_ACTION_TYPE_MAP: Record<string, string> = {
   SERVANT_DELETED: "SERVANT_DELETED",
   ADMIN_ACCESS_MAINTENANCE: "ADMIN_ACCESS_MAINTENANCE",
   ADMIN_UNIVERSITIES_MAINTENANCE: "ADMIN_UNIVERSITIES_MAINTENANCE",
+  // Confirmed present in real historical data, already using the new
+  // app's exact names:
+  ATTENDANCE_ADDED: "ATTENDANCE_ADDED",
+  ATTENDANCE_REMOVED: "ATTENDANCE_REMOVED", // not confirmed in real data, added defensively -- harmless if unused
+  OUTREACH_UPDATED: "OUTREACH_UPDATED",
+  OUTREACH_DELETED: "OUTREACH_DELETED",
+  CALENDAR_EVENT_CREATED: "CALENDAR_EVENT_CREATED",
+  CALENDAR_EVENT_UPDATED: "CALENDAR_EVENT_UPDATED",
+  CALENDAR_EVENT_DELETED: "CALENDAR_EVENT_DELETED",
 };
 
 /** MIGRATION_PLAN.md §3.5 -- the 3 named General Coordinators, by email
@@ -65,11 +81,24 @@ export const GENERAL_COORDINATOR_EMAILS = new Set([
 ]);
 
 export function serviceDateFromTimestamp(timestamp: string): string | null {
-  // Sheets UNFORMATTED_VALUE + FORMATTED_STRING date-time render gives a
-  // human string like "9/13/2025 18:04:22" -- take just the date part and
-  // normalize to YYYY-MM-DD.
-  const m = timestamp.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if (!m) return null;
-  const [, mo, d, y] = m;
-  return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  // FORMATTED_STRING date-time render reflects whatever number format is
+  // applied to that specific cell/column -- different tabs use different
+  // formats. Confirmed against a real dry run: most are US "M/D/YYYY ..."
+  // but some (a whole tab's worth) are "YYYY-MM-DD ..." instead. Try both
+  // rather than assuming one.
+  const v = timestamp.trim();
+
+  const iso = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) {
+    const [, y, mo, d] = iso;
+    return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+
+  const us = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (us) {
+    const [, mo, d, y] = us;
+    return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+
+  return null;
 }

@@ -16,22 +16,24 @@ export const SERVANTS_FILE_ID = "1CYy9iyMP6mTiU2jELImFNIsiPituAB7JaPLcrlJk6Jk"; 
 export const ADMIN_FILE_ID = "1lOu6FsIwrqmQpXOoSmJsELqhhYWkaMJTtC3X7oZUJsk"; // SAY Ministry Admin
 export const CALENDAR_FILE_ID = "1iyKChvoW0Mgc8vhKI1uUTWsjnKJiK7cJFjseqUI1rH8"; // SAY Ministry Audit - Calendar
 
-// Tab names. The ADMIN_FILE_ID names below are confirmed via a direct xlsx
-// export (real sheet names, not guessed). The cohort/servants/calendar file
-// tab names are the subagent's best read of natural-language content
-// inspection, NOT independently confirmed the same way -- read_file_content
-// doesn't surface real tab names (see MIGRATION_PLAN.md §2, tool limitation
-// note). If a step below throws "Unable to parse range" or similar from the
-// Sheets API, open that file's tab bar and fix the name here first.
+// Tab names -- all confirmed for real via the Sheets API's own
+// spreadsheets.get metadata call (fields: sheets.properties.title), once
+// real service-account credentials existed to do that with. Several of
+// these differ from the earlier natural-language-inspection guesses (that
+// inspection couldn't surface real tab names at all -- see MIGRATION_PLAN.md
+// §2's tool-limitation note): "Roster" was actually "Master List",
+// "Check-in responses" was actually "Attendance Responses", "Calendar" was
+// actually "Service Calendar". "Outreach", "Permissions", "Universities",
+// "Verses", and "Audit Log" were already correct.
 export const TABS = {
-  roster: "Roster",
+  roster: "Master List",
   outreach: "Outreach",
-  checkins: "Check-in responses",
-  servantsRoster: "Roster",
-  servantsCheckins: "Check-in responses",
+  checkins: "Attendance Responses",
+  servantsRoster: "Master List",
+  servantsCheckins: "Attendance Responses",
   permissions: "Permissions",
   universities: "Universities",
   verses: "Verses",
-  calendar: "Calendar",
+  calendar: "Service Calendar",
   auditLog: "Audit Log",
 } as const;
