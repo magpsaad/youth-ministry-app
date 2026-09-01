@@ -198,7 +198,17 @@ export function AuditLogsInteractive({
               <tr key={log.id}>
                 <td className="px-4 py-2 whitespace-nowrap text-[#666]">{formatWhen(log.occurred_at)}</td>
                 <td className="px-4 py-2 font-mono text-xs text-[#333]">{log.action_type}</td>
-                <td className="px-4 py-2 text-[#333]">{log.user_name ?? "—"}</td>
+                <td className="px-4 py-2 text-[#333]">
+                  {log.user_name ?? (
+                    log.details?.unmatched_email ? (
+                      <span className="italic text-[#856404]" title="No matching account -- this email wasn't found in the migrated servant roster">
+                        {String(log.details.unmatched_email)} (unmatched)
+                      </span>
+                    ) : (
+                      "—"
+                    )
+                  )}
+                </td>
                 <td className="px-4 py-2 text-[#666]">{log.group_name ?? "—"}</td>
               </tr>
             ))}

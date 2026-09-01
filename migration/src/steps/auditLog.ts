@@ -50,13 +50,25 @@ export async function migrateAuditLog(groupsByPosition: Map<number, string>, ser
     const position = YEAR_TO_POSITION[yearRaw];
     const groupId = position ? groupsByPosition.get(position) ?? null : null;
 
-    let details: unknown = null;
+    let details: Record<string, unknown> | null = null;
     if (r["Details"]) {
       try {
         details = JSON.parse(r["Details"]);
       } catch {
         details = { raw: r["Details"] }; // not valid JSON in source -- keep it, don't drop the row
       }
+    }
+    // Owner-confirmed real scenario: a genuine access attempt whose email
+    // doesn't match anyone provisioned (e.g. someone signed up with a
+    // different email than the one they later tried to log in with) is
+    // still a real historical event worth keeping, not something to drop or
+    // silently null out -- but user_id has to be null (there's truly no
+    // matching account), and the app's own Audit Logs screen has nothing
+    // else to show in that case (web/src/components/admin/
+    // AuditLogsInteractive.tsx falls back to details.unmatched_email, added
+    // alongside this). Keep whatever real Details content already existed.
+    if (userEmail && !userId) {
+      details = { ...details, unmatched_email: userEmail };
     }
 
     records.push({
