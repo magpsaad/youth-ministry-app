@@ -14,11 +14,7 @@ export async function migrateMembers(
   universitiesByName: Map<string, string>,
   servants: ServantLookup,
 ): Promise<Map<string, Map<string, string>>> {
-  if (!config.dryRun) {
-    const { error } = await supabase.from("members").delete().not("id", "is", null);
-    if (error) throw new Error(`Failed to clear members: ${error.message}`);
-  }
-
+  // Clearing happens once, upfront, in clear.ts -- see its comment for why.
   const memberIdsByFile = new Map<string, Map<string, string>>();
 
   for (const file of COHORT_FILES) {

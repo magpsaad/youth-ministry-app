@@ -12,9 +12,7 @@ export async function migrateVerses(): Promise<void> {
   console.log(`Verses: ${texts.length} rows found in Sheets.`);
 
   if (!config.dryRun) {
-    const { error: delErr } = await supabase.from("verses").delete().not("id", "is", null);
-    if (delErr) throw new Error(`Failed to clear verses: ${delErr.message}`);
-
+    // Clearing happens once, upfront, in clear.ts -- see its comment for why.
     const { error: insErr } = await supabase.from("verses").insert(
       texts.map((text) => ({ text, legacy_source_ref: `${ADMIN_FILE_ID}:${TABS.verses}:${text.slice(0, 40)}` })),
     );

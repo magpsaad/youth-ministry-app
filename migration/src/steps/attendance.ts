@@ -12,11 +12,7 @@ const CHECKIN_NAME_COL = "Select your name from the list";
  * formula-derived weekly-grid/computed-roster tabs are NOT read here -- the
  * new app computes those same numbers dynamically, same as new data). */
 export async function migrateAttendance(memberIdsByFile: Map<string, Map<string, string>>, servants: ServantLookup): Promise<void> {
-  if (!config.dryRun) {
-    const { error } = await supabase.from("attendance_records").delete().not("id", "is", null);
-    if (error) throw new Error(`Failed to clear attendance_records: ${error.message}`);
-  }
-
+  // Clearing happens once, upfront, in clear.ts -- see its comment for why.
   let total = 0;
 
   for (const file of COHORT_FILES) {

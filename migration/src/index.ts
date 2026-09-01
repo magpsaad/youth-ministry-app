@@ -1,5 +1,6 @@
 import { config } from "./config.js";
 import { loadGroupsByLadderPosition } from "./lookups.js";
+import { clearContentTables } from "./clear.js";
 import { migrateUniversities } from "./steps/universities.js";
 import { migrateVerses } from "./steps/verses.js";
 import { migrateServants } from "./steps/servants.js";
@@ -14,6 +15,11 @@ import { printReport, hasUnmatched } from "./report.js";
 // dry-run placeholder ids) before anything that references them by lookup.
 async function main() {
   const groupsByPosition = await loadGroupsByLadderPosition();
+
+  if (!config.dryRun) {
+    console.log("Clearing content tables (dependency order: attendance/outreach -> members -> universities, plus verses/calendar/audit_log)...");
+    await clearContentTables();
+  }
 
   const universitiesByName = await migrateUniversities();
   await migrateVerses();

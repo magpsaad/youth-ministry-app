@@ -25,9 +25,7 @@ export async function migrateUniversities(): Promise<Map<string, string>> {
   if (config.dryRun) {
     for (const r of records) byName.set(r.name.toLowerCase(), `dry:${r.name}`);
   } else {
-    const { error: delErr } = await supabase.from("universities").delete().not("id", "is", null);
-    if (delErr) throw new Error(`Failed to clear universities: ${delErr.message}`);
-
+    // Clearing happens once, upfront, in clear.ts -- see its comment for why.
     const { data, error: insErr } = await supabase
       .from("universities")
       .insert(

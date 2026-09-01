@@ -9,10 +9,7 @@ import { resolveServantByName, type ServantLookup } from "../lookups.js";
 /** MIGRATION_PLAN.md §3.9. Attachment column deferred (Drive-hosted, same
  * as photos -- not this pass). */
 export async function migrateCalendar(servants: ServantLookup): Promise<void> {
-  if (!config.dryRun) {
-    const { error } = await supabase.from("service_calendar_events").delete().not("id", "is", null);
-    if (error) throw new Error(`Failed to clear service_calendar_events: ${error.message}`);
-  }
+  // Clearing happens once, upfront, in clear.ts -- see its comment for why.
 
   const rows = await readTabAsRows(CALENDAR_FILE_ID, TABS.calendar);
   console.log(`Calendar: ${rows.length} rows found.`);

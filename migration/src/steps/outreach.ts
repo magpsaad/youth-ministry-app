@@ -9,10 +9,7 @@ import { resolveServantByName, type ServantLookup } from "../lookups.js";
 /** MIGRATION_PLAN.md §3.7 -- one Outreach tab per cohort file, member
  * looked up within that same file's own roster (memberIdsByFile). */
 export async function migrateOutreach(memberIdsByFile: Map<string, Map<string, string>>, servants: ServantLookup): Promise<void> {
-  if (!config.dryRun) {
-    const { error } = await supabase.from("outreach_entries").delete().not("id", "is", null);
-    if (error) throw new Error(`Failed to clear outreach_entries: ${error.message}`);
-  }
+  // Clearing happens once, upfront, in clear.ts -- see its comment for why.
 
   let total = 0;
   for (const file of COHORT_FILES) {

@@ -18,15 +18,7 @@ const YEAR_TO_POSITION: Record<string, number> = {
  * legacy_source_ref column to already be applied, or the delete/insert
  * below will fail loudly (no such column) rather than silently skip. */
 export async function migrateAuditLog(groupsByPosition: Map<number, string>, servants: ServantLookup): Promise<void> {
-  if (!config.dryRun) {
-    const { error } = await supabase.from("audit_log").delete().not("id", "is", null);
-    if (error) {
-      throw new Error(
-        `Failed to clear audit_log: ${error.message} -- has migration 0034_audit_log_legacy_ref.sql been run in the Supabase SQL editor yet?`,
-      );
-    }
-  }
-
+  // Clearing happens once, upfront, in clear.ts -- see its comment for why.
   const rows = await readTabAsRows(CALENDAR_FILE_ID, TABS.auditLog);
   console.log(`Audit Log: ${rows.length} rows found.`);
 
