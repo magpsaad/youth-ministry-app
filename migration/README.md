@@ -32,6 +32,12 @@ Supabase dashboard → your project → **Project Settings → API** → copy th
 
 `audit_log` needs a new column before this tool can touch it. Run `../supabase/migrations/0034_audit_log_legacy_ref.sql` in the Supabase SQL editor, prefixed with `set search_path to qa;` (or `prod;`), same as every other migration in this project -- **not automatic, do this by hand.**
 
+## Where prod's data actually comes from
+
+**Sheets → Prod, directly. Never Qa → Prod.** `qa` and `prod` are two completely independent schemas (REQUIREMENTS.md §1.1) -- running this tool against `qa` throughout the testing period and then, at cutover, running it again with `MIGRATE_SCHEMA=prod` are two entirely separate migrations, both reading the same live Sheets, writing into two different places. Whatever's sitting in `qa` at cutover time (real data, test data, whatever got typed in while poking at the app) never moves into `prod` -- it's disposable and stays disposed. See REQUIREMENTS.md §10.2's cutover runbook: "run one final data migration" means running this tool once more, straight from Sheets, targeting `prod`.
+
+**One consequence worth knowing about**: Supabase Auth accounts (`auth.users`) are shared across the *whole project*, not per-schema (REQUIREMENTS.md §1.1) -- only `profiles`/`user_roles` are schema-scoped. So if you've already run this tool against `qa`, every servant/coordinator/admin already has a real login account by the time you run it against `prod` -- the tool handles this correctly (reuses the existing account rather than erroring), but it means the `prod` run's account-provisioning step is really just adding `prod`-schema `profiles`/`user_roles` rows for accounts that, in practice, already exist.
+
 ## Running it
 
 Always start with a dry run:

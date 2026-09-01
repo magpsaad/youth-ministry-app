@@ -129,16 +129,31 @@ async function ensureProfile(person: PlannedPerson): Promise<string> {
     return existing.id;
   }
 
+  // auth.users is shared across the WHOLE Supabase project, not per-schema
+  // (REQUIREMENTS.md §1.1) -- profiles is schema-scoped, so the "existing"
+  // check above only sees this schema's own profiles. Running this tool
+  // against qa and later against prod for the same people means the second
+  // run's createUser call hits an account that already exists globally --
+  // that's expected, not an error, and gets reused rather than failing.
+  let authUserId: string;
   const { data: created, error } = await supabase.auth.admin.createUser({
     email: person.email,
     email_confirm: true, // pre-confirmed -- no confirmation email sent
   });
-  if (error || !created?.user) {
+  if (created?.user) {
+    authUserId = created.user.id;
+  } else if (error?.code === "email_exists" || error?.message?.toLowerCase().includes("already been registered")) {
+    const { data: list, error: listErr } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+    if (listErr) throw new Error(`Failed to look up existing auth user for ${person.email}: ${listErr.message}`);
+    const match = list.users.find((u) => u.email?.toLowerCase() === person.email);
+    if (!match) throw new Error(`${person.email} already has an auth account per createUser, but couldn't find it via listUsers`);
+    authUserId = match.id;
+  } else {
     throw new Error(`Failed to create auth user for ${person.email}: ${error?.message ?? "unknown error"}`);
   }
 
   const { error: profileErr } = await supabase.from("profiles").insert({
-    id: created.user.id,
+    id: authUserId,
     full_name: person.name,
     email: person.email,
     phone: person.phone,
@@ -148,7 +163,7 @@ async function ensureProfile(person: PlannedPerson): Promise<string> {
   });
   if (profileErr) throw new Error(`Failed to insert profile for ${person.email}: ${profileErr.message}`);
 
-  return created.user.id;
+  return authUserId;
 }
 
 /** MIGRATION_PLAN.md §3.5 -- idempotent: never deletes/recreates an
