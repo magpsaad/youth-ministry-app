@@ -28,9 +28,12 @@ The tool reads via the Sheets API, not your own Google login -- it needs its own
 
 Supabase dashboard → your project → **Project Settings → API** → copy the `service_role` key (not `anon`) into `.env` as `SUPABASE_SERVICE_ROLE_KEY`, and the project URL as `SUPABASE_URL`.
 
-### 4. Run migration 0034 first
+### 4. Run migrations 0034 and 0035 first
 
-`audit_log` needs a new column before this tool can touch it. Run `../supabase/migrations/0034_audit_log_legacy_ref.sql` in the Supabase SQL editor, prefixed with `set search_path to qa;` (or `prod;`), same as every other migration in this project -- **not automatic, do this by hand.**
+Two prerequisites, both in the Supabase SQL editor, prefixed with `set search_path to qa;` (or `prod;`), same as every other migration in this project -- **not automatic, do this by hand:**
+
+- `../supabase/migrations/0034_audit_log_legacy_ref.sql` -- `audit_log` needs a new column before this tool can touch it.
+- `../supabase/migrations/0035_service_role_schema_access.sql` -- this tool connects as `service_role` (not through the app's normal anon+RLS path), and nothing ever granted that role access to a non-public schema before now. Without this, every query fails with "permission denied for schema qa/prod."
 
 ## Where prod's data actually comes from
 
