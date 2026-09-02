@@ -64,12 +64,14 @@ export async function migratePhotos(memberIdsByFile: Map<string, Map<string, str
   const servantPhotos = await listFilesInFolder(SERVANTS_PHOTOS_FOLDER_ID);
   console.log(`Servants Photos: ${servantPhotos.length} files found.`);
 
+  const matchedServantIds = new Set<string>();
   for (const photo of servantPhotos) {
     const resolved = resolveServantByName(servants, baseNameOf(photo.name));
     if (!resolved.id) {
       flagUnmatched("profiles", `${photo.name} (Servants photo)`, resolved.reason ?? "photo filename didn't match a servant");
       continue;
     }
+    matchedServantIds.add(resolved.id);
     if (config.dryRun) {
       servantTotal++;
       continue;
@@ -83,6 +85,26 @@ export async function migratePhotos(memberIdsByFile: Map<string, Map<string, str
     const { error: updErr } = await supabase.from("profiles").update({ photo_path: path }).eq("id", resolved.id);
     if (updErr) throw new Error(`Failed to set photo_path for "${photo.name}": ${updErr.message}`);
     servantTotal++;
+  }
+
+  // Members are fully wiped/recreated every run (fresh row, photo_path
+  // starts null), so a member with no Drive photo naturally has no stale
+  // reference. Servant profiles are updated in place, not recreated -- a
+  // servant with an old photo_path but no matching Drive photo this run
+  // would otherwise keep pointing at a storage object clearPhotosBucket()
+  // just deleted (a permanent 404), e.g. a test account that used the live
+  // app's own upload feature rather than having a real Drive photo. Drive
+  // is the source of truth for the whole person record (same reasoning as
+  // ensureProfile() overwriting name/phone/gender unconditionally), so
+  // "no Drive photo" must mean photo_path = null, not "whatever was there".
+  if (!config.dryRun) {
+    const { data: staleProfiles, error: staleErr } = await supabase.from("profiles").select("id").not("photo_path", "is", null);
+    if (staleErr) throw new Error(`Failed to check for stale profile photo_path values: ${staleErr.message}`);
+    const staleIds = (staleProfiles ?? []).map((p) => p.id).filter((id) => !matchedServantIds.has(id));
+    if (staleIds.length > 0) {
+      const { error: clearErr } = await supabase.from("profiles").update({ photo_path: null }).in("id", staleIds);
+      if (clearErr) throw new Error(`Failed to clear stale photo_path on ${staleIds.length} profile(s): ${clearErr.message}`);
+    }
   }
 
   count("member_photos", memberTotal);
