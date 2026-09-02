@@ -1,21 +1,31 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import type { AnalyticsRawData } from "@/lib/analytics";
 import type { ServantOption } from "@/lib/servants";
 import { useMyAssigned } from "@/components/MyAssignedContext";
+import { groupByGender, genderSubheading } from "@/lib/gender-grouping";
 import { ClipboardCheckIcon, UsersIcon, ChartBarIcon, MapPinIcon } from "@/components/icons";
 import { ProximityDonut } from "@/components/charts/ProximityDonut";
 import { AttendanceTrendChart } from "@/components/charts/AttendanceTrendChart";
 
 type SortKey = "name" | "gender" | "caseload" | "cohort";
 
+function cohortText(s: ServantOption): string {
+  return s.groups.map((g) => g.name).join(", ");
+}
+
 /** REQUIREMENTS.md §6.7 -- Data Completeness and Average Attendance by
  * Month respect "My Assigned List" (§6.2) like every other tab; Servant
- * Assignments deliberately doesn't (see lib/analytics.ts) but its columns
- * are all sortable. `combined` (the "Load Youth Data for all cohorts" view,
- * §6.1 addendum) adds a sortable Cohort column -- redundant everywhere else,
- * since a single-cohort table only ever lists one cohort's servants. */
+ * Assignments deliberately doesn't (see lib/analytics.ts). `combined` (the
+ * "Load Youth Data for all cohorts" view, §6.1 addendum) adds a
+ * Categorical/Alphabetical toggle -- matching Servant Assignments/Servant
+ * Profiles' own (owner-requested, for consistency across all three
+ * screens): Alphabetical is the existing flat, freely-sortable table;
+ * Categorical groups by cohort (ladder order, Unassigned last) then by
+ * gender within each, same "n Female Servants"/"n Male Servants"
+ * subheadings as the other two screens, fixed name order (no independent
+ * per-column sort -- the grouping IS the order, same as those screens). */
 export function AnalyticsInteractive({
   raw,
   servants,
@@ -35,6 +45,7 @@ export function AnalyticsInteractive({
   const applyFilter = hydrated && myAssignedOnly;
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDesc, setSortDesc] = useState(false);
+  const [servantsView, setServantsView] = useState<"categorical" | "alphabetical">("categorical");
 
   const filteredMembers = useMemo(() => {
     const rows = applyFilter ? raw.members.filter((m) => m.assigned_servant_id === currentUserId) : raw.members;
@@ -103,11 +114,32 @@ export function AnalyticsInteractive({
       let cmp = 0;
       if (sortKey === "name") cmp = a.full_name.localeCompare(b.full_name);
       else if (sortKey === "gender") cmp = (a.gender ?? "").localeCompare(b.gender ?? "");
-      else if (sortKey === "cohort") cmp = a.groupNames.join(", ").localeCompare(b.groupNames.join(", "));
+      else if (sortKey === "cohort") cmp = cohortText(a).localeCompare(cohortText(b));
       else cmp = a.caseload - b.caseload;
       return sortDesc ? -cmp : cmp;
     });
   }, [servants, sortKey, sortDesc]);
+
+  // Categorical view (owner-requested, matches Servant Assignments/Servant
+  // Profiles): cohorts in ladder order, Unassigned last; a person holding
+  // Servant grants at more than one cohort appears under each (same rule
+  // those two screens already use).
+  const categoricalCohorts = useMemo(() => {
+    const byCohortId = new Map<string, { id: string; name: string; ladder_position: number; servants: ServantOption[] }>();
+    const unassigned: ServantOption[] = [];
+    for (const s of servants) {
+      if (s.groups.length === 0) {
+        unassigned.push(s);
+        continue;
+      }
+      for (const g of s.groups) {
+        if (!byCohortId.has(g.id)) byCohortId.set(g.id, { id: g.id, name: g.name, ladder_position: g.ladder_position, servants: [] });
+        byCohortId.get(g.id)!.servants.push(s);
+      }
+    }
+    const cohorts = Array.from(byCohortId.values()).sort((a, b) => a.ladder_position - b.ladder_position);
+    return { cohorts, unassigned };
+  }, [servants]);
 
   function handleSort(key: SortKey) {
     if (key === sortKey) setSortDesc((v) => !v);
@@ -172,63 +204,157 @@ export function AnalyticsInteractive({
       </section>
 
       <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
-          <UsersIcon className="h-5 w-5" /> Servant Assignments
-        </h2>
-        <div className="overflow-hidden rounded-lg border border-[#f0f0f0]">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-[#f5f5f5] text-left text-[#666]">
-                <th className="px-4 py-2">
-                  <button type="button" onClick={() => handleSort("name")} className="font-semibold hover:underline">
-                    Servant{indicator("name")}
-                  </button>
-                </th>
-                <th className="px-4 py-2">
-                  <button type="button" onClick={() => handleSort("gender")} className="font-semibold hover:underline">
-                    Gender{indicator("gender")}
-                  </button>
-                </th>
-                {combined && (
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f]">
+            <UsersIcon className="h-5 w-5" /> Servant Assignments
+          </h2>
+          {combined && (
+            <div className="flex rounded-md border border-[#ddd] overflow-hidden text-sm">
+              <button
+                type="button"
+                onClick={() => setServantsView("categorical")}
+                className={`px-3 py-1.5 font-semibold ${servantsView === "categorical" ? "bg-[#1e3a5f] text-white" : "bg-white text-[#333]"}`}
+              >
+                Categorical
+              </button>
+              <button
+                type="button"
+                onClick={() => setServantsView("alphabetical")}
+                className={`px-3 py-1.5 font-semibold ${servantsView === "alphabetical" ? "bg-[#1e3a5f] text-white" : "bg-white text-[#333]"}`}
+              >
+                Alphabetical
+              </button>
+            </div>
+          )}
+        </div>
+
+        {combined && servantsView === "categorical" ? (
+          <div className="space-y-4">
+            {categoricalCohorts.cohorts.map((cohort) => (
+              <ServantCohortTable key={cohort.id} label={cohort.name} servants={cohort.servants} memberLabel={memberLabel} />
+            ))}
+            {categoricalCohorts.unassigned.length > 0 && (
+              <ServantCohortTable label="Unassigned" servants={categoricalCohorts.unassigned} memberLabel={memberLabel} />
+            )}
+            <div className="overflow-hidden rounded-lg border border-[#f0f0f0]">
+              <table className="w-full text-sm">
+                <tbody>
+                  <tr className="bg-[#f9f9f9]">
+                    <td className="px-4 py-2.5 font-semibold text-[#333]">Unassigned {memberLabel}s (no servant)</td>
+                    <td className="px-4 py-2.5 text-right font-semibold text-[#333]">{unassignedCount}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            {servants.length === 0 && <p className="text-sm text-[#666] text-center py-6">No servants assigned yet.</p>}
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-lg border border-[#f0f0f0]">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-[#f5f5f5] text-left text-[#666]">
                   <th className="px-4 py-2">
-                    <button type="button" onClick={() => handleSort("cohort")} className="font-semibold hover:underline">
-                      Cohort{indicator("cohort")}
+                    <button type="button" onClick={() => handleSort("name")} className="font-semibold hover:underline">
+                      Servant{indicator("name")}
                     </button>
                   </th>
-                )}
-                <th className="px-4 py-2 text-right">
-                  <button type="button" onClick={() => handleSort("caseload")} className="font-semibold hover:underline">
-                    Assigned {memberLabel}s{indicator("caseload")}
-                  </button>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#f0f0f0]">
-              {sortedServants.map((s) => (
-                <tr key={s.id}>
-                  <td className="px-4 py-2.5 font-medium text-[#333]">{s.full_name}</td>
-                  <td className="px-4 py-2.5 text-[#666]">{s.gender ?? "—"}</td>
-                  {combined && <td className="px-4 py-2.5 text-[#666]">{s.groupNames.join(", ") || "—"}</td>}
-                  <td className="px-4 py-2.5 text-right text-[#333]">{s.caseload}</td>
+                  <th className="px-4 py-2">
+                    <button type="button" onClick={() => handleSort("gender")} className="font-semibold hover:underline">
+                      Gender{indicator("gender")}
+                    </button>
+                  </th>
+                  {combined && (
+                    <th className="px-4 py-2">
+                      <button type="button" onClick={() => handleSort("cohort")} className="font-semibold hover:underline">
+                        Cohort{indicator("cohort")}
+                      </button>
+                    </th>
+                  )}
+                  <th className="px-4 py-2 text-right">
+                    <button type="button" onClick={() => handleSort("caseload")} className="font-semibold hover:underline">
+                      Assigned {memberLabel}s{indicator("caseload")}
+                    </button>
+                  </th>
                 </tr>
-              ))}
-              <tr className="bg-[#f9f9f9]">
-                <td className="px-4 py-2.5 font-semibold text-[#333]" colSpan={combined ? 3 : 2}>
-                  Unassigned
-                </td>
-                <td className="px-4 py-2.5 text-right font-semibold text-[#333]">{unassignedCount}</td>
-              </tr>
-              {sortedServants.length === 0 && (
-                <tr>
-                  <td colSpan={combined ? 4 : 3} className="px-4 py-6 text-center text-[#666]">
-                    No servants assigned to this group yet.
+              </thead>
+              <tbody className="divide-y divide-[#f0f0f0]">
+                {sortedServants.map((s) => (
+                  <tr key={s.id}>
+                    <td className="px-4 py-2.5 font-medium text-[#333]">{s.full_name}</td>
+                    <td className="px-4 py-2.5 text-[#666]">{s.gender ?? "—"}</td>
+                    {combined && <td className="px-4 py-2.5 text-[#666]">{cohortText(s) || "—"}</td>}
+                    <td className="px-4 py-2.5 text-right text-[#333]">{s.caseload}</td>
+                  </tr>
+                ))}
+                <tr className="bg-[#f9f9f9]">
+                  <td className="px-4 py-2.5 font-semibold text-[#333]" colSpan={combined ? 3 : 2}>
+                    Unassigned
                   </td>
+                  <td className="px-4 py-2.5 text-right font-semibold text-[#333]">{unassignedCount}</td>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                {sortedServants.length === 0 && (
+                  <tr>
+                    <td colSpan={combined ? 4 : 3} className="px-4 py-6 text-center text-[#666]">
+                      No servants assigned to this group yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
+    </div>
+  );
+}
+
+/** One cohort's servants, categorical view: female-then-male subheadings
+ * (same "n Female Servants"/"n Male Servants" pattern as Servant
+ * Assignments/Servant Profiles), name-sorted within each -- no per-column
+ * sort here, the grouping IS the order. Gender/Cohort columns are dropped
+ * (redundant with the heading/subheading text). */
+function ServantCohortTable({ label, servants, memberLabel }: { label: string; servants: ServantOption[]; memberLabel: string }) {
+  const { female, male, other } = groupByGender(servants, (s) => s.gender);
+  return (
+    <div>
+      <h3 className="text-sm font-bold text-[#1e3a5f] mb-2">{label}</h3>
+      <div className="overflow-hidden rounded-lg border border-[#f0f0f0]">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-[#f5f5f5] text-left text-[#666]">
+              <th className="px-4 py-2 font-semibold">Servant</th>
+              <th className="px-4 py-2 text-right font-semibold">Assigned {memberLabel}s</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#f0f0f0]">
+            {(
+              [
+                ["Female", female],
+                ["Male", male],
+                ["Other", other],
+              ] as const
+            ).map(([kind, rows]) =>
+              rows.length === 0 ? null : (
+                <Fragment key={kind}>
+                  <tr className="bg-[#f9f9f9]">
+                    <td colSpan={2} className="px-4 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[#666]">
+                      {genderSubheading(kind, rows.length)}
+                    </td>
+                  </tr>
+                  {[...rows]
+                    .sort((a, b) => a.full_name.localeCompare(b.full_name))
+                    .map((s) => (
+                      <tr key={s.id}>
+                        <td className="px-4 py-2.5 font-medium text-[#333]">{s.full_name}</td>
+                        <td className="px-4 py-2.5 text-right text-[#333]">{s.caseload}</td>
+                      </tr>
+                    ))}
+                </Fragment>
+              ),
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

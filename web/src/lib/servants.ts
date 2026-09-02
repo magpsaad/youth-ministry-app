@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 
+export type ServantGroup = { id: string; name: string; ladder_position: number };
+
 export type ServantOption = {
   id: string;
   full_name: string;
@@ -7,11 +9,15 @@ export type ServantOption = {
   caseload: number;
   /** Which cohort(s) this person holds a 'servant' grant for -- always
    * populated (even for a single-group call, where it's just that one
-   * group's own name), but only meaningfully shown once servants from
-   * several cohorts are listed together (the "all cohorts" combined view's
-   * Analytics table, REQUIREMENTS.md §6.7 addendum -- a person holding
-   * Servant grants at more than one cohort has more than one name here). */
-  groupNames: string[];
+   * group's own info), but only meaningfully shown/grouped-by once
+   * servants from several cohorts are listed together (the "all cohorts"
+   * combined view's Analytics table, REQUIREMENTS.md §6.7 addendum -- a
+   * person holding Servant grants at more than one cohort has more than
+   * one entry here). Carries ladder_position (not just the name) so a
+   * categorical grouping can order cohorts youngest-to-oldest rather than
+   * alphabetically -- same fix already applied to Servant Assignments/
+   * Servant Profiles' own categorical views. */
+  groups: ServantGroup[];
 };
 
 /**
@@ -26,20 +32,30 @@ export type ServantOption = {
 export async function getServantsForGroup(groupId: string | string[]): Promise<ServantOption[]> {
   const supabase = await createClient();
 
-  let roleQuery = supabase.from("user_roles").select("user_id, profiles(id, full_name, gender), groups(name)").eq("role", "servant");
+  let roleQuery = supabase
+    .from("user_roles")
+    .select("user_id, group_id, profiles(id, full_name, gender), groups(name, ladder_position)")
+    .eq("role", "servant");
   roleQuery = Array.isArray(groupId) ? roleQuery.in("group_id", groupId) : roleQuery.eq("group_id", groupId);
   const { data: roleRows } = await roleQuery;
 
-  const byId = new Map<string, { id: string; full_name: string; gender: string | null; groupNames: string[] }>();
+  const byId = new Map<string, { id: string; full_name: string; gender: string | null; groups: ServantGroup[] }>();
   for (const r of roleRows ?? []) {
     const p = r.profiles as unknown as { id: string; full_name: string; gender: string | null } | null;
     if (!p) continue;
-    const groupName = (r.groups as unknown as { name: string } | null)?.name;
+    const group = r.groups as unknown as { name: string; ladder_position: number } | null;
     const existing = byId.get(p.id);
     if (existing) {
-      if (groupName && !existing.groupNames.includes(groupName)) existing.groupNames.push(groupName);
+      if (group && r.group_id && !existing.groups.some((g) => g.id === r.group_id)) {
+        existing.groups.push({ id: r.group_id, name: group.name, ladder_position: group.ladder_position });
+      }
     } else {
-      byId.set(p.id, { id: p.id, full_name: p.full_name, gender: p.gender, groupNames: groupName ? [groupName] : [] });
+      byId.set(p.id, {
+        id: p.id,
+        full_name: p.full_name,
+        gender: p.gender,
+        groups: group && r.group_id ? [{ id: r.group_id, name: group.name, ladder_position: group.ladder_position }] : [],
+      });
     }
   }
   const servants = Array.from(byId.values());
