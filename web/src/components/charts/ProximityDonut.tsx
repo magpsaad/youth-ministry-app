@@ -27,7 +27,7 @@ const SEGMENTS = [
   { key: "Local", color: "#2e7d32" }, // green
   { key: "Regional", color: "#fbc02d" }, // yellow
   { key: "Abroad", color: "#d32f2f" }, // red
-  { key: "Unknown", color: "#757575" }, // gray -- not a real category
+  { key: "Unknown", color: "#9e9e9e" }, // gray, a couple shades lighter (owner-requested) -- not a real category
 ] as const;
 
 export function ProximityDonut({
