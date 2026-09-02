@@ -77,7 +77,7 @@ $$;
 -- ── Fix 2a: backfill -- every current Sub-Coordinator also becomes a
 -- Servant of that same cohort, if they aren't one already. ──
 insert into user_roles (user_id, role, group_id)
-select distinct sc.user_id, 'servant', sc.group_id
+select distinct sc.user_id, 'servant'::app_role, sc.group_id
 from user_roles sc
 where sc.role = 'sub_coordinator'
   and not exists (
