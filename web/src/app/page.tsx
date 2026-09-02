@@ -201,9 +201,17 @@ export default async function LandingPage() {
           </section>
         )}
 
+        {/* The proxy gate (src/lib/supabase/proxy.ts) already redirects
+            anyone with no role at all to /register before they ever reach
+            this page -- this is just a defensive fallback in case that
+            somehow didn't fire. */}
         {!access.isAdmin && !access.isCoordinator && !access.isServant && !access.isReadOnly && (
           <p className="text-center text-sm text-[#666]">
-            Your account isn&rsquo;t assigned to any role yet. Contact an Admin for access.
+            Your account isn&rsquo;t assigned to any role yet.{" "}
+            <Link href="/register" className="underline">
+              Register here
+            </Link>
+            , or contact an Admin for access.
           </p>
         )}
       </main>
