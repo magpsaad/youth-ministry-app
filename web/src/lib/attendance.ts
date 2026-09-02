@@ -54,17 +54,19 @@ function toMinutes(hms: string): number {
  * today OR the configured same-day cutoff has passed, whichever happens
  * first (§7.2).
  */
-export async function getAttendanceBundle(groupId: string): Promise<AttendanceBundle> {
+export async function getAttendanceBundle(groupId: string | string[]): Promise<AttendanceBundle> {
   const supabase = await createClient();
+
+  let memberQuery = supabase
+    .from("members")
+    .select("id, full_name, is_visitor, assigned_servant_id, university:universities(proximity)")
+    .eq("status", "active")
+    .order("full_name");
+  memberQuery = Array.isArray(groupId) ? memberQuery.in("group_id", groupId) : memberQuery.eq("group_id", groupId);
 
   const [{ data: settings }, { data: memberRows }, windowSettings] = await Promise.all([
     supabase.from("app_settings").select("same_day_cutoff_time, timezone").single(),
-    supabase
-      .from("members")
-      .select("id, full_name, is_visitor, assigned_servant_id, university:universities(proximity)")
-      .eq("group_id", groupId)
-      .eq("status", "active")
-      .order("full_name"),
+    memberQuery,
     getAttendanceWindowSettings(),
   ]);
 

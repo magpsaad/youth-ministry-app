@@ -58,13 +58,16 @@ const LIST_SELECT =
  * it just doesn't move this percentage. Returns null (not 0%) when there's
  * no tracked date yet to divide by, including when the member has never
  * attended at all (join_date is null).
+ *
+ * `groupId` accepts an array for the "Load Youth Data for all cohorts"
+ * combined view (REQUIREMENTS.md §6.1 addendum) -- every active member
+ * across those cohorts, combined into one list.
  */
-export async function getGroupMembers(groupId: string): Promise<MemberListItem[]> {
+export async function getGroupMembers(groupId: string | string[]): Promise<MemberListItem[]> {
   const supabase = await createClient();
-  const [{ data }, windowSettings] = await Promise.all([
-    supabase.from("members").select(LIST_SELECT).eq("group_id", groupId).eq("status", "active").order("full_name"),
-    getAttendanceWindowSettings(),
-  ]);
+  let query = supabase.from("members").select(LIST_SELECT).eq("status", "active").order("full_name");
+  query = Array.isArray(groupId) ? query.in("group_id", groupId) : query.eq("group_id", groupId);
+  const [{ data }, windowSettings] = await Promise.all([query, getAttendanceWindowSettings()]);
 
   const members = (data ?? []) as unknown as MemberListItem[];
   if (members.length === 0) return [];
@@ -111,14 +114,11 @@ export type MemberBasic = {
  * assignment (e.g. the Outreach tab's member picker) -- skips the
  * per-member average-attendance computation getGroupMembers does, which
  * requires a second full attendance_records fetch this doesn't need. */
-export async function getGroupMembersLite(groupId: string): Promise<MemberBasic[]> {
+export async function getGroupMembersLite(groupId: string | string[]): Promise<MemberBasic[]> {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("members")
-    .select("id, full_name, phone, assigned_servant_id")
-    .eq("group_id", groupId)
-    .eq("status", "active")
-    .order("full_name");
+  let query = supabase.from("members").select("id, full_name, phone, assigned_servant_id").eq("status", "active").order("full_name");
+  query = Array.isArray(groupId) ? query.in("group_id", groupId) : query.eq("group_id", groupId);
+  const { data } = await query;
   return data ?? [];
 }
 

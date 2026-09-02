@@ -9,6 +9,7 @@ import { ensureProfile } from "@/lib/supabase/ensure-profile";
 import { logAudit } from "@/lib/audit";
 import { getRandomVerseAction } from "@/app/actions";
 import { LoadGroupPanel } from "@/components/LoadGroupPanel";
+import { LoadAllCohortsButton } from "@/components/LoadAllCohortsButton";
 import { AppLogo } from "@/components/AppLogo";
 import { SignOutButton } from "@/components/SignOutButton";
 import { ServiceCalendarButton } from "@/components/calendar/ServiceCalendarButton";
@@ -95,6 +96,11 @@ export default async function LandingPage() {
           <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
             <h2 className="text-lg font-bold text-[#1e3a5f] mb-4">Coordinator Corner</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {access.isCoordinator && (
+                <div className="sm:col-span-2">
+                  <LoadAllCohortsButton memberLabel={settings.member_label} groupLabel={settings.group_label} />
+                </div>
+              )}
               <Link
                 href="/servant-profiles"
                 className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"

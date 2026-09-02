@@ -8,24 +8,28 @@ import { ClipboardCheckIcon, UsersIcon, ChartBarIcon, MapPinIcon } from "@/compo
 import { ProximityDonut } from "@/components/charts/ProximityDonut";
 import { AttendanceTrendChart } from "@/components/charts/AttendanceTrendChart";
 
-type SortKey = "name" | "gender" | "caseload";
+type SortKey = "name" | "gender" | "caseload" | "cohort";
 
 /** REQUIREMENTS.md §6.7 -- Data Completeness and Average Attendance by
  * Month respect "My Assigned List" (§6.2) like every other tab; Servant
- * Assignments deliberately doesn't (see lib/analytics.ts) but its three
- * columns are all sortable. */
+ * Assignments deliberately doesn't (see lib/analytics.ts) but its columns
+ * are all sortable. `combined` (the "Load Youth Data for all cohorts" view,
+ * §6.1 addendum) adds a sortable Cohort column -- redundant everywhere else,
+ * since a single-cohort table only ever lists one cohort's servants. */
 export function AnalyticsInteractive({
   raw,
   servants,
   unassignedCount,
   memberLabel,
   currentUserId,
+  combined = false,
 }: {
   raw: AnalyticsRawData;
   servants: ServantOption[];
   unassignedCount: number;
   memberLabel: string;
   currentUserId: string;
+  combined?: boolean;
 }) {
   const { myAssignedOnly, hydrated } = useMyAssigned();
   const applyFilter = hydrated && myAssignedOnly;
@@ -99,6 +103,7 @@ export function AnalyticsInteractive({
       let cmp = 0;
       if (sortKey === "name") cmp = a.full_name.localeCompare(b.full_name);
       else if (sortKey === "gender") cmp = (a.gender ?? "").localeCompare(b.gender ?? "");
+      else if (sortKey === "cohort") cmp = a.groupNames.join(", ").localeCompare(b.groupNames.join(", "));
       else cmp = a.caseload - b.caseload;
       return sortDesc ? -cmp : cmp;
     });
@@ -184,6 +189,13 @@ export function AnalyticsInteractive({
                     Gender{indicator("gender")}
                   </button>
                 </th>
+                {combined && (
+                  <th className="px-4 py-2">
+                    <button type="button" onClick={() => handleSort("cohort")} className="font-semibold hover:underline">
+                      Cohort{indicator("cohort")}
+                    </button>
+                  </th>
+                )}
                 <th className="px-4 py-2 text-right">
                   <button type="button" onClick={() => handleSort("caseload")} className="font-semibold hover:underline">
                     Assigned {memberLabel}s{indicator("caseload")}
@@ -196,18 +208,19 @@ export function AnalyticsInteractive({
                 <tr key={s.id}>
                   <td className="px-4 py-2.5 font-medium text-[#333]">{s.full_name}</td>
                   <td className="px-4 py-2.5 text-[#666]">{s.gender ?? "—"}</td>
+                  {combined && <td className="px-4 py-2.5 text-[#666]">{s.groupNames.join(", ") || "—"}</td>}
                   <td className="px-4 py-2.5 text-right text-[#333]">{s.caseload}</td>
                 </tr>
               ))}
               <tr className="bg-[#f9f9f9]">
-                <td className="px-4 py-2.5 font-semibold text-[#333]" colSpan={2}>
+                <td className="px-4 py-2.5 font-semibold text-[#333]" colSpan={combined ? 3 : 2}>
                   Unassigned
                 </td>
                 <td className="px-4 py-2.5 text-right font-semibold text-[#333]">{unassignedCount}</td>
               </tr>
               {sortedServants.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-4 py-6 text-center text-[#666]">
+                  <td colSpan={combined ? 4 : 3} className="px-4 py-6 text-center text-[#666]">
                     No servants assigned to this group yet.
                   </td>
                 </tr>

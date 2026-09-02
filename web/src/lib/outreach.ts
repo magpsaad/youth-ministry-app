@@ -40,16 +40,17 @@ export type OutreachEntryFull = {
  * happens client-side on this fetched set, same architecture as the Member
  * List. Filters by the joined member's group_id directly (one round trip)
  * rather than fetching member ids first and filtering in a second query. */
-export async function getOutreachEntries(groupId: string): Promise<OutreachEntryFull[]> {
+export async function getOutreachEntries(groupId: string | string[]): Promise<OutreachEntryFull[]> {
   const supabase = await createClient();
 
-  const { data } = await supabase
+  let query = supabase
     .from("outreach_entries")
     .select(
       "id, member_id, servant_id, occurred_at, type, notes, follow_up_due, member:members!inner(full_name, phone, assigned_servant_id, group_id), servant:profiles(full_name)",
     )
-    .eq("member.group_id", groupId)
     .order("occurred_at", { ascending: false });
+  query = Array.isArray(groupId) ? query.in("member.group_id", groupId) : query.eq("member.group_id", groupId);
+  const { data } = await query;
 
   return ((data ?? []) as unknown as {
     id: string;

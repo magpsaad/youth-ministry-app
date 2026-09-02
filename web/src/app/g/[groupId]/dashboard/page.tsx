@@ -5,12 +5,28 @@ import { getServantsForGroup } from "@/lib/servants";
 import { getUniversities } from "@/lib/universities";
 import { getAppSettings } from "@/lib/app-settings";
 import { getAccessSummary } from "@/lib/roles";
+import { getCombinedGroups } from "@/lib/groups";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { DashboardInteractive } from "@/components/dashboard/DashboardInteractive";
+import { CombinedDashboardOverview } from "@/components/dashboard/CombinedDashboardOverview";
+import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 
 export default async function DashboardPage({ params }: { params: Promise<{ groupId: string }> }) {
   const { groupId } = await params;
+
+  if (groupId === ALL_COHORTS_GROUP_ID) {
+    const [combinedGroups, settings] = await Promise.all([getCombinedGroups(), getAppSettings()]);
+    const groups = await Promise.all(
+      combinedGroups.map(async (g) => ({ groupId: g.id, groupName: g.name, statsData: await getDashboardStatsData(g.id) })),
+    );
+    return (
+      <div className="mt-4">
+        <CombinedDashboardOverview groups={groups} memberLabel={settings.member_label} />
+      </div>
+    );
+  }
+
   const supabase = await createClient();
   const user = await getCurrentUser();
 

@@ -23,6 +23,7 @@ export function GroupNavShell({
   logoUrl,
   appVersion,
   lastServiceDate,
+  combined = false,
   children,
 }: {
   groupId: string;
@@ -32,6 +33,13 @@ export function GroupNavShell({
   logoUrl: string | null;
   appVersion: string;
   lastServiceDate: string | null;
+  /** The "Load Youth Data for all cohorts" view (REQUIREMENTS.md §6.1
+   * addendum) -- hides "My Assigned List" (owner-reported: doesn't apply
+   * once multiple cohorts' data is combined; the group layout also doesn't
+   * wrap this tree in MyAssignedProvider in this case, so every screen's
+   * own useMyAssigned() call already resolves to permanently-off regardless
+   * of this prop -- this just keeps the now-inert control from showing). */
+  combined?: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -89,11 +97,13 @@ export function GroupNavShell({
         })}
       </nav>
 
-      <div className="max-w-5xl w-full mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-2">
-        <label className="inline-flex items-center gap-2 text-sm text-[#333]">
-          <input type="checkbox" checked={filtered} onChange={toggle} className="accent-[#1e3a5f]" />
-          My Assigned List
-        </label>
+      <div className={`max-w-5xl w-full mx-auto px-4 py-3 flex items-center flex-wrap gap-2 ${combined ? "justify-end" : "justify-between"}`}>
+        {!combined && (
+          <label className="inline-flex items-center gap-2 text-sm text-[#333]">
+            <input type="checkbox" checked={filtered} onChange={toggle} className="accent-[#1e3a5f]" />
+            My Assigned List
+          </label>
+        )}
         <span className="text-sm text-[#666]">
           Last Service Date:{" "}
           {lastServiceDate

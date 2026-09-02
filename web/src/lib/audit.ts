@@ -53,10 +53,17 @@ export async function logAudit(
       .maybeSingle();
     if (config && config.enabled === false) return;
 
+    // The "Load Data for all cohorts" combined view (§ the /g/all/* routes)
+    // passes the literal route param "all" as groupId through every call
+    // site that already threads groupId into logAudit -- normalized to null
+    // here, once, rather than patching each call site, since group_id is a
+    // real FK to groups(id) and "all" isn't a real group.
+    const groupId = opts?.groupId === "all" ? null : (opts?.groupId ?? null);
+
     await supabase.from("audit_log").insert({
       user_id: userId,
       action_type: actionType,
-      group_id: opts?.groupId ?? null,
+      group_id: groupId,
       details: opts?.details ?? null,
     });
   } catch {

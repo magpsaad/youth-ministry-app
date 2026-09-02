@@ -567,7 +567,10 @@ export function DashboardInteractive({
   );
 }
 
-function StatCard({
+/** Exported for CombinedDashboardOverview's per-cohort panels (the "Load
+ * Youth Data for all cohorts" view, REQUIREMENTS.md §6.1 addendum) --
+ * same card, shared rather than duplicated. */
+export function StatCard({
   label,
   value,
   small,
