@@ -11,8 +11,9 @@
  * background, and owner-reported them as hard to tell apart at a glance.
  * A donut needs bold, saturated, clearly-distinct fills, which is a
  * different constraint than a legible text/background pair -- so this
- * uses simple, high-contrast primary-ish colors instead (blue/green/red,
- * gray for the catch-all "Unknown" bucket, which isn't a real category).
+ * uses simple, high-contrast primary colors instead (owner's exact choice:
+ * green/yellow/red for Local/Regional/Abroad, gray for the catch-all
+ * "Unknown" bucket, which isn't a real category).
  *
  * Built as a plain stroke-dasharray donut (no charting library, consistent
  * with the app's zero-dependency, hand-drawn-icon approach) -- simpler and
@@ -23,10 +24,10 @@
  */
 
 const SEGMENTS = [
-  { key: "Local", color: "#1976d2" }, // blue
-  { key: "Regional", color: "#2e7d32" }, // green
+  { key: "Local", color: "#2e7d32" }, // green
+  { key: "Regional", color: "#fbc02d" }, // yellow
   { key: "Abroad", color: "#d32f2f" }, // red
-  { key: "Unknown", color: "#757575" }, // neutral gray -- not a real category
+  { key: "Unknown", color: "#757575" }, // gray -- not a real category
 ] as const;
 
 export function ProximityDonut({

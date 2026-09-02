@@ -8,13 +8,19 @@ export type AuditReportRow = {
   user_name: string | null;
 };
 
+/** REQUIREMENTS.md §3.11 -- the cap here is deliberate (owner's explicit
+ * choice, not a bug to remove): it keeps the report's data set bounded
+ * without needing real pagination, and doubles as a soft prompt to use the
+ * Admin-only archive tool (archiveAuditLogAction) once history gets long
+ * enough to bump into it. 15,000 rows, most-recent-first, so if it's ever
+ * hit, what quietly drops off is the oldest activity, not the newest. */
 export async function getAuditReportDataAction(): Promise<AuditReportRow[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("audit_log")
     .select("occurred_at, user_id, profiles(full_name)")
     .order("occurred_at", { ascending: false })
-    .limit(5000);
+    .limit(15000);
 
   return (data ?? []).map((r) => ({
     occurred_at: r.occurred_at,
