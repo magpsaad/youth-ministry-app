@@ -24,6 +24,18 @@ export default async function RegisterPage() {
   await ensureProfile(user);
 
   const supabase = await createClient();
+
+  // Owner-reported: if an Admin grants access directly through Access
+  // Maintenance instead of formally approving this person's /register
+  // submission through Pending Servants, the phone/gender they already
+  // typed once never gets copied over (link_approved_pending_servant()
+  // only fires for a formally approved row) -- they'd land back here and
+  // be asked to retype the same two fields. absorb_own_pending_
+  // registration() (migration 0042) is a no-op unless they already hold a
+  // role AND still have an unlinked submission of their own sitting
+  // around, so it's safe to call unconditionally on every load.
+  await supabase.rpc("absorb_own_pending_registration");
+
   const [{ data: profile }, { data: roles }, { data: pending }, settings] = await Promise.all([
     supabase.from("profiles").select("full_name, phone, gender").eq("id", user.id).maybeSingle(),
     supabase.from("user_roles").select("role").eq("user_id", user.id),

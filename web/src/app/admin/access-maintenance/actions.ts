@@ -32,6 +32,16 @@ export async function getAllRoleRowsAction(): Promise<AccessRoleRow[]> {
   }));
 }
 
+/** Owner-reported: a person can hold at most one 'servant' grant at a time
+ * (ministry policy -- the same rule Servant Assignments' reassign already
+ * enforces, migration 0031). Granting "servant" here used to always insert
+ * a fresh row, so a person who already had one (most commonly Unassigned,
+ * auto-granted the moment their Checkin registration links -- lib/
+ * supabase/ensure-profile.ts) ended up with two: the old one untouched,
+ * plus this new one alongside it -- both Servant Profiles and Servant
+ * Assignments then correctly listed them under both. Reassign the existing
+ * row instead of duplicating it, same outcome Servant Assignments' own
+ * "move to another cohort" control already produces. */
 export async function grantRoleAction(
   userId: string,
   role: AccessRoleRow["role"],
@@ -42,6 +52,23 @@ export async function grantRoleAction(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not signed in", id: null };
+
+  if (role === "servant") {
+    const { data: existing } = await supabase
+      .from("user_roles")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("role", "servant")
+      .maybeSingle();
+    if (existing) {
+      const { error } = await supabase.from("user_roles").update({ group_id: groupId }).eq("id", existing.id);
+      if (error) return { error: error.message, id: null };
+
+      await logAudit(user.id, "ADMIN_ACCESS_MAINTENANCE", { groupId, details: { action: "reassign", userId, role } });
+      revalidatePath("/admin/access-maintenance");
+      return { error: null, id: existing.id as string };
+    }
+  }
 
   const { data, error } = await supabase
     .from("user_roles")
