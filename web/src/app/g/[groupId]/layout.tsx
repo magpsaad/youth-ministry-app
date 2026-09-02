@@ -30,10 +30,13 @@ export default async function GroupLayout({
   ]);
 
   if (isCombined) {
-    // Owner-reported access rule: General Coordinators and Sub-Coordinators
-    // only -- deliberately narrower than the rest of this layout, which
-    // otherwise defers entirely to RLS/per-page checks.
-    if (!access.isCoordinator) {
+    // Owner-reported access rule: Admin and General Coordinator only, NOT
+    // Sub-Coordinator -- a Sub-Coordinator only ever has one cohort
+    // anyway, so this would just duplicate the ordinary "Load [Member]
+    // Data" flow for them. Admin gets it by default ("Admin should have
+    // access to everything"). Deliberately narrower than the rest of this
+    // layout, which otherwise defers entirely to RLS/per-page checks.
+    if (!access.isAdmin && !access.isGeneralCoordinator) {
       return (
         <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] p-4">
           <p className="text-sm text-[#666]">You don&rsquo;t have access to this page.</p>

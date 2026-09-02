@@ -71,7 +71,7 @@ export default async function RegisterPage() {
           <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5 text-center space-y-2">
             <h2 className="text-base font-bold text-[#1e3a5f]">Awaiting approval</h2>
             <p className="text-sm text-[#666]">
-              Thanks, {fullName} — your registration is in and waiting for a Coordinator or Admin to review it.
+              Thanks, {fullName} — your registration is in and waiting for a Coordinator or System Admin to review it.
               There&rsquo;s nothing else to do right now; check back once they&rsquo;ve approved it.
             </p>
           </div>

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAttendanceWindowSettings, resolveAttendanceSince, isOnServiceWeekday } from "@/lib/app-settings";
+import { fetchAllRows } from "@/lib/pagination";
 
 export type MemberListItem = {
   id: string;
@@ -72,18 +73,32 @@ export async function getGroupMembers(groupId: string | string[]): Promise<Membe
   const members = (data ?? []) as unknown as MemberListItem[];
   if (members.length === 0) return [];
 
-  const memberIds = members.map((m) => m.id);
-  const { data: attendance } = await supabase
-    .from("attendance_records")
-    .select("member_id, service_date")
-    .eq("attendee_type", "member")
-    .in("member_id", memberIds);
+  // Filtered by the same group_id(s)/active-status as the members query
+  // above, via a join -- NOT `.in("member_id", memberIds)` with every id
+  // from a large member list. That silently broke the "all cohorts
+  // combined" view (owner-reported: Attendance/Analytics showed no data
+  // at all) -- ~900 UUIDs in one filter is a ~34,000-character query the
+  // Supabase API flatly rejects with a 400, and this call never checked
+  // for an error, so it just looked like an empty result. A group_id
+  // filter stays small (at most a handful of cohort ids) regardless of
+  // how many members that resolves to. Paged via fetchAllRows -- a single
+  // cohort alone can already exceed one page (lib/pagination.ts).
+  const attendance = await fetchAllRows((from, to) => {
+    let q = supabase
+      .from("attendance_records")
+      .select("member_id, service_date, member:members!inner(group_id, status)")
+      .eq("attendee_type", "member")
+      .eq("member.status", "active")
+      .range(from, to);
+    q = Array.isArray(groupId) ? q.in("member.group_id", groupId) : q.eq("member.group_id", groupId);
+    return q;
+  });
 
-  const trackedDates = Array.from(new Set((attendance ?? []).map((a) => a.service_date)))
+  const trackedDates = Array.from(new Set(attendance.map((a) => a.service_date)))
     .filter((d) => isOnServiceWeekday(d, windowSettings.service_weekday))
     .sort();
   const presentByMember = new Map<string, Set<string>>();
-  for (const a of attendance ?? []) {
+  for (const a of attendance) {
     if (!a.member_id) continue;
     if (!presentByMember.has(a.member_id)) presentByMember.set(a.member_id, new Set());
     presentByMember.get(a.member_id)!.add(a.service_date);

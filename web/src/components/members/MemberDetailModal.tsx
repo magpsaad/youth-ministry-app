@@ -18,6 +18,7 @@ import { CameraIcon, TrashIcon } from "@/components/icons";
 import { AddOutreachModal } from "@/components/outreach/AddOutreachModal";
 import { PrevOutreachModal } from "@/components/outreach/PrevOutreachModal";
 import { PhotoCropperModal } from "@/components/PhotoCropperModal";
+import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 
 const inputClass = (editing: boolean) =>
   `w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
@@ -68,6 +69,13 @@ export function MemberDetailModal({
     is_visitor: member.is_visitor,
   });
   const [assignedServantId, setAssignedServantId] = useState(member.assigned_servant_id);
+  // "Load Youth Data for all cohorts" combined view (REQUIREMENTS.md §6.1
+  // addendum) -- owner-reported: reassigning from here isn't safe, since
+  // the servant list shown across a combined member set spans the whole
+  // ministry rather than being scoped to this one member's actual cohort.
+  // Reassignment stays a single-cohort-screen action; this just shows who
+  // it currently is.
+  const isCombined = groupId === ALL_COHORTS_GROUP_ID;
 
   const sortedServants = [...servants].sort((a, b) => {
     const aMatch = a.gender === member.gender ? 0 : 1;
@@ -323,8 +331,8 @@ export function MemberDetailModal({
             <select
               value={assignedServantId ?? ""}
               onChange={(e) => setAssignedServantId(e.target.value || null)}
-              disabled={!editing}
-              className={inputClass(editing)}
+              disabled={!editing || isCombined}
+              className={inputClass(editing && !isCombined)}
             >
               <option value="">Unassigned</option>
               {sortedServants.map((s) => (

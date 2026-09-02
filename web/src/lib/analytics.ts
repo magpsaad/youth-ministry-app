@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getServantsForGroup, type ServantOption } from "@/lib/servants";
+import { fetchAllRows } from "@/lib/pagination";
 
 export type MemberAnalyticsRow = {
   id: string;
@@ -55,15 +56,25 @@ export async function getAnalyticsRawData(groupId: string | string[]): Promise<A
     hasPhoto: !!m.photo_path,
   }));
 
-  const ids = members.map((m) => m.id);
   let attendance: AttendanceDateRow[] = [];
-  if (ids.length > 0) {
-    const { data } = await supabase
-      .from("attendance_records")
-      .select("member_id, service_date")
-      .eq("attendee_type", "member")
-      .in("member_id", ids);
-    attendance = (data ?? []).map((r) => ({ memberId: r.member_id, serviceDate: r.service_date }));
+  if (members.length > 0) {
+    // Filtered by group_id(s) via a join, not `.in("member_id", ids)` --
+    // see lib/members.ts's getGroupMembers for why (owner-reported: this
+    // exact pattern silently broke the "all cohorts combined" view's
+    // Average Attendance by Month, ~900 UUIDs in one filter is a request
+    // the Supabase API flatly rejects). Paged via fetchAllRows -- a single
+    // cohort alone can already exceed one page (lib/pagination.ts).
+    const rows = await fetchAllRows((from, to) => {
+      let q = supabase
+        .from("attendance_records")
+        .select("member_id, service_date, member:members!inner(group_id, status)")
+        .eq("attendee_type", "member")
+        .eq("member.status", "active")
+        .range(from, to);
+      q = Array.isArray(groupId) ? q.in("member.group_id", groupId) : q.eq("member.group_id", groupId);
+      return q;
+    });
+    attendance = rows.map((r) => ({ memberId: r.member_id, serviceDate: r.service_date }));
   }
 
   return { members, attendance };

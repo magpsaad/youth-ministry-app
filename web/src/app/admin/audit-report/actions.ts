@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { fetchAllRows } from "@/lib/pagination";
 
 export type AuditReportRow = {
   occurred_at: string;
@@ -8,21 +9,33 @@ export type AuditReportRow = {
   user_name: string | null;
 };
 
-/** REQUIREMENTS.md §3.11 -- the cap here is deliberate (owner's explicit
- * choice, not a bug to remove): it keeps the report's data set bounded
- * without needing real pagination, and doubles as a soft prompt to use the
- * Admin-only archive tool (archiveAuditLogAction) once history gets long
- * enough to bump into it. 15,000 rows, most-recent-first, so if it's ever
- * hit, what quietly drops off is the oldest activity, not the newest. */
+/** REQUIREMENTS.md §3.11 -- the 15,000-row cap is deliberate (owner's
+ * explicit choice): it keeps the report's data set bounded, and doubles as
+ * a soft prompt to use the Admin-only archive tool (archiveAuditLogAction)
+ * once history gets long enough to bump into it. Most-recent-first, so if
+ * it's ever hit, what quietly drops off is the oldest activity, not the
+ * newest.
+ *
+ * A plain `.limit(15000)` never actually returned more than 1000 rows,
+ * though -- confirmed directly: this project's Supabase instance caps a
+ * single response at its configured `db-max-rows` (1000) regardless of
+ * what the client asks for, silently, no error. Paged via fetchAllRows
+ * (lib/pagination.ts) so the real cap is 15,000, not 1,000 -- audit_log
+ * already has 4,000+ rows, well past that ceiling. */
 export async function getAuditReportDataAction(): Promise<AuditReportRow[]> {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("audit_log")
-    .select("occurred_at, user_id, profiles(full_name)")
-    .order("occurred_at", { ascending: false })
-    .limit(15000);
+  const rows = await fetchAllRows(
+    (from, to) =>
+      supabase
+        .from("audit_log")
+        .select("occurred_at, user_id, profiles(full_name)")
+        .order("occurred_at", { ascending: false })
+        .range(from, to),
+    1000,
+    15000,
+  );
 
-  return (data ?? []).map((r) => ({
+  return rows.map((r) => ({
     occurred_at: r.occurred_at,
     user_id: r.user_id,
     user_name: (r.profiles as unknown as { full_name: string } | null)?.full_name ?? null,

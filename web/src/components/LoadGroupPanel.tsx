@@ -34,7 +34,7 @@ export function LoadGroupPanel({
   if (groups.length === 0) {
     return (
       <p className="text-sm text-[#666]">
-        No groups are available to you yet. Contact an Admin for access.
+        No groups are available to you yet. Contact a System Admin for access.
       </p>
     );
   }

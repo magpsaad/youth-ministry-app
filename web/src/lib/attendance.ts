@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAttendanceWindowSettings, isOnServiceWeekday } from "@/lib/app-settings";
+import { fetchAllRows } from "@/lib/pagination";
 
 export type AttendanceMemberBase = {
   id: string;
@@ -85,16 +86,27 @@ export async function getAttendanceBundle(groupId: string | string[]): Promise<A
 
   const attendanceByMember: Record<string, string[]> = {};
   const trackedDatesSet = new Set<string>();
-  const ids = members.map((m) => m.id);
 
-  if (ids.length > 0) {
-    const { data: attendance } = await supabase
-      .from("attendance_records")
-      .select("member_id, service_date")
-      .eq("attendee_type", "member")
-      .in("member_id", ids);
+  if (members.length > 0) {
+    // Filtered by group_id(s) via a join, not `.in("member_id", ids)` with
+    // every id from a potentially large member list -- see lib/members.ts's
+    // getGroupMembers for why (owner-reported: this exact pattern silently
+    // broke the "all cohorts combined" view's Attendance tab, ~900 UUIDs in
+    // one filter is a request the Supabase API flatly rejects). Paged via
+    // fetchAllRows -- a single cohort alone can already exceed one page
+    // (lib/pagination.ts).
+    const attendance = await fetchAllRows((from, to) => {
+      let q = supabase
+        .from("attendance_records")
+        .select("member_id, service_date, member:members!inner(group_id, status)")
+        .eq("attendee_type", "member")
+        .eq("member.status", "active")
+        .range(from, to);
+      q = Array.isArray(groupId) ? q.in("member.group_id", groupId) : q.eq("member.group_id", groupId);
+      return q;
+    });
 
-    for (const row of attendance ?? []) {
+    for (const row of attendance) {
       (attendanceByMember[row.member_id] ??= []).push(row.service_date);
       trackedDatesSet.add(row.service_date);
     }

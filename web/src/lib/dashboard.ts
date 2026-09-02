@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAppSettings } from "@/lib/app-settings";
+import { fetchAllRows } from "@/lib/pagination";
 
 export type MemberStatRow = {
   id: string;
@@ -105,12 +106,20 @@ export async function getDashboardStatsData(groupId: string): Promise<DashboardS
     if (latestDateRow) {
       lastServiceDate = latestDateRow.service_date;
 
-      const { data: attendedIds } = await supabase
-        .from("attendance_records")
-        .select("member_id")
-        .eq("attendee_type", "member")
-        .in("member_id", memberIds);
-      everAttendedSet = new Set((attendedIds ?? []).map((r) => r.member_id));
+      // All-time, per-cohort -- can exceed one page on its own (confirmed
+      // directly: Yr1 alone already has 1200+ attendance_records), so a
+      // plain single request here would silently truncate and mark some
+      // members "Never Attended" who actually have (whichever ones happen
+      // to fall past row 1000). Paged via fetchAllRows (lib/pagination.ts).
+      const attendedIds = await fetchAllRows((from, to) =>
+        supabase
+          .from("attendance_records")
+          .select("member_id")
+          .eq("attendee_type", "member")
+          .in("member_id", memberIds)
+          .range(from, to),
+      );
+      everAttendedSet = new Set(attendedIds.map((r) => r.member_id));
 
       const { data: presentRows } = await supabase
         .from("attendance_records")

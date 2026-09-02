@@ -64,7 +64,7 @@ export function RegisterInteractive({ hasRole, fullName }: { hasRole: boolean; f
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5 text-center space-y-2">
         <h2 className="text-base font-bold text-[#1e3a5f]">Thanks, {fullName}!</h2>
         <p className="text-sm text-[#666]">
-          Your registration has been submitted. A Coordinator or Admin will review it and give you access soon.
+          Your registration has been submitted. A Coordinator or System Admin will review it and give you access soon.
         </p>
       </div>
     );
@@ -76,7 +76,7 @@ export function RegisterInteractive({ hasRole, fullName }: { hasRole: boolean; f
       <p className="text-sm text-[#666]">
         {hasRole
           ? "Please fill in a few more details before continuing."
-          : "Please fill in your info so a Coordinator or Admin can review and approve your access."}
+          : "Please fill in your info so a Coordinator or System Admin can review and approve your access."}
       </p>
       {error && <p className="text-sm text-[#dc3545]">{error}</p>}
       <Field label="Phone *">

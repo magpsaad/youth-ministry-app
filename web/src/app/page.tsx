@@ -111,7 +111,13 @@ export default async function LandingPage() {
           <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
             <h2 className="text-lg font-bold text-[#1e3a5f] mb-4">Coordinator Corner</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {access.isCoordinator && (
+              {/* Admin/General Coordinator only, not Sub-Coordinator
+                  (owner-reported: a Sub-Coordinator only ever has one
+                  cohort anyway -- the ordinary "Load [Member] Data" button
+                  above already covers exactly that, so this would just be
+                  redundant for them). Admin gets it by default: "Admin
+                  should have access to everything." */}
+              {(access.isAdmin || access.isGeneralCoordinator) && (
                 <div className="sm:col-span-2">
                   <LoadAllCohortsButton memberLabel={settings.member_label} groupLabel={settings.group_label} />
                 </div>
@@ -154,7 +160,7 @@ export default async function LandingPage() {
         {/* Admin Corner -- Admins only */}
         {access.isAdmin && (
           <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-            <h2 className="text-lg font-bold text-[#1e3a5f] mb-4">Admin Corner</h2>
+            <h2 className="text-lg font-bold text-[#1e3a5f] mb-4">System Admin Corner</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {yr0Group && (
                 <Link
@@ -226,7 +232,7 @@ export default async function LandingPage() {
             <Link href="/register" className="underline">
               Register here
             </Link>
-            , or contact an Admin for access.
+            , or contact a System Admin for access.
           </p>
         )}
       </main>

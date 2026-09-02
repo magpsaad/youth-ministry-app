@@ -556,7 +556,7 @@ export function DashboardInteractive({
                 ))}
               </div>
               <p className="mt-3 text-xs text-[#666]">
-                These thresholds are editable by an Admin on the App Settings screen — this text always reflects the
+                These thresholds are editable by a System Admin on the App Settings screen — this text always reflects the
                 current values.
               </p>
             </div>
