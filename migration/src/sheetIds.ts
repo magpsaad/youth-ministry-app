@@ -16,6 +16,19 @@ export const SERVANTS_FILE_ID = "1CYy9iyMP6mTiU2jELImFNIsiPituAB7JaPLcrlJk6Jk"; 
 export const ADMIN_FILE_ID = "1lOu6FsIwrqmQpXOoSmJsELqhhYWkaMJTtC3X7oZUJsk"; // SAY Ministry Admin
 export const CALENDAR_FILE_ID = "1iyKChvoW0Mgc8vhKI1uUTWsjnKJiK7cJFjseqUI1rH8"; // SAY Ministry Audit - Calendar
 
+// Photo Drive folders -- one per cohort ladder position, plus servants.
+// Found by listing the real "Photos" Drive folder the owner shared with the
+// service account. Yr0 has no folder at all (that cohort has no photos yet)
+// -- deliberately absent from this list, not an oversight.
+export const PHOTO_FOLDERS: { ladderPosition: number; folderId: string }[] = [
+  { ladderPosition: 1, folderId: "1PYfz-DikavoQYIhoSE5VyGdrAqNbSSu-" }, // Yr1 Youth Photos
+  { ladderPosition: 2, folderId: "1DRwyASuCe3HGT_QrJBXC0fpeQ0J8pw74" }, // Yr2 Youth Photos
+  { ladderPosition: 3, folderId: "1ykstXO31mP3upz6sgJVYTtRSZVkKCbyE" }, // Yr3 Youth Photos
+  { ladderPosition: 4, folderId: "1qowujc_ZgFPiGdRooOn19YY1BKir4aPn" }, // Yr4 Youth Photos
+  { ladderPosition: 5, folderId: "1e5OLLdmRA1-zTaIRDT3kkr90zO3iQ7jK" }, // Yr5 Youth Photos
+];
+export const SERVANTS_PHOTOS_FOLDER_ID = "1_xSruI_bVZc6ZVPU1AG21OVPqZTeqReN"; // Servants Photos
+
 // Tab names -- all confirmed for real via the Sheets API's own
 // spreadsheets.get metadata call (fields: sheets.properties.title), once
 // real service-account credentials existed to do that with. Several of

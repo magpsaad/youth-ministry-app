@@ -1,10 +1,11 @@
 import { config } from "./config.js";
 import { loadGroupsByLadderPosition } from "./lookups.js";
-import { clearContentTables } from "./clear.js";
+import { clearContentTables, clearPhotosBucket } from "./clear.js";
 import { migrateUniversities } from "./steps/universities.js";
 import { migrateVerses } from "./steps/verses.js";
 import { migrateServants } from "./steps/servants.js";
 import { migrateMembers } from "./steps/members.js";
+import { migratePhotos } from "./steps/photos.js";
 import { migrateOutreach } from "./steps/outreach.js";
 import { migrateAttendance } from "./steps/attendance.js";
 import { migrateCalendar } from "./steps/calendar.js";
@@ -19,6 +20,8 @@ async function main() {
   if (!config.dryRun) {
     console.log("Clearing content tables (dependency order: attendance/outreach -> members -> universities, plus verses/calendar/audit_log)...");
     await clearContentTables();
+    console.log("Clearing photos bucket before reload (see clear.ts's comment for why)...");
+    await clearPhotosBucket();
   }
 
   const universitiesByName = await migrateUniversities();
@@ -26,6 +29,7 @@ async function main() {
 
   const servants = await migrateServants(groupsByPosition);
   const memberIdsByFile = await migrateMembers(groupsByPosition, universitiesByName, servants);
+  await migratePhotos(memberIdsByFile, servants);
   await migrateOutreach(memberIdsByFile, servants);
   await migrateAttendance(memberIdsByFile, servants);
   await migrateCalendar(servants);

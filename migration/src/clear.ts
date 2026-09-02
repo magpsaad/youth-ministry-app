@@ -1,4 +1,5 @@
 import { supabase } from "./supabase.js";
+import { config } from "./config.js";
 
 /** MIGRATION_PLAN.md §4 -- the wipe-and-reload, done as one upfront pass in
  * strict foreign-key dependency order (children before parents), rather
@@ -37,5 +38,24 @@ export async function clearContentTables(): Promise<void> {
             : ""),
       );
     }
+  }
+}
+
+/** Same wipe-and-reload philosophy as clearContentTables(), extended to the
+ * photos bucket -- confirmed with the owner explicitly (this is the one
+ * genuinely hard-to-reverse part of that philosophy: Storage has no
+ * trash/undo). Members get fresh UUIDs every run, so member-owned photo
+ * objects from a prior run are unrecoverable garbage anyway once orphaned;
+ * servant photo objects are also fully overwritten each run for the same
+ * reason ensureProfile() already overwrites a servant's name/phone/gender
+ * from Sheets unconditionally -- Sheets/Drive is the source of truth for
+ * the whole person record, photo included, not just the DB fields. */
+export async function clearPhotosBucket(): Promise<void> {
+  const bucket = `${config.schema}-photos`;
+  const { data, error } = await supabase.storage.from(bucket).list("", { limit: 1000 });
+  if (error) throw new Error(`Failed to list ${bucket} for clearing: ${error.message}`);
+  if (data && data.length > 0) {
+    const { error: delErr } = await supabase.storage.from(bucket).remove(data.map((f) => f.name));
+    if (delErr) throw new Error(`Failed to clear ${bucket}: ${delErr.message}`);
   }
 }
