@@ -138,7 +138,13 @@ export function OutreachInteractive({
           const canEdit = entry.servant_id === currentUserId;
           return (
             <div key={entry.id} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
-              <div className="flex flex-wrap items-start justify-between gap-2">
+              {/* flex-wrap here let the Edit/Delete buttons drop to a new
+                  line (left-aligned) whenever the text content was long
+                  enough to want to wrap -- owner-reported. Plain flex
+                  (no wrap) forces the text column (already min-w-0) to
+                  shrink and wrap its own text internally instead, keeping
+                  the buttons pinned on the same row via justify-between. */}
+              <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="font-semibold text-[#1e3a5f]">
                     {entry.member_name}
@@ -151,7 +157,7 @@ export function OutreachInteractive({
                     })}{" "}
                     · By {entry.servant_name}
                   </p>
-                  {entry.notes && <p className="mt-1 text-sm text-[#333]">{entry.notes}</p>}
+                  {entry.notes && <p className="mt-1 text-sm text-[#333] break-words">{entry.notes}</p>}
                   {entry.follow_up_due && (
                     <p className="mt-1 text-xs text-[#856404]">Follow-up due {entry.follow_up_due}</p>
                   )}

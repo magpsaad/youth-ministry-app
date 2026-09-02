@@ -25,16 +25,12 @@ export async function getAuditReportDataAction(): Promise<AuditReportRow[]> {
 
 export type AuditReportUser = { id: string; full_name: string };
 
+/** Same fix, same reason as getAuditLogUsersAction() (Audit Logs'
+ * equivalent) -- migration 0037. */
 export async function getAuditReportUsersAction(): Promise<AuditReportUser[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("audit_log").select("user_id, profiles(full_name)").not("user_id", "is", null);
-
-  const byId = new Map<string, string>();
-  for (const r of data ?? []) {
-    const name = (r.profiles as unknown as { full_name: string } | null)?.full_name;
-    if (r.user_id && name && !byId.has(r.user_id)) byId.set(r.user_id, name);
-  }
-  return Array.from(byId.entries())
-    .map(([id, full_name]) => ({ id, full_name }))
+  const { data } = await supabase.rpc("get_audit_log_users");
+  return ((data as { user_id: string; full_name: string }[] | null) ?? [])
+    .map((r) => ({ id: r.user_id, full_name: r.full_name }))
     .sort((a, b) => a.full_name.localeCompare(b.full_name));
 }

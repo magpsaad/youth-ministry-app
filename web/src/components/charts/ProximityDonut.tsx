@@ -1,10 +1,18 @@
 /**
  * REQUIREMENTS.md §8.1 -- Phase H item 5, "small data visualizations."
  * Replaces the plain Local/Regional/Abroad/Unknown stat-card grid with a
- * donut chart + legend. Uses the exact same colors as the Proximity badges
- * elsewhere in the app (Member List, Attendance tab -- §8's Badges spec) so
- * a color learned there reads the same way here, rather than introducing a
- * second, different color mapping for the same four categories.
+ * donut chart + legend.
+ *
+ * Color choice is deliberately its OWN palette, not the Proximity badges'
+ * light-background/dark-text pairs used elsewhere (Member List, Attendance
+ * tab -- §8's Badges spec): those dark text colors (#0c5460 teal, #856404
+ * olive, #721c24 maroon, #383d41 charcoal) all read as similar muted dark
+ * tones once used as a FILLED donut segment instead of text on a pale
+ * background, and owner-reported them as hard to tell apart at a glance.
+ * A donut needs bold, saturated, clearly-distinct fills, which is a
+ * different constraint than a legible text/background pair -- so this
+ * uses simple, high-contrast primary-ish colors instead (blue/green/red,
+ * gray for the catch-all "Unknown" bucket, which isn't a real category).
  *
  * Built as a plain stroke-dasharray donut (no charting library, consistent
  * with the app's zero-dependency, hand-drawn-icon approach) -- simpler and
@@ -15,10 +23,10 @@
  */
 
 const SEGMENTS = [
-  { key: "Local", color: "#0c5460" },
-  { key: "Regional", color: "#856404" },
-  { key: "Abroad", color: "#721c24" },
-  { key: "Unknown", color: "#383d41" },
+  { key: "Local", color: "#1976d2" }, // blue
+  { key: "Regional", color: "#2e7d32" }, // green
+  { key: "Abroad", color: "#d32f2f" }, // red
+  { key: "Unknown", color: "#757575" }, // neutral gray -- not a real category
 ] as const;
 
 export function ProximityDonut({

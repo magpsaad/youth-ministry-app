@@ -74,16 +74,31 @@ export async function assignServantAction(memberId: string, groupId: string, ser
 
 /** REQUIREMENTS.md §6.3/§7.1 -- manually dismisses a "Newly Assigned" Actions
  * Needed card without requiring an outreach entry. Persistent (a DB column,
- * not sessionStorage) since the card should stay gone across sessions. */
+ * not sessionStorage) since the card should stay gone across sessions.
+ *
+ * Owner-reported: this card is captioned "has been assigned to you" and is
+ * meant to be that servant's own action item, but the update itself had no
+ * check that the caller actually IS that servant -- RLS only scopes by
+ * group, not by person, so any coordinator/servant with access to the
+ * group could dismiss another servant's card. Checked explicitly here
+ * (the Dashboard UI now also hides the button from anyone else, but this
+ * is the real enforcement -- a UI hide alone isn't). */
 export async function dismissNewAssignmentAction(memberId: string, groupId: string) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in" };
+
+  const { data: member } = await supabase.from("members").select("assigned_servant_id").eq("id", memberId).single();
+  if (!member || member.assigned_servant_id !== user.id) {
+    return { error: "Only the assigned servant can dismiss this." };
+  }
+
   const { error } = await supabase.from("members").update({ is_new_assignment: false }).eq("id", memberId);
   if (error) return { error: error.message };
 
-  if (user) await logAudit(user.id, "MEMBER_EDITED", { groupId, details: { memberId, action: "new_assignment_dismissed" } });
+  await logAudit(user.id, "MEMBER_EDITED", { groupId, details: { memberId, action: "new_assignment_dismissed" } });
   revalidatePath(`/g/${groupId}/dashboard`);
   return { error: null };
 }

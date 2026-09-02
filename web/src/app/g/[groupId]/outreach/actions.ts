@@ -93,19 +93,31 @@ export async function updateOutreachEntryAction(groupId: string, entryId: string
  * itself, so the original entry's follow-up date stays visible as a record;
  * only its "still needs action" state is cleared. Logged as OUTREACH_UPDATED
  * -- this is an update to the outreach entry, not a distinct audit action
- * type of its own. */
+ * type of its own.
+ *
+ * Owner-reported: only the servant who logged the entry (servant_id) should
+ * be able to dismiss its own follow-up card -- same issue and same fix as
+ * dismissNewAssignmentAction's (members/actions.ts), RLS alone only scopes
+ * by group, not by person. */
 export async function dismissFollowUpAction(groupId: string, entryId: string) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in" };
+
+  const { data: entry } = await supabase.from("outreach_entries").select("servant_id").eq("id", entryId).single();
+  if (!entry || entry.servant_id !== user.id) {
+    return { error: "Only the servant who logged this entry can dismiss it." };
+  }
+
   const { error } = await supabase
     .from("outreach_entries")
     .update({ follow_up_dismissed_at: new Date().toISOString() })
     .eq("id", entryId);
   if (error) return { error: error.message };
 
-  if (user) await logAudit(user.id, "OUTREACH_UPDATED", { groupId, details: { entryId, action: "follow_up_dismissed" } });
+  await logAudit(user.id, "OUTREACH_UPDATED", { groupId, details: { entryId, action: "follow_up_dismissed" } });
   revalidatePath(`/g/${groupId}/dashboard`);
   return { error: null };
 }

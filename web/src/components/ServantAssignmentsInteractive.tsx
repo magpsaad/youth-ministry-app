@@ -39,6 +39,17 @@ function initials(name: string): string {
   return name.split(" ").map((w) => w[0]).slice(0, 2).join("");
 }
 
+type Row = { person: AssignmentPerson; grants: RoleGrant[] };
+
+/** True if this row's grants (already filtered to one cohort) include an
+ * actual Servant or Sub-Coordinator grant there -- i.e. they're really
+ * serving that cohort, not just holding Read-Only access to its data
+ * (owner-reported: Read-Only shouldn't count toward "n Female/Male
+ * Servants" below). */
+function isServingRow(row: Row): boolean {
+  return row.grants.some((g) => g.role === "servant" || g.role === "sub_coordinator");
+}
+
 /**
  * REQUIREMENTS.md §6.13 -- redesigned to correctly handle a person holding
  * several `user_roles` grants at once (Servant + Sub-Coordinator at the
@@ -190,7 +201,6 @@ export function ServantAssignmentsInteractive({
   }
 
   const categoricalBuckets = useMemo(() => {
-    type Row = { person: AssignmentPerson; grants: RoleGrant[] };
     function rowsFor(pred: (g: RoleGrant) => boolean): Row[] {
       return filtered
         .map((p) => ({ person: p, grants: p.grants.filter(pred) }))
@@ -308,6 +318,19 @@ export function ServantAssignmentsInteractive({
     );
   }
 
+  function renderPersonRow({ person, grants }: Row) {
+    return (
+      <div key={person.id} className="py-2.5 flex items-center gap-3">
+        <Avatar person={person} />
+        <span className="flex-1 min-w-0 font-semibold text-[#333] truncate">{person.full_name}</span>
+        <span className="flex items-center gap-1.5 flex-wrap justify-end">
+          {grants.map((g) => renderChip(person, g, false))}
+          {renderAddRoleControl(person)}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -334,7 +357,9 @@ export function ServantAssignmentsInteractive({
       {viewMode === "categorical" ? (
         <div className="space-y-4">
           {categoricalBuckets.cohorts.map((bucket) => {
-            const { female, male, other } = groupByGender(bucket.rows, (r) => r.person.gender);
+            const servingRows = bucket.rows.filter(isServingRow);
+            const readOnlyRows = bucket.rows.filter((r) => !isServingRow(r));
+            const { female, male, other } = groupByGender(servingRows, (r) => r.person.gender);
             return (
               <div key={bucket.key} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
                 <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">{bucket.label}</h3>
@@ -355,20 +380,17 @@ export function ServantAssignmentsInteractive({
                             <h4 className="text-[11px] font-bold text-[#666] uppercase tracking-wide mb-1.5">
                               {genderSubheading(kind, rows.length)}
                             </h4>
-                            <div className="divide-y divide-[#f0f0f0]">
-                              {rows.map(({ person, grants }) => (
-                                <div key={person.id} className="py-2.5 flex items-center gap-3">
-                                  <Avatar person={person} />
-                                  <span className="flex-1 min-w-0 font-semibold text-[#333] truncate">{person.full_name}</span>
-                                  <span className="flex items-center gap-1.5 flex-wrap justify-end">
-                                    {grants.map((g) => renderChip(person, g, false))}
-                                    {renderAddRoleControl(person)}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
+                            <div className="divide-y divide-[#f0f0f0]">{rows.map(renderPersonRow)}</div>
                           </div>
                         ),
+                    )}
+                    {readOnlyRows.length > 0 && (
+                      <div>
+                        <h4 className="text-[11px] font-bold text-[#666] uppercase tracking-wide mb-1.5">
+                          {readOnlyRows.length} Read-only Access (not counted as servants)
+                        </h4>
+                        <div className="divide-y divide-[#f0f0f0]">{readOnlyRows.map(renderPersonRow)}</div>
+                      </div>
                     )}
                   </div>
                 )}

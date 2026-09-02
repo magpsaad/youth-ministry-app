@@ -35,16 +35,16 @@ function monthGrid(cursor: Date): Date[] {
   return Array.from({ length: 42 }, (_, i) => addDays(start, i));
 }
 
-/** Whether any day in the event's [start_date, end_date] range falls on the
- * given ISO weekday (1=Monday .. 7=Sunday). */
-function matchesWeekday(e: CalendarEvent, isoWeekday: number): boolean {
-  const start = new Date(`${e.start_date}T00:00:00`);
-  const end = new Date(`${e.end_date}T00:00:00`);
-  for (let d = new Date(start); d.getTime() <= end.getTime(); d.setDate(d.getDate() + 1)) {
-    const dow = d.getDay() === 0 ? 7 : d.getDay();
-    if (dow === isoWeekday) return true;
-  }
-  return false;
+/** Whether this specific date falls on the given ISO weekday (1=Monday ..
+ * 7=Sunday) -- NOT "does some day in a multi-day event's range happen to
+ * match" (owner-reported bug: the Fridays view used to check the latter,
+ * so a multi-day event like a 2-week fast that merely touched a Friday
+ * somewhere in its span made every day of it -- Saturdays, Holy Week's
+ * other weekdays included -- show up on a view that's supposed to be
+ * Fridays-only). */
+function isServiceDay(date: Date, isoWeekday: number): boolean {
+  const dow = date.getDay() === 0 ? 7 : date.getDay();
+  return dow === isoWeekday;
 }
 
 function EventPill({ event, onClick }: { event: CalendarEvent; onClick: () => void }) {
@@ -226,7 +226,7 @@ export function ServiceCalendarModal({
   }, [events]);
 
   const fridaysListDates = useMemo(
-    () => listDates.filter((d) => d.events.some((e) => matchesWeekday(e, serviceWeekday))),
+    () => listDates.filter((d) => isServiceDay(d.date, serviceWeekday)),
     [listDates, serviceWeekday],
   );
 
@@ -331,7 +331,7 @@ export function ServiceCalendarModal({
               <DateRow
                 key={toISO(date)}
                 date={date}
-                events={view === "fridays" ? dayEvents.filter((e) => matchesWeekday(e, serviceWeekday)) : dayEvents}
+                events={dayEvents}
                 showMonth
                 onDayClick={openNew}
                 onEventClick={setEditingEvent}

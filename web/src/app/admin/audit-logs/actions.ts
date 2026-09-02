@@ -46,18 +46,17 @@ export async function getAuditLogsAction(filters: AuditLogFilters): Promise<Audi
 export type AuditLogUser = { id: string; full_name: string };
 
 /** Distinct users who've actually generated a log entry -- a shorter, more
- * relevant list than every profile in the system. */
+ * relevant list than every profile in the system. Computed server-side via
+ * migration 0037's get_audit_log_users() RPC, not by fetching every
+ * audit_log row and de-duping in JS -- that used to silently cap out at
+ * PostgREST's default row limit on an unordered, unbounded query, which
+ * (owner-reported) only ever surfaced the handful of people active in
+ * whatever slice of thousands of historical rows happened to fit under it. */
 export async function getAuditLogUsersAction(): Promise<AuditLogUser[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("audit_log").select("user_id, profiles(full_name)").not("user_id", "is", null);
-
-  const byId = new Map<string, string>();
-  for (const r of data ?? []) {
-    const name = (r.profiles as unknown as { full_name: string } | null)?.full_name;
-    if (r.user_id && name && !byId.has(r.user_id)) byId.set(r.user_id, name);
-  }
-  return Array.from(byId.entries())
-    .map(([id, full_name]) => ({ id, full_name }))
+  const { data } = await supabase.rpc("get_audit_log_users");
+  return ((data as { user_id: string; full_name: string }[] | null) ?? [])
+    .map((r) => ({ id: r.user_id, full_name: r.full_name }))
     .sort((a, b) => a.full_name.localeCompare(b.full_name));
 }
 

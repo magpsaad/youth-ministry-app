@@ -54,7 +54,17 @@ export function QrCodesInteractive({ qrCodes: initial }: { qrCodes: QrCodeForPri
           return (
             <div
               key={q.id}
-              className="flex flex-col items-center print:break-inside-avoid print:break-after-page print:min-h-screen print:justify-center"
+              // print:min-h-screen used to sit here to vertically-center each
+              // code on its own printed page, but `vh` units don't map
+              // reliably to an actual printed page's height (a well-known
+              // print-CSS pitfall) -- it was overflowing onto a stray extra
+              // page for some codes. print:break-after-page alone already
+              // guarantees "one code per page" without it. That same class
+              // was also unconditionally on the LAST code too, forcing a
+              // guaranteed blank page after it -- print:last:break-after-auto
+              // undoes it for just that one (owner-reported: both a stray
+              // blank page mid-list and one at the very end).
+              className="flex flex-col items-center print:break-inside-avoid print:break-after-page print:last:break-after-auto print:pt-12"
             >
               <div className="rounded-3xl p-3 print:p-6" style={{ backgroundColor: q.color }}>
                 <div

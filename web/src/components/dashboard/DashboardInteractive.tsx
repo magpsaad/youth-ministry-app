@@ -416,14 +416,16 @@ export function DashboardInteractive({
                                 currentUserName={currentUserName}
                                 className="rounded-md bg-[#1e3a5f] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#152a45]"
                               />
-                              <button
-                                type="button"
-                                onClick={() => handleDismissNewAssignment(m.id)}
-                                disabled={dismissPending}
-                                className="rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-[#666] border border-[#ddd] hover:bg-[#f5f5f5] disabled:opacity-60"
-                              >
-                                Dismiss
-                              </button>
+                              {m.assigned_servant_id === currentUserId && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDismissNewAssignment(m.id)}
+                                  disabled={dismissPending}
+                                  className="rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-[#666] border border-[#ddd] hover:bg-[#f5f5f5] disabled:opacity-60"
+                                >
+                                  Dismiss
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -458,14 +460,16 @@ export function DashboardInteractive({
                             >
                               Outreach
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDismissFollowUp(f.id)}
-                              disabled={dismissPending}
-                              className="rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-[#666] border border-[#ddd] hover:bg-[#f5f5f5] disabled:opacity-60"
-                            >
-                              Dismiss
-                            </button>
+                            {f.servant_id === currentUserId && (
+                              <button
+                                type="button"
+                                onClick={() => handleDismissFollowUp(f.id)}
+                                disabled={dismissPending}
+                                className="rounded-md bg-white px-2.5 py-1 text-[11px] font-semibold text-[#666] border border-[#ddd] hover:bg-[#f5f5f5] disabled:opacity-60"
+                              >
+                                Dismiss
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
