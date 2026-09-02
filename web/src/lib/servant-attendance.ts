@@ -90,7 +90,12 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
 
   const trackedDates = Array.from(trackedDatesSet).sort((a, b) => (a < b ? 1 : -1));
   const todayHasRows = trackedDatesSet.has(todayDate);
-  const cutoffPassed = timeMinutes >= toMinutes(cutoff);
+  // Owner-reported: the date-picker was defaulting to today even on days
+  // that aren't the configured service day at all -- `cutoffPassed` was
+  // purely time-of-day (past 9pm), with no check that today is actually a
+  // service day. It's only meant to open up "today" early, before any
+  // check-ins exist yet, on an actual service day.
+  const cutoffPassed = isOnServiceWeekday(todayDate, windowSettings.service_weekday) && timeMinutes >= toMinutes(cutoff);
 
   // Only service-weekday dates count toward average attendance % -- the
   // date-picker (`trackedDates`, above) still shows every date, including

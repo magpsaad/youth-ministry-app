@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { AssignmentPerson, RoleGrant } from "@/lib/servant-assignments";
 import type { GroupSummary } from "@/lib/groups";
 import { servantPhotoUrl } from "@/lib/storage";
+import { groupByGender, genderSubheading } from "@/lib/gender-grouping";
 import {
   reassignRoleGroupAction,
   revokeRoleGrantAction,
@@ -332,50 +333,74 @@ export function ServantAssignmentsInteractive({
 
       {viewMode === "categorical" ? (
         <div className="space-y-4">
-          {categoricalBuckets.unassigned.length > 0 && (
-            <BucketCard label="Unassigned" rows={categoricalBuckets.unassigned} renderChip={renderChip} renderAddRoleControl={renderAddRoleControl} />
-          )}
-
-          {categoricalBuckets.cohorts.map((bucket) => (
-            <div key={bucket.key} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
-              <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">{bucket.label}</h3>
-              <div className="divide-y divide-[#f0f0f0]">
-                {bucket.rows.map(({ person, grants }) => (
-                  <div key={person.id} className="py-2.5 flex items-center gap-3">
-                    <Avatar person={person} />
-                    <span className="flex-1 min-w-0 font-semibold text-[#333] truncate">{person.full_name}</span>
-                    <span className="flex items-center gap-1.5 flex-wrap justify-end">
-                      {grants.map((g) => renderChip(person, g, false))}
-                      {renderAddRoleControl(person)}
-                    </span>
+          {categoricalBuckets.cohorts.map((bucket) => {
+            const { female, male, other } = groupByGender(bucket.rows, (r) => r.person.gender);
+            return (
+              <div key={bucket.key} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
+                <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">{bucket.label}</h3>
+                {bucket.rows.length === 0 ? (
+                  <p className="py-3 text-xs text-[#666]">No one here yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {(
+                      [
+                        ["Female", female],
+                        ["Male", male],
+                        ["Other", other],
+                      ] as const
+                    ).map(
+                      ([kind, rows]) =>
+                        rows.length > 0 && (
+                          <div key={kind}>
+                            <h4 className="text-[11px] font-bold text-[#666] uppercase tracking-wide mb-1.5">
+                              {genderSubheading(kind, rows.length)}
+                            </h4>
+                            <div className="divide-y divide-[#f0f0f0]">
+                              {rows.map(({ person, grants }) => (
+                                <div key={person.id} className="py-2.5 flex items-center gap-3">
+                                  <Avatar person={person} />
+                                  <span className="flex-1 min-w-0 font-semibold text-[#333] truncate">{person.full_name}</span>
+                                  <span className="flex items-center gap-1.5 flex-wrap justify-end">
+                                    {grants.map((g) => renderChip(person, g, false))}
+                                    {renderAddRoleControl(person)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ),
+                    )}
                   </div>
-                ))}
-                {bucket.rows.length === 0 && <p className="py-3 text-xs text-[#666]">No one here yet.</p>}
+                )}
+                {canManageServants && (
+                  <BringSomeoneNew
+                    open={addingForGroup === bucket.groupId}
+                    onOpen={() => {
+                      setAddingForGroup(bucket.groupId);
+                      setBringUserId("");
+                      setBringRole("servant");
+                      setError(null);
+                    }}
+                    onClose={() => setAddingForGroup(null)}
+                    candidates={roster.filter((p) => p.grants.every((g) => g.group_id !== bucket.groupId))}
+                    bringUserId={bringUserId}
+                    setBringUserId={setBringUserId}
+                    bringRole={bringRole}
+                    setBringRole={setBringRole}
+                    onSubmit={() => handleBringSomeoneNew(bucket.groupId)}
+                    pending={pending}
+                  />
+                )}
               </div>
-              {canManageServants && (
-                <BringSomeoneNew
-                  open={addingForGroup === bucket.groupId}
-                  onOpen={() => {
-                    setAddingForGroup(bucket.groupId);
-                    setBringUserId("");
-                    setBringRole("servant");
-                    setError(null);
-                  }}
-                  onClose={() => setAddingForGroup(null)}
-                  candidates={roster.filter((p) => p.grants.every((g) => g.group_id !== bucket.groupId))}
-                  bringUserId={bringUserId}
-                  setBringUserId={setBringUserId}
-                  bringRole={bringRole}
-                  setBringRole={setBringRole}
-                  onSubmit={() => handleBringSomeoneNew(bucket.groupId)}
-                  pending={pending}
-                />
-              )}
-            </div>
-          ))}
+            );
+          })}
 
           {categoricalBuckets.generalCoordinators.length > 0 && (
             <BucketCard label="General Coordinators" rows={categoricalBuckets.generalCoordinators} renderChip={renderChip} renderAddRoleControl={renderAddRoleControl} />
+          )}
+
+          {categoricalBuckets.unassigned.length > 0 && (
+            <BucketCard label="Unassigned" rows={categoricalBuckets.unassigned} renderChip={renderChip} renderAddRoleControl={renderAddRoleControl} />
           )}
         </div>
       ) : (

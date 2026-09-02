@@ -47,7 +47,11 @@ export function AccessMaintenanceInteractive({
 
   const filteredProfiles = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return profiles.slice(0, 20);
+    // Was capped at the first 20 -- silently hid anyone alphabetically past
+    // that (owner-reported: only findable by searching). The list below
+    // already scrolls in its own fixed-height box, so there's no reason to
+    // truncate it.
+    if (!q) return profiles;
     return profiles.filter((p) => p.full_name.toLowerCase().includes(q) || p.email?.toLowerCase().includes(q));
   }, [profiles, search]);
 

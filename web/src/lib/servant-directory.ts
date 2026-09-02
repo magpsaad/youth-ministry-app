@@ -20,13 +20,17 @@ export type ServantDirectoryEntry = {
  * REQUIREMENTS.md §6.13 -- the cross-group servant roster used by Servant
  * Directory and Servant Profiles (Servant Assignments has its own richer
  * roster, lib/servant-assignments.ts, since it needs every role grant, not
- * just 'servant'). Includes anyone holding a 'servant' or
- * 'general_coordinator' role row (Sub-Coordinators/Admins-only-with-no-
- * servant-role aren't "servants" for this listing). Average attendance % is
- * a rolling window (`servant_attendance_window_weeks`, admin-configurable,
- * owner's explicit choice distinct from members' rule in §7.2), floored at
- * the servant's `join_date` (their earliest attendance record -- §3.5), and
- * only counts dates on the configured service weekday (Friday by default).
+ * just 'servant'). Includes anyone holding a 'servant', 'sub_coordinator',
+ * or 'general_coordinator' role row. Sub-Coordinators count as servants of
+ * their own cohort here regardless of whether they also hold an explicit
+ * 'servant' row for it (owner-reported: they should show up under their
+ * cohort either way) -- migration 0036 also grants that explicit row
+ * automatically now, but this listing doesn't depend on that having
+ * happened. Average attendance % is a rolling window
+ * (`servant_attendance_window_weeks`, admin-configurable, owner's explicit
+ * choice distinct from members' rule in §7.2), floored at the servant's
+ * `join_date` (their earliest attendance record -- §3.5), and only counts
+ * dates on the configured service weekday (Friday by default).
  */
 export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
   const supabase = await createClient();
@@ -42,7 +46,7 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
   const { data: roleRows } = await supabase
     .from("user_roles")
     .select("user_id, role, group_id, groups(name, ladder_position)")
-    .in("role", ["servant", "general_coordinator"]);
+    .in("role", ["servant", "sub_coordinator", "general_coordinator"]);
 
   const { data: profileRows } = await supabase
     .from("profiles")
@@ -64,11 +68,16 @@ export async function getServantDirectory(): Promise<ServantDirectoryEntry[]> {
       isUnassignedServant: false,
     };
     if (r.role === "general_coordinator") acc.isGeneralCoordinator = true;
-    if (r.role === "servant") {
+    if (r.role === "servant" || r.role === "sub_coordinator") {
       if (r.group_id) {
         const group = r.groups as unknown as { name: string; ladder_position: number } | null;
-        if (group?.name != null) acc.servantGroups.push({ id: r.group_id, name: group.name, ladder_position: group.ladder_position });
-      } else {
+        // A person can hold both a Servant and a Sub-Coordinator grant for
+        // the same cohort (0036's trigger, or the migration tool, grants
+        // both) -- de-duped here so they don't appear twice in one cohort.
+        if (group?.name != null && !acc.servantGroups.some((sg) => sg.id === r.group_id)) {
+          acc.servantGroups.push({ id: r.group_id, name: group.name, ladder_position: group.ladder_position });
+        }
+      } else if (r.role === "servant") {
         acc.isUnassignedServant = true;
       }
     }

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAttendanceWindowSettings, isOnServiceWeekday } from "@/lib/app-settings";
 
 export type AttendanceMemberBase = {
   id: string;
@@ -56,7 +57,7 @@ function toMinutes(hms: string): number {
 export async function getAttendanceBundle(groupId: string): Promise<AttendanceBundle> {
   const supabase = await createClient();
 
-  const [{ data: settings }, { data: memberRows }] = await Promise.all([
+  const [{ data: settings }, { data: memberRows }, windowSettings] = await Promise.all([
     supabase.from("app_settings").select("same_day_cutoff_time, timezone").single(),
     supabase
       .from("members")
@@ -64,6 +65,7 @@ export async function getAttendanceBundle(groupId: string): Promise<AttendanceBu
       .eq("group_id", groupId)
       .eq("status", "active")
       .order("full_name"),
+    getAttendanceWindowSettings(),
   ]);
 
   const cutoff = settings?.same_day_cutoff_time ?? "21:00:00";
@@ -98,7 +100,10 @@ export async function getAttendanceBundle(groupId: string): Promise<AttendanceBu
 
   const trackedDates = Array.from(trackedDatesSet).sort((a, b) => (a < b ? 1 : -1));
   const todayHasRows = trackedDatesSet.has(todayDate);
-  const cutoffPassed = timeMinutes >= toMinutes(cutoff);
+  // Same fix as the servants' equivalent (lib/servant-attendance.ts,
+  // owner-reported there) -- this was purely time-of-day before, with no
+  // check that today is actually the configured service day.
+  const cutoffPassed = isOnServiceWeekday(todayDate, windowSettings.service_weekday) && timeMinutes >= toMinutes(cutoff);
 
   return { members, attendanceByMember, trackedDates, todayDate, todayAvailable: todayHasRows || cutoffPassed };
 }

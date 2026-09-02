@@ -191,26 +191,55 @@ export async function migrateServants(groupsByPosition: Map<number, string>): Pr
     console.log(`Found ${existingAuthUsersByEmail.size} existing auth account(s) project-wide.`);
   }
 
+  // Real run surfaced that upsert(..., {onConflict: "user_id,role,group_id"})
+  // never actually caught a re-run's duplicate grants when group_id is null
+  // (Unassigned servant, general coordinator) -- Postgres never treats two
+  // NULLs as conflicting under a plain unique constraint, so every one of
+  // several `--run` attempts against qa this session inserted a fresh
+  // duplicate row for the same person (see migration 0036, which also adds
+  // a real constraint for this). Fetching every existing grant once
+  // upfront and explicitly skipping ones already present -- rather than
+  // leaning on SQL's NULL semantics at all -- sidesteps that regardless of
+  // schema shape.
+  const existingGrantKeys = new Set<string>();
+  if (!config.dryRun) {
+    const { data: existingRoles, error: rolesErr } = await supabase.from("user_roles").select("user_id, role, group_id");
+    if (rolesErr) throw new Error(`Failed to list existing user_roles: ${rolesErr.message}`);
+    for (const r of existingRoles ?? []) existingGrantKeys.add(`${r.user_id}|${r.role}|${r.group_id ?? "null"}`);
+  }
+
   const byEmail = new Map<string, string>();
   const byName = new Map<string, string[]>();
 
   for (const person of plan) {
     let profileId: string;
+    let grantedCount = 0;
     if (config.dryRun) {
       profileId = `dry:${person.email}`;
     } else {
       profileId = await ensureProfile(person, existingAuthUsersByEmail);
       for (const grant of person.grants) {
-        const { error } = await supabase
-          .from("user_roles")
-          .upsert({ user_id: profileId, role: grant.role, group_id: grant.groupId }, { onConflict: "user_id,role,group_id", ignoreDuplicates: true });
+        const key = `${profileId}|${grant.role}|${grant.groupId ?? "null"}`;
+        if (existingGrantKeys.has(key)) continue; // already granted -- idempotent re-run, not a duplicate
+
+        const { error } = await supabase.from("user_roles").insert({ user_id: profileId, role: grant.role, group_id: grant.groupId });
         if (error) throw new Error(`Failed to grant ${grant.role} to ${person.email}: ${error.message}`);
+        existingGrantKeys.add(key);
+        grantedCount++;
+
+        // Migration 0036's trigger auto-creates a matching Servant grant
+        // for any Sub-Coordinator row -- mirror that here so a later grant
+        // in this same person's list (or the next full run) doesn't try to
+        // insert that same now-existing row itself and fail.
+        if (grant.role === "sub_coordinator") {
+          existingGrantKeys.add(`${profileId}|servant|${grant.groupId ?? "null"}`);
+        }
       }
     }
     byEmail.set(person.email, profileId);
     const nameKey = person.name.toLowerCase();
     byName.set(nameKey, [...(byName.get(nameKey) ?? []), profileId]);
-    count("user_roles", person.grants.length);
+    count("user_roles", config.dryRun ? person.grants.length : grantedCount);
   }
   count("profiles", plan.length);
 

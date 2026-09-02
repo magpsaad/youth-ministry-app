@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { ServantDirectoryEntry } from "@/lib/servant-directory";
 import { PhoneLink } from "@/components/PhoneLink";
 import { servantPhotoUrl } from "@/lib/storage";
+import { groupByGender, genderSubheading } from "@/lib/gender-grouping";
 import { ServantDetailModal } from "@/components/ServantDetailModal";
 
 function initials(name: string): string {
@@ -65,11 +66,11 @@ export function ServantProfilesInteractive({
 
     return [...groupLabels, ...tail].map((label) => ({
       label,
-      entries: byLabel.get(label)!.sort((a, b) => {
-        const aRank = a.gender === "Female" ? 0 : 1;
-        const bRank = b.gender === "Female" ? 0 : 1;
-        return aRank - bRank || a.full_name.localeCompare(b.full_name);
-      }),
+      // Only real cohorts get the Female/Male subheadings below (owner
+      // asked for "within each Cohort grouping", same scope as Servant
+      // Assignments) -- General Coordinators/Unassigned stay a flat list.
+      isCohort: label !== "General Coordinators" && label !== "Unassigned",
+      entries: byLabel.get(label)!.sort((a, b) => a.full_name.localeCompare(b.full_name)),
     }));
   }, [filtered]);
 
@@ -107,7 +108,11 @@ export function ServantProfilesInteractive({
         ? categorical.map((bucket) => (
             <div key={bucket.label} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
               <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">{bucket.label}</h3>
-              <ServantRows entries={bucket.entries} onSelect={setSelected} />
+              {bucket.isCohort ? (
+                <GenderGroupedRows entries={bucket.entries} onSelect={setSelected} />
+              ) : (
+                <ServantRows entries={bucket.entries} onSelect={setSelected} />
+              )}
             </div>
           ))
         : (
@@ -125,6 +130,38 @@ export function ServantProfilesInteractive({
           onClose={() => setSelected(null)}
           onSaved={() => router.refresh()}
         />
+      )}
+    </div>
+  );
+}
+
+/** "n Female Servants" / "n Male Servants" subheadings within one cohort --
+ * same treatment as Servant Assignments' Categorical view (owner-reported,
+ * both screens should agree). */
+function GenderGroupedRows({
+  entries,
+  onSelect,
+}: {
+  entries: ServantDirectoryEntry[];
+  onSelect: (s: ServantDirectoryEntry) => void;
+}) {
+  const { female, male, other } = groupByGender(entries, (e) => e.gender);
+  return (
+    <div className="space-y-3">
+      {(
+        [
+          ["Female", female],
+          ["Male", male],
+          ["Other", other],
+        ] as const
+      ).map(
+        ([kind, rows]) =>
+          rows.length > 0 && (
+            <div key={kind}>
+              <h4 className="text-[11px] font-bold text-[#666] uppercase tracking-wide mb-1.5">{genderSubheading(kind, rows.length)}</h4>
+              <ServantRows entries={rows} onSelect={onSelect} />
+            </div>
+          ),
       )}
     </div>
   );
