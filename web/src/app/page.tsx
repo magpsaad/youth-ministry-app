@@ -33,7 +33,22 @@ export default async function LandingPage() {
   // app (REQUIREMENTS.md §2.2) -- excluded from the ordinary group selector,
   // but surfaced as its own dedicated, full-width button in the Admin Corner
   // instead (below).
-  const selectableGroups = groups.filter((g) => g.ladder_position > 0);
+  //
+  // groups itself (getAccessibleGroups()) is now visible more broadly than
+  // "cohorts I can load data for" -- migration 0038 widened groups_select
+  // to is_app_user() so the Servant Directory/QR Codes could show every
+  // cohort's NAME to any servant, but that same widening meant this Load
+  // [Member] Data selector started listing every cohort too, including
+  // ones a plain servant has no actual access to (owner-reported: picking
+  // one then showed zero data). "Which cohorts can I see the name of" and
+  // "which cohorts can I load data for" are different questions now that
+  // groups_select answers the first one broadly -- this selector needs the
+  // narrower answer, computed from the user's own real grants instead:
+  // every cohort for an Admin/General Coordinator, or only the specific
+  // ones a Sub-Coordinator/Servant/Read-Only actually holds a role at.
+  const hasFullGroupAccess = access.isAdmin || access.isGeneralCoordinator;
+  const ownGroupIds = new Set(access.roles.map((r) => r.group_id).filter((id): id is string => id !== null));
+  const selectableGroups = groups.filter((g) => g.ladder_position > 0 && (hasFullGroupAccess || ownGroupIds.has(g.id)));
   const yr0Group = groups.find((g) => g.ladder_position === 0);
 
   return (

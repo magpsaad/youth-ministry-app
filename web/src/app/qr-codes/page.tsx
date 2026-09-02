@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getQrCodesForPrinting } from "@/lib/qrcodes";
 import { getAppSettings } from "@/lib/app-settings";
-import { getAccessSummary } from "@/lib/roles";
 import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon } from "@/components/icons";
 import { SignOutButton } from "@/components/SignOutButton";
@@ -15,10 +14,7 @@ export default async function QrCodesPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const access = await getAccessSummary(user.id);
-  const includePreEntry = access.isAdmin || access.isGeneralCoordinator;
-
-  const [qrCodes, settings] = await Promise.all([getQrCodesForPrinting(includePreEntry), getAppSettings()]);
+  const [qrCodes, settings] = await Promise.all([getQrCodesForPrinting(), getAppSettings()]);
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">

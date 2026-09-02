@@ -54,33 +54,38 @@ async function siteOrigin(): Promise<string> {
  * or has changed (its label, from a future Group Transition rename) since
  * it last was.
  *
- * Ordered Year 1 -> Year 5+, then Servants (position 0's pre-entry QR is
- * excluded entirely unless the caller is Admin/General Coordinator -- it's
- * only needed once a year, for the July/August welcoming party, and
- * showing it to everyone would be confusing for a code nobody else should
- * be handing out).
+ * Ordered Year 0 -> Year 5+, then Servants -- every code, for every app
+ * user (owner's explicit call, migration 0040). Reads through
+ * get_qr_codes_with_groups() rather than a plain embedded-join select:
+ * groups_select's position-0 branch stays Admin-only for every OTHER
+ * screen, so a plain select's embedded `groups` join for the Yr0 row
+ * would silently resolve to null for anyone else -- indistinguishable,
+ * if you keyed off that, from the true Servants QR (qr_codes.group_id
+ * itself IS null), which is exactly the bug this replaced ("SAY Servants"
+ * shown twice, Yr0 nowhere). group_id/label live on qr_codes itself
+ * (label already synced from the group's real name whenever it's set, or
+ * "SAY Servants" for the true group-less row -- REQUIREMENTS.md §6.15),
+ * so no override/fallback logic is needed here at all -- just read it.
  */
-export async function getQrCodesForPrinting(includePreEntry: boolean): Promise<QrCodeForPrinting[]> {
+export async function getQrCodesForPrinting(): Promise<QrCodeForPrinting[]> {
   const supabase = await createClient();
   const [origin, settings] = await Promise.all([siteOrigin(), getAppSettings()]);
 
-  const { data } = await supabase
-    .from("qr_codes")
-    .select("id, label, check_in_token, printed_at, updated_at, group:groups(ladder_position, qr_color)");
+  const { data } = await supabase.rpc("get_qr_codes_with_groups");
 
-  const rows = (data ?? []) as unknown as {
+  const rows = (data ?? []) as {
     id: string;
     label: string;
     check_in_token: string;
     printed_at: string | null;
     updated_at: string;
-    group: { ladder_position: number; qr_color: string | null } | null;
+    group_id: string | null;
+    ladder_position: number | null;
+    qr_color: string | null;
   }[];
 
-  const filtered = rows.filter((r) => includePreEntry || r.group?.ladder_position !== 0);
-
-  const sorted = filtered.sort((a, b) => {
-    const rank = (r: (typeof rows)[number]) => (r.group === null ? 999 : r.group.ladder_position);
+  const sorted = [...rows].sort((a, b) => {
+    const rank = (r: (typeof rows)[number]) => (r.group_id === null ? 999 : (r.ladder_position ?? 999));
     return rank(a) - rank(b);
   });
 
@@ -95,16 +100,9 @@ export async function getQrCodesForPrinting(includePreEntry: boolean): Promise<Q
       });
       const svg = settings.logo_url ? embedLogo(rawSvg, settings.logo_url) : rawSvg;
       const needsReprint = !r.printed_at || new Date(r.updated_at) > new Date(r.printed_at);
-      const color = r.group?.qr_color ?? SERVANTS_COLOR;
+      const color = r.qr_color ?? SERVANTS_COLOR;
 
-      // The terminal (5+) group is now a single, permanent merged bucket
-      // (REQUIREMENTS.md §2.2/§5, revised during Phase G) -- its name is a
-      // fixed, admin-set value like any other group's, not regenerated
-      // from a shifting cohort_year, so its stored label is used as-is.
-      // Only the shared Servants QR (no group row) still needs an override.
-      const label = r.group ? r.label : "SAY Servants";
-
-      return { id: r.id, label, checkInUrl, svg, color, needsReprint };
+      return { id: r.id, label: r.label, checkInUrl, svg, color, needsReprint };
     }),
   );
 }
