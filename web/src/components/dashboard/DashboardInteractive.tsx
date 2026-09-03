@@ -487,13 +487,6 @@ export function DashboardInteractive({
                             >
                               View original entry
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => setOutreachForFollowUp(f)}
-                              className="rounded-md bg-[#1e3a5f] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#152a45]"
-                            >
-                              Outreach
-                            </button>
                             {f.servant_id === currentUserId && (
                               <button
                                 type="button"
@@ -506,6 +499,19 @@ export function DashboardInteractive({
                             )}
                           </div>
                         </div>
+                        {/* Owner-reported follow-up: Outreach right-
+                            justified to match the other Actions Needed
+                            cards' horizontal position, even though it isn't
+                            vertically centered here (this card's own top-
+                            aligned layout, kept so View original entry/
+                            Dismiss stay together and visible on the left). */}
+                        <button
+                          type="button"
+                          onClick={() => setOutreachForFollowUp(f)}
+                          className="shrink-0 rounded-md bg-[#1e3a5f] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#152a45]"
+                        >
+                          Outreach
+                        </button>
                       </div>
                     );
                   })}
