@@ -322,8 +322,16 @@ export function ServantAssignmentsInteractive({
     return (
       <div key={person.id} className="py-2.5 flex items-center gap-3">
         <Avatar person={person} />
-        <span className="flex-1 min-w-0 font-semibold text-[#333] truncate">{person.full_name}</span>
-        <span className="flex items-center gap-1.5 flex-wrap justify-end">
+        {/* Owner-reported (mobile): a person with several role chips could
+            squeeze this name down to nothing -- `flex-1 min-w-0` has no
+            floor, so the chips span (which never shrinks below its own
+            content) won a width fight against the name for it every time.
+            The Alphabetical view never had this problem because its name
+            column is a fixed, never-shrinking width instead -- matched
+            here (w-32 shrink-0), with the chips span now flex-1 so IT
+            absorbs the remaining space and wraps, not the name. */}
+        <span className="w-32 shrink-0 font-semibold text-[#333] truncate">{person.full_name}</span>
+        <span className="flex-1 flex items-center gap-1.5 flex-wrap justify-end">
           {grants.map((g) => renderChip(person, g, false))}
           {renderAddRoleControl(person)}
         </span>
@@ -476,8 +484,9 @@ function BucketCard({
         {rows.map(({ person, grants }) => (
           <div key={person.id} className="py-2.5 flex items-center gap-3">
             <Avatar person={person} />
-            <span className="flex-1 min-w-0 font-semibold text-[#333] truncate">{person.full_name}</span>
-            <span className="flex items-center gap-1.5 flex-wrap justify-end">
+            {/* Same fixed-width name column fix as renderPersonRow above. */}
+            <span className="w-32 shrink-0 font-semibold text-[#333] truncate">{person.full_name}</span>
+            <span className="flex-1 flex items-center gap-1.5 flex-wrap justify-end">
               {grants.map((g) => renderChip(person, g, false))}
               {label !== "General Coordinators" && renderAddRoleControl(person)}
             </span>

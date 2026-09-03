@@ -59,16 +59,36 @@ export function EventForm({
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  // Owner-reported: picking Group Discussion filled in its template, but
+  // then switching to Speaker Session (or anything else) left that
+  // template's text stuck in the box instead of swapping to the new type's
+  // template (or clearing). Tracks the exact string we last auto-filled so
+  // a later type change can tell "still exactly what we suggested, safe to
+  // replace" apart from "the user actually typed/edited this, leave it
+  // alone" -- null whenever the description isn't (or is no longer) our
+  // own suggestion, including for an existing event's real saved
+  // description, which was never auto-filled by this session.
+  const [autoDescription, setAutoDescription] = useState<string | null>(null);
 
   function field<K extends keyof EventInput>(key: K, value: EventInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  function handleDescriptionChange(value: string) {
+    field("description", value);
+    if (value !== autoDescription) setAutoDescription(null);
+  }
+
   function handleTypeChange(type: CalendarEventType) {
     setForm((f) => {
       const template = DESCRIPTION_TEMPLATES[type];
-      const shouldApplyTemplate = template && !f.description?.trim();
-      return { ...f, event_type: type, description: shouldApplyTemplate ? template : f.description };
+      const currentIsEmpty = !f.description?.trim();
+      const currentIsAutoFilled = autoDescription !== null && f.description === autoDescription;
+      if (currentIsEmpty || currentIsAutoFilled) {
+        setAutoDescription(template ?? null);
+        return { ...f, event_type: type, description: template ?? "" };
+      }
+      return { ...f, event_type: type };
     });
   }
 
@@ -178,7 +198,7 @@ export function EventForm({
             <label className="block font-semibold mb-1">Description</label>
             <textarea
               value={form.description ?? ""}
-              onChange={(e) => field("description", e.target.value)}
+              onChange={(e) => handleDescriptionChange(e.target.value)}
               rows={3}
               className={inputClass}
             />

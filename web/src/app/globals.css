@@ -35,6 +35,21 @@ body {
     print-color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
   }
+
+  /* Owner-reported: "1 QR code per page" wasn't holding on mobile print.
+     Tailwind's print:break-after-page/print:break-inside-avoid utilities
+     (QrCodesInteractive.tsx) only emit the modern break-after/break-inside
+     properties -- some mobile print pipelines only honor the older
+     page-break-after/page-break-inside aliases. Applied here via the
+     stable qr-print-card class so both property names are always present
+     together, whichever one a given engine actually reads. */
+  .qr-print-card {
+    page-break-after: always;
+    page-break-inside: avoid;
+  }
+  .qr-print-card:last-child {
+    page-break-after: auto;
+  }
 }
 
 /* REQUIREMENTS.md §8.1 -- 2.5D buttons, mobile follow-up (2nd round).

@@ -48,7 +48,16 @@ export function QrCodesInteractive({ qrCodes: initial }: { qrCodes: QrCodeForPri
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 print:grid-cols-1 print:gap-0">
+      {/* Owner-reported: "1 QR code per page" didn't hold on mobile print.
+          Page breaks inside a CSS Grid container are a long-standing,
+          widely-documented cross-browser print bug (grid/flex children
+          don't fragment reliably -- desktop Chrome's Print/Save-as-PDF
+          happens to cope well enough that this wasn't noticed there, but
+          mobile print pipelines expose it consistently). print:block swaps
+          the container to a plain block layout for print, so each card is
+          an ordinary block-level child -- that's the layout mode
+          break-after/break-inside are actually reliably supported in. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 print:block print:gap-0">
         {qrCodes.map((q) => {
           const textColor = contrastText(q.color);
           return (
@@ -64,7 +73,7 @@ export function QrCodesInteractive({ qrCodes: initial }: { qrCodes: QrCodeForPri
               // guaranteed blank page after it -- print:last:break-after-auto
               // undoes it for just that one (owner-reported: both a stray
               // blank page mid-list and one at the very end).
-              className="flex flex-col items-center print:break-inside-avoid print:break-after-page print:last:break-after-auto print:pt-12"
+              className="qr-print-card flex flex-col items-center print:break-inside-avoid print:break-after-page print:last:break-after-auto print:pt-12"
             >
               <div className="rounded-3xl p-3 print:p-6" style={{ backgroundColor: q.color }}>
                 <div
