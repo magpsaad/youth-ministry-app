@@ -456,7 +456,7 @@ export function DashboardInteractive({
                     return (
                       <div
                         key={`followup-${f.id}`}
-                        className="rounded-lg bg-[#f3e5f5] border-l-4 border-[#8e44ad] p-3 flex items-start gap-3"
+                        className="rounded-lg bg-[#f3e5f5] border-l-4 border-[#8e44ad] p-3 flex items-center gap-3"
                       >
                         <Avatar photoUrl={photoUrl} fullName={f.member_name} />
                         <div className="min-w-0 flex-1">
@@ -500,11 +500,10 @@ export function DashboardInteractive({
                           </div>
                         </div>
                         {/* Owner-reported follow-up: Outreach right-
-                            justified to match the other Actions Needed
-                            cards' horizontal position, even though it isn't
-                            vertically centered here (this card's own top-
-                            aligned layout, kept so View original entry/
-                            Dismiss stay together and visible on the left). */}
+                            justified and vertically centered to match the
+                            other Actions Needed cards exactly, while View
+                            original entry/Dismiss stay together in their
+                            own row on the left. */}
                         <button
                           type="button"
                           onClick={() => setOutreachForFollowUp(f)}
