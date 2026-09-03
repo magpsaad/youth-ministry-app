@@ -395,7 +395,7 @@ export function ServantAssignmentsInteractive({
                     {readOnlyRows.length > 0 && (
                       <div>
                         <h4 className="text-[11px] font-bold text-[#666] uppercase tracking-wide mb-1.5">
-                          {readOnlyRows.length} Read-only Access (not counted as servants)
+                          {readOnlyRows.length} Read-only Access
                         </h4>
                         <div className="divide-y divide-[#f0f0f0]">{readOnlyRows.map(renderPersonRow)}</div>
                       </div>
