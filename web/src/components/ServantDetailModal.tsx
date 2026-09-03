@@ -70,6 +70,14 @@ export function ServantDetailModal({
     e.target.value = ""; // allow re-selecting the same file
   }
 
+  // Owner-reported: Replace had no warning, unlike Delete -- confirms
+  // before opening the file picker whenever there's an existing photo to
+  // lose (Add, with no current photo, needs no such warning).
+  function handleAddOrReplaceClick() {
+    if (photoUrl && !confirm("Replace this photo? This cannot be undone.")) return;
+    fileInputRef.current?.click();
+  }
+
   function handlePhotoCropped(blob: Blob) {
     setPendingPhotoFile(null);
     const formData = new FormData();
@@ -155,7 +163,7 @@ export function ServantDetailModal({
             {(!photoUrl || editing) && (
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={handleAddOrReplaceClick}
                 disabled={pending}
                 title={photoUrl ? "Replace photo" : "Add photo"}
                 className="flex items-center gap-1 text-xs font-semibold text-[#1e3a5f] hover:underline"
