@@ -4,6 +4,7 @@ import { Fragment, useMemo, useState } from "react";
 import type { AnalyticsRawData } from "@/lib/analytics";
 import type { ServantOption } from "@/lib/servants";
 import { useMyAssigned } from "@/components/MyAssignedContext";
+import { isOnServiceWeekday, resolveAttendanceSince, weekdayName } from "@/lib/attendance-window";
 import { groupByGender, genderSubheading } from "@/lib/gender-grouping";
 import { ClipboardCheckIcon, UsersIcon, ChartBarIcon, MapPinIcon } from "@/components/icons";
 import { ProximityDonut } from "@/components/charts/ProximityDonut";
@@ -40,6 +41,8 @@ export function AnalyticsInteractive({
   memberLabel,
   currentUserId,
   combined = false,
+  serviceWeekday,
+  windowWeeks,
 }: {
   raw: AnalyticsRawData;
   servants: ServantOption[];
@@ -47,6 +50,16 @@ export function AnalyticsInteractive({
   memberLabel: string;
   currentUserId: string;
   combined?: boolean;
+  /** Owner-reported (§6.7/§6.4 alignment): Average Attendance by Month used
+   * to count every tracked date with no rolling-window cap, while the
+   * Member List's per-person average attendance % only counts the
+   * configured service weekday and caps to a rolling window -- diverging
+   * from it for no real reason. Now uses the exact same
+   * isOnServiceWeekday()/resolveAttendanceSince() rules as
+   * lib/members.ts's getGroupMembers(), just aggregated per month instead
+   * of per person. */
+  serviceWeekday: number;
+  windowWeeks: number | null;
 }) {
   const { myAssignedOnly, hydrated } = useMyAssigned();
   const applyFilter = hydrated && myAssignedOnly;
@@ -79,9 +92,16 @@ export function AnalyticsInteractive({
     return counts;
   }, [filteredMembers]);
 
+  // Owner-reported: this used to count every tracked date with no rolling-
+  // window cap, diverging from the Member List's per-person average
+  // attendance % for no real reason -- aligned to the exact same rules now
+  // (isOnServiceWeekday/resolveAttendanceSince, lib/attendance-window.ts),
+  // just aggregated per month instead of per person.
   const monthly = useMemo(() => {
     const filteredIds = new Set(filteredMembers.map((m) => m.id));
-    const relevantAttendance = raw.attendance.filter((a) => filteredIds.has(a.memberId));
+    const relevantAttendance = raw.attendance.filter(
+      (a) => filteredIds.has(a.memberId) && isOnServiceWeekday(a.serviceDate, serviceWeekday),
+    );
 
     const datesByMonth = new Map<string, Set<string>>();
     for (const a of relevantAttendance) {
@@ -99,8 +119,8 @@ export function AnalyticsInteractive({
         let presentCount = 0;
         let totalSlots = 0;
         for (const m of filteredMembers) {
-          if (!m.join_date) continue;
-          const since = m.join_date;
+          const since = resolveAttendanceSince(m.join_date, windowWeeks);
+          if (!since) continue;
           for (const d of dates) {
             if (d < since) continue;
             totalSlots += 1;
@@ -114,7 +134,7 @@ export function AnalyticsInteractive({
         });
         return { month, label, avgPercent };
       });
-  }, [filteredMembers, raw.attendance]);
+  }, [filteredMembers, raw.attendance, serviceWeekday, windowWeeks]);
 
   const sortedServants = useMemo(() => {
     return [...servants].sort((a, b) => {
@@ -208,6 +228,11 @@ export function AnalyticsInteractive({
             <AttendanceTrendChart data={[...monthly].reverse()} />
           </div>
         )}
+        <p className="mt-3 text-xs text-[#666]">
+          {windowWeeks === null
+            ? `Calculated over each ${memberLabel.toLowerCase()}'s entire history since their Join Date, counting only ${weekdayName(serviceWeekday)}s -- same rule as the Member List's average attendance %.`
+            : `A rolling trailing ${windowWeeks} week${windowWeeks === 1 ? "" : "s"}, counting only ${weekdayName(serviceWeekday)}s, never counting weeks before someone joined -- same rule as the Member List's average attendance %.`}
+        </p>
       </section>
 
       <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">

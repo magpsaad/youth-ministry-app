@@ -132,14 +132,18 @@ export function parseLocalDateTimeToUtcIso(raw: string, timeZone: string): strin
   const v = raw.trim();
   if (!v) return null;
 
-  const iso = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/);
-  const us = !iso ? v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})[ T]?(\d{1,2}):(\d{2})(?::(\d{2}))?/) : null;
+  // Time component is optional -- confirmed via a real dry run that some
+  // rows (a chunk of the Yr4 Outreach tab) are date-only, e.g. "10/30/2024"
+  // with no time at all. Treated as midnight local time, same as
+  // serviceDateFromTimestamp already does for date-only values elsewhere.
+  const iso = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  const us = !iso ? v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?/) : null;
 
   let y: number, mo: number, d: number, h: number, mi: number, s: number;
   if (iso) {
-    [y, mo, d, h, mi, s] = [Number(iso[1]), Number(iso[2]), Number(iso[3]), Number(iso[4]), Number(iso[5]), Number(iso[6] ?? "0")];
+    [y, mo, d, h, mi, s] = [Number(iso[1]), Number(iso[2]), Number(iso[3]), Number(iso[4] ?? "0"), Number(iso[5] ?? "0"), Number(iso[6] ?? "0")];
   } else if (us) {
-    [mo, d, y, h, mi, s] = [Number(us[1]), Number(us[2]), Number(us[3]), Number(us[4]), Number(us[5]), Number(us[6] ?? "0")];
+    [mo, d, y, h, mi, s] = [Number(us[1]), Number(us[2]), Number(us[3]), Number(us[4] ?? "0"), Number(us[5] ?? "0"), Number(us[6] ?? "0")];
   } else {
     return null;
   }

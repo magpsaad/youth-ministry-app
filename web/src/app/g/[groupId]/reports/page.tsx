@@ -1,5 +1,5 @@
 import { getAnalyticsRawData, getServantAssignments } from "@/lib/analytics";
-import { getAppSettings } from "@/lib/app-settings";
+import { getAppSettings, getAttendanceWindowSettings } from "@/lib/app-settings";
 import { getCombinedGroups } from "@/lib/groups";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { AnalyticsInteractive } from "@/components/analytics/AnalyticsInteractive";
@@ -16,10 +16,11 @@ export default async function AnalyticsPage({ params }: { params: Promise<{ grou
   // Assignments additionally gets a Cohort column (`combined` prop below).
   const groupIds = combined ? (await getCombinedGroups()).map((g) => g.id) : groupId;
 
-  const [raw, assignments, settings] = await Promise.all([
+  const [raw, assignments, settings, windowSettings] = await Promise.all([
     getAnalyticsRawData(groupIds),
     getServantAssignments(groupIds),
     getAppSettings(),
+    getAttendanceWindowSettings(),
   ]);
 
   return (
@@ -30,6 +31,8 @@ export default async function AnalyticsPage({ params }: { params: Promise<{ grou
       memberLabel={settings.member_label}
       currentUserId={user?.id ?? ""}
       combined={combined}
+      serviceWeekday={windowSettings.service_weekday}
+      windowWeeks={windowSettings.youth_attendance_window_weeks}
     />
   );
 }
