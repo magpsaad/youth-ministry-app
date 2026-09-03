@@ -41,10 +41,16 @@ export function AssignServantSelect({
           router.refresh();
         });
       }}
-      className="rounded-md bg-[#1e3a5f] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#152a45] focus:outline-none disabled:opacity-60"
+      // Owner-reported: on a narrow screen, this button's own width was
+      // squeezing the phone number next to it into wrapping onto extra
+      // lines -- shrink-0 keeps this at its natural width so the sibling
+      // info column (not this) does any shrinking, and the shorter "Assign"
+      // label (was "Assign Servant") gives that column more room to begin
+      // with.
+      className="shrink-0 rounded-md bg-[#1e3a5f] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#152a45] focus:outline-none disabled:opacity-60"
     >
       <option value="" disabled>
-        {pending ? "Assigning…" : "Assign Servant"}
+        {pending ? "Assigning…" : "Assign"}
       </option>
       {matching.map((s) => (
         <option key={s.id} value={s.id}>

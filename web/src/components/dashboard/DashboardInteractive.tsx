@@ -302,7 +302,13 @@ export function DashboardInteractive({
                       {m.university?.name ?? "—"}
                       {m.program_of_study ? ` · ${m.program_of_study}` : ""}
                     </p>
-                    {m.phone && <PhoneLink phone={m.phone} className="text-xs" />}
+                    {/* Owner-reported: the phone number was wrapping onto
+                        extra lines on a narrow screen, squeezed by the
+                        Assign button next to it -- truncate (with the
+                        button's own shrink-0 + shorter label) keeps it on
+                        one line, ellipsizing only in the unlikely case
+                        there's still not enough room. */}
+                    {m.phone && <PhoneLink phone={m.phone} className="text-xs truncate" />}
                   </div>
                   <AssignServantSelect memberId={m.id} groupId={groupId} memberGender={m.gender} servants={servants} />
                 </div>
@@ -446,7 +452,22 @@ export function DashboardInteractive({
                       >
                         <Avatar photoUrl={photoUrl} fullName={f.member_name} />
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-[#1e3a5f] truncate">{f.member_name}</p>
+                          {/* Owner-reported: this card's name wasn't
+                              clickable, unlike the other two card kinds in
+                              this section -- matched to the same
+                              MemberDetailLink pattern they already use. */}
+                          <MemberDetailLink
+                            memberId={f.member_id}
+                            groupId={groupId}
+                            universities={universities}
+                            servants={servants}
+                            memberLabel={memberLabel}
+                            canDelete={canDelete}
+                            currentUserName={currentUserName}
+                            className="font-semibold text-[#1e3a5f] hover:underline text-left truncate block"
+                          >
+                            {f.member_name}
+                          </MemberDetailLink>
                           <p className="text-xs text-[#6a1b7a]">
                             Your follow-up is due {f.follow_up_due ? formatIsoDate(f.follow_up_due) : "—"}
                           </p>
