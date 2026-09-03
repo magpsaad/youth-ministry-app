@@ -227,11 +227,11 @@ export function MemberDetailModal({
               onChange={handlePhotoSelected}
               className="hidden"
             />
-            {/* Owner-reported (follow-up): all three photo actions -- not
-                just Delete -- were reachable at any time, unlike every
-                other field on this modal. Add/Replace now gated behind
-                Edit too, same as Delete below. */}
-            {editing && (
+            {/* Owner-reported (follow-up, then revised): Add Photo (no
+                photo yet) stays available any time -- only Replace and
+                Delete, which act on an existing photo, are gated behind
+                Edit. */}
+            {(!photoUrl || editing) && (
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
