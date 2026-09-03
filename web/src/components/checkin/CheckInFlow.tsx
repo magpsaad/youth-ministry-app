@@ -25,6 +25,7 @@ export function CheckInFlow({
   initialPeople,
   universities,
   memberLabel,
+  serviceDayName,
 }: {
   token: string;
   isServant: boolean;
@@ -32,6 +33,9 @@ export function CheckInFlow({
   initialPeople: CheckInPerson[];
   universities: University[];
   memberLabel: string;
+  /** Owner-reported: the "check back this Friday" message was hardcoded to
+   * "Friday" regardless of the actually-configured service day. */
+  serviceDayName: string;
 }) {
   const [view, setView] = useState<View>(
     flowType === "intake_only" ? (isServant ? "servant-intake" : "member-intake") : "list",
@@ -121,7 +125,7 @@ export function CheckInFlow({
             ? "See you inside."
             : wasNewRegistration
               ? "Attendance isn’t tracked today, but your registration is saved."
-              : "Attendance isn’t tracked today — please check back this Friday."}
+              : `Attendance isn’t tracked today — please check back this ${serviceDayName}.`}
         </p>
         {canUndo && (
           <>

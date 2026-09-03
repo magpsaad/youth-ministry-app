@@ -1,6 +1,7 @@
 import { getCheckInFlow, listCheckInMembers, listCheckInServants } from "@/lib/checkin";
 import { getUniversities } from "@/lib/universities";
 import { getAppSettings } from "@/lib/app-settings";
+import { weekdayName } from "@/lib/attendance-window";
 import { AppLogo } from "@/components/AppLogo";
 import { CheckInFlow } from "@/components/checkin/CheckInFlow";
 
@@ -44,6 +45,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
           initialPeople={people}
           universities={universities}
           memberLabel={settings.member_label}
+          serviceDayName={weekdayName(settings.service_weekday)}
         />
       </main>
     </div>
