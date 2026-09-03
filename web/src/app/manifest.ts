@@ -5,18 +5,15 @@ import { getAppSettings } from "@/lib/app-settings";
  * requested: use the ministry's own configured logo (app_settings.logo_url)
  * instead of no icon at all (there was no manifest here before this).
  *
- * TEMPORARY testing-phase gate, owner's explicit plan: qa gets the logo
- * first so it can be tried out; once approved, swap the check below to
- * `=== "prod"` instead (kept in sync with layout.tsx's generateMetadata,
- * which needs the identical flip) -- prod keeps the branded icon
- * permanently and qa reverts to none, specifically so the two are visually
- * distinguishable at a glance on a home screen. Deployed to both qa and
- * main either way (same env-gating pattern as the QA banner in
- * layout.tsx), so no branch stays manually out of sync for this.
+ * Owner tried it out on qa first, approved, then asked for prod-only
+ * permanently: prod gets the branded icon, qa stays on the generic one,
+ * deliberately so the two are visually distinguishable at a glance on a
+ * home screen (kept in sync with layout.tsx's generateMetadata, which
+ * needs the identical check).
  */
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
   const settings = await getAppSettings();
-  const useLogo = process.env.NEXT_PUBLIC_APP_ENV === "qa" && !!settings.logo_url;
+  const useLogo = process.env.NEXT_PUBLIC_APP_ENV === "prod" && !!settings.logo_url;
 
   return {
     name: settings.app_title_long,

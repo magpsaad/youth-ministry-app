@@ -14,10 +14,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const settings = await getAppSettings();
   // Owner-requested: the logo as the "Add to Home Screen" icon -- iOS
   // Safari specifically needs an apple-touch-icon link (separate from the
-  // manifest.ts icons Android reads). TEMPORARY testing-phase gate, kept
-  // in sync with manifest.ts's identical check/comment -- flip both to
-  // `=== "prod"` once approved.
-  const useLogo = process.env.NEXT_PUBLIC_APP_ENV === "qa" && !!settings.logo_url;
+  // manifest.ts icons Android reads). Owner tried it on qa, approved, then
+  // asked for prod-only permanently -- kept in sync with manifest.ts's
+  // identical check.
+  const useLogo = process.env.NEXT_PUBLIC_APP_ENV === "prod" && !!settings.logo_url;
   return {
     title: {
       default: settings.app_title_long,
