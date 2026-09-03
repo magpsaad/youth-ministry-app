@@ -349,7 +349,7 @@ export function DashboardInteractive({
                       return (
                         <div
                           key={`outreach-${m.id}`}
-                          className="rounded-lg bg-[#fff3cd] border-l-4 border-[#dc3545] p-3 flex items-start gap-3"
+                          className="rounded-lg bg-[#fff3cd] border-l-4 border-[#dc3545] p-3 flex items-center gap-3"
                         >
                           <Avatar photoUrl={photoUrl} fullName={m.full_name} />
                           <div className="min-w-0 flex-1">
@@ -371,18 +371,20 @@ export function DashboardInteractive({
                             <p className="text-xs text-[#666]">
                               Last outreach: {m.lastOutreachDate ? new Date(m.lastOutreachDate).toLocaleDateString() : "Never"}
                             </p>
-                            <div className="mt-1 flex items-center gap-2">
-                              <OutreachQuickLink
-                                memberId={m.id}
-                                memberName={m.full_name}
-                                memberPhone={m.phone}
-                                memberLabel={memberLabel}
-                                groupId={groupId}
-                                currentUserName={currentUserName}
-                                className="rounded-md bg-[#1e3a5f] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#152a45]"
-                              />
-                            </div>
                           </div>
+                          {/* Owner-reported: Outreach was tucked below the
+                              text on the left, unlike Birthdays' Outreach
+                              button, which always sits on the right --
+                              matched to that same placement here. */}
+                          <OutreachQuickLink
+                            memberId={m.id}
+                            memberName={m.full_name}
+                            memberPhone={m.phone}
+                            memberLabel={memberLabel}
+                            groupId={groupId}
+                            currentUserName={currentUserName}
+                            className="shrink-0 rounded-md bg-[#1e3a5f] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#152a45]"
+                          />
                         </div>
                       );
                     }
@@ -393,7 +395,7 @@ export function DashboardInteractive({
                       return (
                         <div
                           key={`newly-${m.id}`}
-                          className="rounded-lg bg-[#e3f2fd] border-l-4 border-[#1976d2] p-3 flex items-start gap-3"
+                          className="rounded-lg bg-[#e3f2fd] border-l-4 border-[#1976d2] p-3 flex items-center gap-3"
                         >
                           <Avatar photoUrl={photoUrl} fullName={m.full_name} />
                           <div className="min-w-0 flex-1">
@@ -417,17 +419,8 @@ export function DashboardInteractive({
                               {m.program_of_study ? ` · ${m.program_of_study}` : ""}
                             </p>
                             {m.phone && <PhoneLink phone={m.phone} className="text-xs" />}
-                            <div className="mt-1 flex items-center gap-2">
-                              <OutreachQuickLink
-                                memberId={m.id}
-                                memberName={m.full_name}
-                                memberPhone={m.phone}
-                                memberLabel={memberLabel}
-                                groupId={groupId}
-                                currentUserName={currentUserName}
-                                className="rounded-md bg-[#1e3a5f] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#152a45]"
-                              />
-                              {m.assigned_servant_id === currentUserId && (
+                            {m.assigned_servant_id === currentUserId && (
+                              <div className="mt-1">
                                 <button
                                   type="button"
                                   onClick={() => handleDismissNewAssignment(m.id)}
@@ -436,9 +429,24 @@ export function DashboardInteractive({
                                 >
                                   Dismiss
                                 </button>
-                              )}
-                            </div>
+                              </div>
+                            )}
                           </div>
+                          {/* Owner-reported: Outreach was tucked below the
+                              text on the left, unlike Birthdays' Outreach
+                              button, which always sits on the right --
+                              matched to that same placement here. Dismiss
+                              stays below the text (a secondary action, not
+                              the card's primary one). */}
+                          <OutreachQuickLink
+                            memberId={m.id}
+                            memberName={m.full_name}
+                            memberPhone={m.phone}
+                            memberLabel={memberLabel}
+                            groupId={groupId}
+                            currentUserName={currentUserName}
+                            className="shrink-0 rounded-md bg-[#1e3a5f] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[#152a45]"
+                          />
                         </div>
                       );
                     }
