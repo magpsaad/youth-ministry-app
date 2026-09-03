@@ -3,7 +3,12 @@
 import { useMemo, useState } from "react";
 import type { CheckInPerson } from "@/lib/checkin";
 import type { University } from "@/lib/universities";
-import { markMemberAttendanceAction, markServantAttendanceAction } from "@/app/checkin/actions";
+import {
+  markMemberAttendanceAction,
+  markServantAttendanceAction,
+  undoMemberAttendanceAction,
+  undoServantAttendanceAction,
+} from "@/app/checkin/actions";
 import { MemberIntakeForm } from "./MemberIntakeForm";
 import { ServantIntakeForm } from "./ServantIntakeForm";
 
@@ -37,6 +42,21 @@ export function CheckInFlow({
   const [successName, setSuccessName] = useState<string | null>(null);
   const [attendanceRecorded, setAttendanceRecorded] = useState(true);
   const [wasNewRegistration, setWasNewRegistration] = useState(false);
+  // Owner-reported: a self-check-in mis-tap (wrong name, right next to the
+  // intended one) had no way to be undone. The success screen already
+  // shows the checked-in name -- a mis-tap is immediately visible there --
+  // so rather than a confirm-before-every-tap dialog (friction on every
+  // single check-in to guard a rare mistake), this adds a "Not you? Undo"
+  // action on that screen instead. checkedInPerson carries what's needed
+  // to call the matching undo action; canUndo is only true when this tap
+  // actually created today's record (never when it already existed --
+  // e.g. someone else already checked this person in), so undo can never
+  // remove a record this tap didn't create. Only wired up for the tap-a-
+  // name list, not the "don't see your name?" registration flow, which is
+  // out of scope here.
+  const [checkedInPerson, setCheckedInPerson] = useState<CheckInPerson | null>(null);
+  const [canUndo, setCanUndo] = useState(false);
+  const [undoing, setUndoing] = useState(false);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -58,6 +78,8 @@ export function CheckInFlow({
     setSuccessName(person.full_name);
     setAttendanceRecorded(result.attendanceRecorded);
     setWasNewRegistration(false);
+    setCheckedInPerson(person);
+    setCanUndo(result.attendanceRecorded && result.newlyCreated);
     setView("success");
   }
 
@@ -65,7 +87,26 @@ export function CheckInFlow({
     setSuccessName(name);
     setAttendanceRecorded(recorded);
     setWasNewRegistration(true);
+    setCheckedInPerson(null);
+    setCanUndo(false);
     setView("success");
+  }
+
+  async function handleUndo() {
+    if (!checkedInPerson) return;
+    setUndoing(true);
+    setError(null);
+    const result = isServant
+      ? await undoServantAttendanceAction(token, checkedInPerson.id, checkedInPerson.kind === "pending" ? "pending" : "servant")
+      : await undoMemberAttendanceAction(token, checkedInPerson.id);
+    setUndoing(false);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    setCheckedInPerson(null);
+    setCanUndo(false);
+    setView("list");
   }
 
   if (view === "success") {
@@ -82,6 +123,19 @@ export function CheckInFlow({
               ? "Attendance isn’t tracked today, but your registration is saved."
               : "Attendance isn’t tracked today — please check back this Friday."}
         </p>
+        {canUndo && (
+          <>
+            {error && <p className="mt-3 text-sm text-[#dc3545]">{error}</p>}
+            <button
+              type="button"
+              onClick={handleUndo}
+              disabled={undoing}
+              className="mt-4 text-sm font-semibold text-[#666] underline hover:text-[#333] disabled:opacity-50"
+            >
+              {undoing ? "Removing…" : "Not you? Undo"}
+            </button>
+          </>
+        )}
       </div>
     );
   }

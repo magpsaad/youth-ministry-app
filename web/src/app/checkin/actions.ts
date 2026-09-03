@@ -34,10 +34,26 @@ function validateIntake(input: { full_name: string; phone: string | null; email:
   return null;
 }
 
+/** `newlyCreated` distinguishes "this tap actually created today's
+ * attendance record" from "today's record already existed" (someone else
+ * already checked this person in, or a coordinator marked it manually) --
+ * the client only offers "Not you? Undo" when it's true, since undoing an
+ * already-existing record would remove something this tap didn't create. */
 export async function markMemberAttendanceAction(token: string, memberId: string) {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("checkin_mark_attendance", { p_token: token, p_member_id: memberId });
-  return { error: error?.message ?? null, attendanceRecorded: (data as boolean | null) ?? false };
+  const { data, error } = await supabase.rpc("checkin_mark_attendance", { p_token: token, p_member_id: memberId }).single();
+  const row = data as { attendance_recorded: boolean; newly_created: boolean } | null;
+  return { error: error?.message ?? null, attendanceRecorded: row?.attendance_recorded ?? false, newlyCreated: row?.newly_created ?? false };
+}
+
+/** Mis-tap recovery for the self-check-in list (owner-reported: a wrong tap
+ * had no way to be undone). Only removes a record checkin_mark_attendance
+ * itself created within the last couple minutes (see migration 0046) --
+ * never something pre-existing. */
+export async function undoMemberAttendanceAction(token: string, memberId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("checkin_undo_attendance", { p_token: token, p_member_id: memberId });
+  return { error: error?.message ?? null };
 }
 
 export type NewMemberInput = {
@@ -83,9 +99,20 @@ export async function markServantAttendanceAction(token: string, id: string, kin
   const supabase = await createClient();
   const { data, error } =
     kind === "servant"
-      ? await supabase.rpc("checkin_mark_servant_attendance", { p_token: token, p_servant_id: id })
-      : await supabase.rpc("checkin_mark_pending_servant_attendance", { p_token: token, p_pending_servant_id: id });
-  return { error: error?.message ?? null, attendanceRecorded: (data as boolean | null) ?? false };
+      ? await supabase.rpc("checkin_mark_servant_attendance", { p_token: token, p_servant_id: id }).single()
+      : await supabase.rpc("checkin_mark_pending_servant_attendance", { p_token: token, p_pending_servant_id: id }).single();
+  const row = data as { attendance_recorded: boolean; newly_created: boolean } | null;
+  return { error: error?.message ?? null, attendanceRecorded: row?.attendance_recorded ?? false, newlyCreated: row?.newly_created ?? false };
+}
+
+/** Same mis-tap recovery as undoMemberAttendanceAction, for the Servants QR. */
+export async function undoServantAttendanceAction(token: string, id: string, kind: "servant" | "pending") {
+  const supabase = await createClient();
+  const { error } =
+    kind === "servant"
+      ? await supabase.rpc("checkin_undo_servant_attendance", { p_token: token, p_servant_id: id })
+      : await supabase.rpc("checkin_undo_pending_servant_attendance", { p_token: token, p_pending_servant_id: id });
+  return { error: error?.message ?? null };
 }
 
 export type NewServantInput = {
