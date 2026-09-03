@@ -17,15 +17,22 @@ function cohortText(s: ServantOption): string {
 
 /** REQUIREMENTS.md §6.7 -- Data Completeness and Average Attendance by
  * Month respect "My Assigned List" (§6.2) like every other tab; Servant
- * Assignments deliberately doesn't (see lib/analytics.ts). `combined` (the
- * "Load Youth Data for all cohorts" view, §6.1 addendum) adds a
- * Categorical/Alphabetical toggle -- matching Servant Assignments/Servant
- * Profiles' own (owner-requested, for consistency across all three
- * screens): Alphabetical is the existing flat, freely-sortable table;
- * Categorical groups by cohort (ladder order, Unassigned last) then by
- * gender within each, same "n Female Servants"/"n Male Servants"
- * subheadings as the other two screens, fixed name order (no independent
- * per-column sort -- the grouping IS the order, same as those screens). */
+ * Assignments deliberately doesn't (see lib/analytics.ts). Servant
+ * Assignments always offers a Categorical/Alphabetical toggle -- matching
+ * Servant Assignments/Servant Profiles' own (owner-requested, for
+ * consistency across all three screens, and across both a single cohort's
+ * own Analytics tab and the "Load Youth Data for all cohorts" combined
+ * view, `combined` below -- Categorical just has one cohort to show on a
+ * single-cohort page, same shape either way): Alphabetical is the
+ * existing flat, freely-sortable table; Categorical groups by cohort
+ * (ladder order, Unassigned last -- never populated on a single-cohort
+ * page, since that page only ever lists servants of the one cohort it's
+ * scoped to) then by gender within each, same "n Female Servants"/"n Male
+ * Servants" subheadings as the other two screens, fixed name order (no
+ * independent per-column sort -- the grouping IS the order, same as those
+ * screens). `combined` only still gates the flat table's Cohort
+ * column/sort -- redundant there on a single-cohort page, since every row
+ * would repeat the one same cohort name. */
 export function AnalyticsInteractive({
   raw,
   servants,
@@ -208,27 +215,25 @@ export function AnalyticsInteractive({
           <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f]">
             <UsersIcon className="h-5 w-5" /> Servant Assignments
           </h2>
-          {combined && (
-            <div className="flex rounded-md border border-[#ddd] overflow-hidden text-sm">
-              <button
-                type="button"
-                onClick={() => setServantsView("categorical")}
-                className={`px-3 py-1.5 font-semibold ${servantsView === "categorical" ? "bg-[#1e3a5f] text-white" : "bg-white text-[#333]"}`}
-              >
-                Categorical
-              </button>
-              <button
-                type="button"
-                onClick={() => setServantsView("alphabetical")}
-                className={`px-3 py-1.5 font-semibold ${servantsView === "alphabetical" ? "bg-[#1e3a5f] text-white" : "bg-white text-[#333]"}`}
-              >
-                Alphabetical
-              </button>
-            </div>
-          )}
+          <div className="flex rounded-md border border-[#ddd] overflow-hidden text-sm">
+            <button
+              type="button"
+              onClick={() => setServantsView("categorical")}
+              className={`px-3 py-1.5 font-semibold ${servantsView === "categorical" ? "bg-[#1e3a5f] text-white" : "bg-white text-[#333]"}`}
+            >
+              Categorical
+            </button>
+            <button
+              type="button"
+              onClick={() => setServantsView("alphabetical")}
+              className={`px-3 py-1.5 font-semibold ${servantsView === "alphabetical" ? "bg-[#1e3a5f] text-white" : "bg-white text-[#333]"}`}
+            >
+              Alphabetical
+            </button>
+          </div>
         </div>
 
-        {combined && servantsView === "categorical" ? (
+        {servantsView === "categorical" ? (
           <div className="space-y-4">
             {categoricalCohorts.cohorts.map((cohort) => (
               <ServantCohortTable key={cohort.id} label={cohort.name} servants={cohort.servants} memberLabel={memberLabel} />
