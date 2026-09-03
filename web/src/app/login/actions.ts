@@ -59,6 +59,27 @@ export async function signUpWithPassword(formData: FormData) {
   redirect("/login?message=Check your email to confirm your account.");
 }
 
+/** "Forgot password" flow, step 1 of 2 -- emails a recovery link that lands
+ * on /auth/callback (the same PKCE code-exchange route Google sign-in
+ * already uses) with `next=/auth/reset-password`, so the code exchange
+ * establishes a real (recovery-type) session before the new-password page
+ * ever loads. Deliberately shows the same message whether or not the email
+ * has an account -- matches Supabase Auth's own behavior of not erroring on
+ * an unknown email (avoids confirming/denying which addresses are real). */
+export async function requestPasswordReset(formData: FormData) {
+  const email = String(formData.get("email") ?? "");
+  const supabase = await createClient();
+  const origin = await siteOrigin();
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${origin}/auth/callback?next=/auth/reset-password`,
+  });
+  if (error) {
+    redirect(`/login?mode=forgot&error=${encodeURIComponent(error.message)}`);
+  }
+  redirect(`/login?message=${encodeURIComponent("If that email has an account, a password reset link is on its way.")}`);
+}
+
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();

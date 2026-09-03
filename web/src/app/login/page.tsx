@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAppSettings } from "@/lib/app-settings";
 import { createClient } from "@/lib/supabase/server";
-import { signInWithGoogle, signInWithPassword, signUpWithPassword } from "./actions";
+import { signInWithGoogle, signInWithPassword, signUpWithPassword, requestPasswordReset } from "./actions";
 
 export default async function LoginPage({
   searchParams,
@@ -18,6 +18,7 @@ export default async function LoginPage({
   const settings = await getAppSettings();
   const { error, message, mode } = await searchParams;
   const isSignUp = mode === "signup";
+  const isForgot = mode === "forgot";
 
   return (
     <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] px-4 py-12">
@@ -48,87 +49,129 @@ export default async function LoginPage({
             </div>
           )}
 
-          <form action={signInWithGoogle}>
-            <button
-              type="submit"
-              className="w-full flex items-center justify-center gap-2 rounded-md bg-[#1e3a5f] py-3 text-sm font-semibold text-white hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
-            >
-              <GoogleIcon />
-              Continue with Google
-            </button>
-          </form>
-
-          <div className="my-5 flex items-center gap-3 text-xs text-[#999]">
-            <div className="h-px flex-1 bg-[#eee]" />
-            or
-            <div className="h-px flex-1 bg-[#eee]" />
-          </div>
-
-          <form action={isSignUp ? signUpWithPassword : signInWithPassword} className="space-y-3">
-            {isSignUp && (
-              <div>
-                <label className="block text-sm font-semibold mb-1" htmlFor="full_name">
-                  Full name
-                </label>
-                <input
-                  id="full_name"
-                  name="full_name"
-                  type="text"
-                  required
-                  className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
-                />
-              </div>
-            )}
-            <div>
-              <label className="block text-sm font-semibold mb-1" htmlFor="email">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold mb-1" htmlFor="password">
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                minLength={6}
-                className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
-              />
-            </div>
-            <button
-              type="submit"
-              className="w-full rounded-md border border-[#1e3a5f] bg-white py-3 text-sm font-semibold text-[#1e3a5f] hover:bg-[#f0f4f8] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
-            >
-              {isSignUp ? "Create account" : "Sign in"}
-            </button>
-          </form>
-
-          <p className="mt-4 text-center text-sm text-[#666]">
-            {isSignUp ? (
-              <>
-                Already have an account?{" "}
+          {isForgot ? (
+            <>
+              <p className="mb-4 text-sm text-[#666]">
+                Enter your email and we&apos;ll send you a link to reset your password.
+              </p>
+              <form action={requestPasswordReset} className="space-y-3">
+                <div>
+                  <label className="block text-sm font-semibold mb-1" htmlFor="email">
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full rounded-md bg-[#1e3a5f] py-3 text-sm font-semibold text-white hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+                >
+                  Send reset link
+                </button>
+              </form>
+              <p className="mt-4 text-center text-sm text-[#666]">
                 <Link href="/login" className="font-semibold text-[#1e3a5f]">
-                  Sign in
+                  Back to sign in
                 </Link>
-              </>
-            ) : (
-              <>
-                New here?{" "}
-                <Link href="/login?mode=signup" className="font-semibold text-[#1e3a5f]">
-                  Create an account
-                </Link>
-              </>
-            )}
-          </p>
+              </p>
+            </>
+          ) : (
+            <>
+              <form action={signInWithGoogle}>
+                <button
+                  type="submit"
+                  className="w-full flex items-center justify-center gap-2 rounded-md bg-[#1e3a5f] py-3 text-sm font-semibold text-white hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+                >
+                  <GoogleIcon />
+                  Continue with Google
+                </button>
+              </form>
+
+              <div className="my-5 flex items-center gap-3 text-xs text-[#999]">
+                <div className="h-px flex-1 bg-[#eee]" />
+                or
+                <div className="h-px flex-1 bg-[#eee]" />
+              </div>
+
+              <form action={isSignUp ? signUpWithPassword : signInWithPassword} className="space-y-3">
+                {isSignUp && (
+                  <div>
+                    <label className="block text-sm font-semibold mb-1" htmlFor="full_name">
+                      Full name
+                    </label>
+                    <input
+                      id="full_name"
+                      name="full_name"
+                      type="text"
+                      required
+                      className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-semibold mb-1" htmlFor="email">
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-semibold" htmlFor="password">
+                      Password
+                    </label>
+                    {!isSignUp && (
+                      <Link href="/login?mode=forgot" className="text-xs font-semibold text-[#1e3a5f]">
+                        Forgot password?
+                      </Link>
+                    )}
+                  </div>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    required
+                    minLength={6}
+                    className="w-full rounded-md border border-[#ddd] px-3 py-2.5 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="w-full rounded-md border border-[#1e3a5f] bg-white py-3 text-sm font-semibold text-[#1e3a5f] hover:bg-[#f0f4f8] shadow-[0_2px_4px_rgba(0,0,0,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.15)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.1)]"
+                >
+                  {isSignUp ? "Create account" : "Sign in"}
+                </button>
+              </form>
+
+              <p className="mt-4 text-center text-sm text-[#666]">
+                {isSignUp ? (
+                  <>
+                    Already have an account?{" "}
+                    <Link href="/login" className="font-semibold text-[#1e3a5f]">
+                      Sign in
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    New here?{" "}
+                    <Link href="/login?mode=signup" className="font-semibold text-[#1e3a5f]">
+                      Create an account
+                    </Link>
+                  </>
+                )}
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>
