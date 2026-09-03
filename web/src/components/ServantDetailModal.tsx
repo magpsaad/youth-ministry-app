@@ -12,6 +12,7 @@ import {
 } from "@/app/servant-profiles/actions";
 import { CameraIcon, TrashIcon } from "@/components/icons";
 import { PhotoCropperModal } from "@/components/PhotoCropperModal";
+import { ErrorModal } from "@/components/ErrorModal";
 
 const inputClass = (editing: boolean) =>
   `w-full rounded-md border px-3 py-2 text-sm focus:outline-none ${
@@ -86,6 +87,9 @@ export function ServantDetailModal({
 
   function handleRemovePhoto() {
     if (!photoPath) return;
+    // Owner-reported: this was one click away with no confirmation, easy to
+    // hit by mistake.
+    if (!confirm("Delete this photo? This cannot be undone.")) return;
     startTransition(async () => {
       const result = await removeServantPhotoAction(servant.id, photoPath);
       if (result.error) {
@@ -139,7 +143,11 @@ export function ServantDetailModal({
             </div>
           )}
           <div className="flex gap-3 mt-2">
-            <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handlePhotoSelected} className="hidden" />
+            {/* Owner-reported: no `capture` attribute -- forcing "environment"
+                made mobile browsers open the camera directly, with no way
+                to pick an existing photo from the library instead. Leaving
+                it unset lets the native picker offer both. */}
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoSelected} className="hidden" />
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -150,7 +158,11 @@ export function ServantDetailModal({
               <CameraIcon className="h-3.5 w-3.5" />
               {photoUrl ? "Replace" : "Add"} Photo
             </button>
-            {photoUrl && (
+            {/* Owner-reported: this was reachable with one click, no
+                confirmation, at any time -- now only shown while editing
+                (matching every other destructive/data-changing control on
+                this modal), and handleRemovePhoto itself now confirms. */}
+            {photoUrl && editing && (
               <button
                 type="button"
                 onClick={handleRemovePhoto}
@@ -164,8 +176,6 @@ export function ServantDetailModal({
             )}
           </div>
         </div>
-
-        {error && <div className="mb-3 rounded-md bg-[#f8d7da] text-[#721c24] text-sm px-3 py-2">{error}</div>}
 
         <div className="space-y-3">
           <FieldRow label="Full Name">
@@ -250,6 +260,10 @@ export function ServantDetailModal({
           onCropped={handlePhotoCropped}
         />
       )}
+      {/* Same fix as Member Detail's ErrorModal -- an inline banner near
+          the top of this scrollable modal was easy to miss while scrolled
+          down near Remove Servant at the very bottom. */}
+      {error && <ErrorModal message={error} onDismiss={() => setError(null)} />}
     </div>,
     document.body,
   );

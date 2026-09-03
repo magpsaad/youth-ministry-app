@@ -18,6 +18,7 @@ import { CameraIcon, TrashIcon } from "@/components/icons";
 import { AddOutreachModal } from "@/components/outreach/AddOutreachModal";
 import { PrevOutreachModal } from "@/components/outreach/PrevOutreachModal";
 import { PhotoCropperModal } from "@/components/PhotoCropperModal";
+import { ErrorModal } from "@/components/ErrorModal";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 
 const inputClass = (editing: boolean) =>
@@ -161,6 +162,9 @@ export function MemberDetailModal({
 
   function handleRemovePhoto() {
     if (!photoPath) return;
+    // Owner-reported: this was one click away with no confirmation, easy to
+    // hit by mistake.
+    if (!confirm("Delete this photo? This cannot be undone.")) return;
     startTransition(async () => {
       const result = await removeMemberPhotoAction(member.id, groupId, photoPath);
       if (result.error) {
@@ -212,11 +216,14 @@ export function MemberDetailModal({
             </div>
           )}
           <div className="flex gap-3 mt-2">
+            {/* Owner-reported: no `capture` attribute -- forcing "environment"
+                made mobile browsers open the camera directly, with no way
+                to pick an existing photo from the library instead. Leaving
+                it unset lets the native picker offer both. */}
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
               onChange={handlePhotoSelected}
               className="hidden"
             />
@@ -230,7 +237,11 @@ export function MemberDetailModal({
               <CameraIcon className="h-3.5 w-3.5" />
               {photoUrl ? "Replace" : "Add"} Photo
             </button>
-            {photoUrl && (
+            {/* Owner-reported: this was reachable with one click, no
+                confirmation, at any time -- now only shown while editing
+                (matching every other destructive/data-changing control on
+                this modal), and handleRemovePhoto itself now confirms. */}
+            {photoUrl && editing && (
               <button
                 type="button"
                 onClick={handleRemovePhoto}
@@ -244,10 +255,6 @@ export function MemberDetailModal({
             )}
           </div>
         </div>
-
-        {error && (
-          <div className="mb-3 rounded-md bg-[#f8d7da] text-[#721c24] text-sm px-3 py-2">{error}</div>
-        )}
 
         <div className="space-y-3">
           <FieldRow label="Phone">
@@ -438,6 +445,14 @@ export function MemberDetailModal({
           onCropped={handlePhotoCropped}
         />
       )}
+      {/* Owner-reported (Delete Youth's blocked-by-FK error specifically,
+          but this covers every error path here -- Save, photo upload/
+          delete, Delete -- since they all had the same problem): an inline
+          banner near the top of this modal was easy to miss if the user
+          was scrolled down near whatever they'd just clicked (e.g. Delete
+          at the very bottom) -- it looked like nothing had happened unless
+          they knew to scroll back up. */}
+      {error && <ErrorModal message={error} onDismiss={() => setError(null)} />}
     </div>,
     document.body,
   );
