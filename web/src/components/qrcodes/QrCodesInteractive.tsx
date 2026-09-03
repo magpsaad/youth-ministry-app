@@ -76,10 +76,18 @@ export function QrCodesInteractive({ qrCodes: initial }: { qrCodes: QrCodeForPri
               className="qr-print-card flex flex-col items-center print:break-inside-avoid print:break-after-page print:last:break-after-auto print:pt-12"
             >
               <div className="rounded-3xl p-3 print:p-6" style={{ backgroundColor: q.color }}>
-                <div
-                  className="rounded-2xl bg-white p-3 w-[220px] print:w-[420px] [&_svg]:h-auto [&_svg]:w-full"
-                  dangerouslySetInnerHTML={{ __html: q.svg }}
-                />
+                {/* Owner-requested: the QR code itself is also a real link
+                    to the same check-in page it encodes, so someone
+                    viewing this screen can tap it directly instead of
+                    scanning with a second device. Print doesn't care about
+                    hrefs, so this doesn't need to be gated to on-screen
+                    only. */}
+                <a href={q.checkInUrl} title={`Open check-in for ${q.label}`}>
+                  <div
+                    className="rounded-2xl bg-white p-3 w-[220px] print:w-[420px] [&_svg]:h-auto [&_svg]:w-full"
+                    dangerouslySetInnerHTML={{ __html: q.svg }}
+                  />
+                </a>
               </div>
               <div
                 className="-mt-4 rounded-full px-6 py-2 text-center font-bold shadow-[0_2px_6px_rgba(0,0,0,0.15)] print:px-10 print:py-4 print:text-2xl"
