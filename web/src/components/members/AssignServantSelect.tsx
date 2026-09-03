@@ -41,13 +41,16 @@ export function AssignServantSelect({
           router.refresh();
         });
       }}
-      // Owner-reported: on a narrow screen, this button's own width was
-      // squeezing the phone number next to it into wrapping onto extra
-      // lines -- shrink-0 keeps this at its natural width so the sibling
-      // info column (not this) does any shrinking, and the shorter "Assign"
-      // label (was "Assign Servant") gives that column more room to begin
-      // with.
-      className="shrink-0 rounded-md bg-[#1e3a5f] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#152a45] focus:outline-none disabled:opacity-60"
+      // Owner-reported: shortening the visible label alone didn't shrink
+      // this control -- a native <select>'s rendered box width isn't
+      // reliably driven by its currently-shown option on every browser;
+      // several (WebKit/Firefox in particular) size it to fit the WIDEST
+      // option in the whole list instead (here, a full servant name plus
+      // "(has N)"), so the box stayed wide regardless of the short
+      // placeholder text. An explicit width overrides that intrinsic
+      // sizing outright. shrink-0 keeps it at that width so the sibling
+      // info column (not this) does any shrinking on a narrow screen.
+      className="shrink-0 w-[76px] truncate rounded-md bg-[#1e3a5f] px-2 py-1.5 text-xs font-semibold text-white hover:bg-[#152a45] focus:outline-none disabled:opacity-60"
     >
       <option value="" disabled>
         {pending ? "Assigning…" : "Assign"}
