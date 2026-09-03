@@ -138,7 +138,12 @@ export function DashboardInteractive({
     const totalMembers = rows.length;
     const neverAttended = rows.filter((r) => !r.everAttended).length;
     const presentLastServiceDate = statsData.lastServiceDate ? rows.filter((r) => r.presentLastService).length : null;
-    const absentLastServiceDate = statsData.lastServiceDate ? totalMembers - (presentLastServiceDate ?? 0) : null;
+    // Owner-reported: Total = Present + Absent + Never Attended -- Absent
+    // used to be "everyone not present" (totalMembers - present), which
+    // silently folded in everyone who's never attended at all, inflating
+    // it and double-counting them against the separate Never Attended
+    // card.
+    const absentLastServiceDate = statsData.lastServiceDate ? totalMembers - (presentLastServiceDate ?? 0) - neverAttended : null;
     return { totalMembers, neverAttended, presentLastServiceDate, absentLastServiceDate };
   }, [statsData, applyFilter, currentUserId]);
 

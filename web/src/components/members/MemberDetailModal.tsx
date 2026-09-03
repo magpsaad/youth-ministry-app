@@ -77,11 +77,17 @@ export function MemberDetailModal({
   // it currently is.
   const isCombined = groupId === ALL_COHORTS_GROUP_ID;
 
-  const sortedServants = [...servants].sort((a, b) => {
-    const aMatch = a.gender === member.gender ? 0 : 1;
-    const bMatch = b.gender === member.gender ? 0 : 1;
-    return aMatch - bMatch || a.full_name.localeCompare(b.full_name);
-  });
+  // Owner-reported: hard-filter to matching-gender servants, same rule
+  // AssignServantSelect (the New Registrations quick-assign dropdown)
+  // already enforces -- this used to only soft-sort by gender instead.
+  // Always keeps the member's CURRENT servant in the list even if their
+  // gender doesn't match (a pre-existing exception shouldn't silently
+  // vanish from its own dropdown, which would either blank the selection
+  // or make it look unassigned). A servant with no gender on file still
+  // shows up for everyone, same as AssignServantSelect.
+  const sortedServants = servants
+    .filter((s) => !member.gender || !s.gender || s.gender === member.gender || s.id === member.assigned_servant_id)
+    .sort((a, b) => a.full_name.localeCompare(b.full_name));
 
   function field<K extends keyof UpdateMemberInput>(key: K, value: UpdateMemberInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));

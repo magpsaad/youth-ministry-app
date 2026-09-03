@@ -2,7 +2,7 @@ import { config } from "../config.js";
 import { supabase } from "../supabase.js";
 import { readTabAsRows } from "../sheets.js";
 import { CALENDAR_FILE_ID, TABS } from "../sheetIds.js";
-import { AUDIT_ACTION_TYPE_MAP } from "../normalize.js";
+import { AUDIT_ACTION_TYPE_MAP, parseLocalDateTimeToUtcIso, APP_TIMEZONE } from "../normalize.js";
 import { count, flagUnmatched } from "../report.js";
 import type { ServantLookup } from "../lookups.js";
 
@@ -64,8 +64,17 @@ export async function migrateAuditLog(groupsByPosition: Map<number, string>, ser
       details = { ...details, unmatched_email: userEmail };
     }
 
+    // Owner-reported (same bug as outreach's "Date & Time"): occurred_at is
+    // timestamptz, but the sheet gives a naive local datetime string --
+    // inserted as-is, Postgres reads it as UTC and shifts every value by
+    // the zone's offset. See parseLocalDateTimeToUtcIso.
+    const occurredAt = timestamp ? parseLocalDateTimeToUtcIso(timestamp, APP_TIMEZONE) : null;
+    if (timestamp && !occurredAt) {
+      flagUnmatched("audit_log", `${timestamp} ${oldActionType}`, `unparseable "Timestamp" value "${timestamp}"`);
+    }
+
     records.push({
-      occurred_at: timestamp || null,
+      occurred_at: occurredAt,
       user_id: userId,
       action_type: newActionType,
       group_id: groupId,

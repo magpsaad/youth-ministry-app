@@ -2,7 +2,7 @@ import { config } from "../config.js";
 import { supabase } from "../supabase.js";
 import { readTabAsRows } from "../sheets.js";
 import { COHORT_FILES, TABS } from "../sheetIds.js";
-import { normalizeOutreachType } from "../normalize.js";
+import { normalizeOutreachType, parseLocalDateTimeToUtcIso, APP_TIMEZONE } from "../normalize.js";
 import { count, flagUnmatched } from "../report.js";
 import { resolveServantByName, resolveByName, type ServantLookup } from "../lookups.js";
 
@@ -31,14 +31,30 @@ export async function migrateOutreach(memberIdsByFile: Map<string, Map<string, s
         flagUnmatched("outreach_entries", `${youthName} (${file.label})`, `Servant "${servantName}": ${resolvedServant.reason}`);
         return;
       }
+      // Owner-reported: occurred_at/follow_up_dismissed_at are timestamptz
+      // columns, but the sheet gives a naive local datetime string (no
+      // timezone marker) -- inserted as-is, Postgres reads it as UTC and
+      // every value ends up shifted by the zone's offset. See
+      // parseLocalDateTimeToUtcIso for the fix. follow_up_due is a plain
+      // `date` column (no time-of-day component), so it's unaffected.
+      const occurredAtRaw = r["Date & Time"]?.trim() || null;
+      const followUpDismissedRaw = r["Follow-up Dismissed"]?.trim() || null;
+      const occurredAt = occurredAtRaw ? parseLocalDateTimeToUtcIso(occurredAtRaw, APP_TIMEZONE) : null;
+      const followUpDismissedAt = followUpDismissedRaw ? parseLocalDateTimeToUtcIso(followUpDismissedRaw, APP_TIMEZONE) : null;
+      if (occurredAtRaw && !occurredAt) {
+        flagUnmatched("outreach_entries", `${youthName} (${file.label})`, `unparseable "Date & Time" value "${occurredAtRaw}"`);
+      }
+      if (followUpDismissedRaw && !followUpDismissedAt) {
+        flagUnmatched("outreach_entries", `${youthName} (${file.label})`, `unparseable "Follow-up Dismissed" value "${followUpDismissedRaw}"`);
+      }
       records.push({
         member_id: resolvedMember.id,
         servant_id: resolvedServant.id,
-        occurred_at: r["Date & Time"]?.trim() || null,
+        occurred_at: occurredAt,
         type: normalizeOutreachType(r["Type"]),
         notes: r["Notes"]?.trim() || null,
         follow_up_due: r["Follow-up Due"]?.trim() || null,
-        follow_up_dismissed_at: r["Follow-up Dismissed"]?.trim() || null,
+        follow_up_dismissed_at: followUpDismissedAt,
         legacy_source_ref: `${file.fileId}:${TABS.outreach}:row${i}`,
       });
     });

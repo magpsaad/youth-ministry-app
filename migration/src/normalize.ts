@@ -1,3 +1,10 @@
+/** The ministry's one configured timezone (confirmed live in both qa and
+ * prod's app_settings.timezone) -- the migration tool doesn't read
+ * app_settings itself (it writes straight to Postgres, not through the web
+ * app), so this mirrors the same value as a plain constant rather than
+ * fetching it. Used by parseLocalDateTimeToUtcIso below. */
+export const APP_TIMEZONE = "America/New_York";
+
 /** REQUIREMENTS.md §6.11 item 6 / §10.1 -- every phone number gets
  * reformatted to "1 (416) 930-1659" regardless of source format. */
 export function normalizePhone(raw: string | undefined | null): string | null {
@@ -101,4 +108,56 @@ export function serviceDateFromTimestamp(timestamp: string): string | null {
   }
 
   return null;
+}
+
+/** Owner-reported: migrated timestamptz values (Outreach's "Date & Time",
+ * Audit Log's "Timestamp", Outreach's "Follow-up Dismissed") were coming in
+ * shifted by several hours -- e.g. a real 9:08pm entry displayed as 5:08pm.
+ * Root cause: FORMATTED_STRING render gives a naive local datetime string
+ * with no timezone marker (same "ISO vs US" format split as
+ * serviceDateFromTimestamp), representing wall-clock time in the app's own
+ * configured timezone (app_settings.timezone, "America/New_York" for this
+ * deployment) -- but it was being inserted as-is, which Postgres then
+ * interprets as UTC, shifting every value by the zone's offset (a confirmed
+ * 4-hour EDT gap).
+ *
+ * Converts those naive components into the correct UTC instant using the
+ * standard "guess as UTC, then correct by the target timezone's actual
+ * offset at that instant" trick (no library needed, same zero-dependency
+ * style as the app's own nowInTimezone() helpers) -- DST-safe except within
+ * roughly the one hour immediately around a transition, which this project
+ * accepts. Returns a UTC ISO string ready for a timestamptz column, or null
+ * if the raw string doesn't match either known format. */
+export function parseLocalDateTimeToUtcIso(raw: string, timeZone: string): string | null {
+  const v = raw.trim();
+  if (!v) return null;
+
+  const iso = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/);
+  const us = !iso ? v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})[ T]?(\d{1,2}):(\d{2})(?::(\d{2}))?/) : null;
+
+  let y: number, mo: number, d: number, h: number, mi: number, s: number;
+  if (iso) {
+    [y, mo, d, h, mi, s] = [Number(iso[1]), Number(iso[2]), Number(iso[3]), Number(iso[4]), Number(iso[5]), Number(iso[6] ?? "0")];
+  } else if (us) {
+    [mo, d, y, h, mi, s] = [Number(us[1]), Number(us[2]), Number(us[3]), Number(us[4]), Number(us[5]), Number(us[6] ?? "0")];
+  } else {
+    return null;
+  }
+
+  const guessUtcMs = Date.UTC(y, mo - 1, d, h, mi, s);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(guessUtcMs));
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? "0");
+  const seenAsUtcMs = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+
+  const offsetMs = seenAsUtcMs - guessUtcMs;
+  return new Date(guessUtcMs - offsetMs).toISOString();
 }

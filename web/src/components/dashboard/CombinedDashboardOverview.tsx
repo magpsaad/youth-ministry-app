@@ -23,7 +23,11 @@ export function CombinedDashboardOverview({ groups, memberLabel }: { groups: Gro
         const totalMembers = statsData.rows.length;
         const neverAttended = statsData.rows.filter((r) => !r.everAttended).length;
         const presentLastServiceDate = statsData.lastServiceDate ? statsData.rows.filter((r) => r.presentLastService).length : null;
-        const absentLastServiceDate = statsData.lastServiceDate ? totalMembers - (presentLastServiceDate ?? 0) : null;
+        // Owner-reported (same fix as the single-cohort Dashboard,
+        // DashboardInteractive.tsx): Total = Present + Absent + Never
+        // Attended, not Absent = everyone-not-present (which silently
+        // folded in never-attended members too).
+        const absentLastServiceDate = statsData.lastServiceDate ? totalMembers - (presentLastServiceDate ?? 0) - neverAttended : null;
 
         return (
           <section key={groupId} className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">

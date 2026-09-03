@@ -171,15 +171,24 @@ export async function getUpcomingBirthdays(groupId: string): Promise<BirthdayMem
   };
   const todayDoy = dayOfYear(today);
 
-  return ((data ?? []) as unknown as BirthdayMember[]).filter((m) => {
-    const [, month, day] = m.date_of_birth.split("-").map(Number);
-    const bdayThisYear = new Date(today.getFullYear(), month - 1, day);
-    let diff = dayOfYear(bdayThisYear) - todayDoy;
-    // wrap around the year boundary in both directions
-    if (diff < -daysBefore) diff += 365;
-    if (diff > daysAfter) diff -= 365;
-    return diff >= -daysBefore && diff <= daysAfter;
-  });
+  // Owner-reported: these weren't sorted in any meaningful order (whatever
+  // order the query happened to return). Sorted by that same signed diff --
+  // most-recently-passed first, through today, to soonest-upcoming last --
+  // computed once per member and kept alongside it rather than recomputed
+  // twice.
+  return ((data ?? []) as unknown as BirthdayMember[])
+    .map((m) => {
+      const [, month, day] = m.date_of_birth.split("-").map(Number);
+      const bdayThisYear = new Date(today.getFullYear(), month - 1, day);
+      let diff = dayOfYear(bdayThisYear) - todayDoy;
+      // wrap around the year boundary in both directions
+      if (diff < -daysBefore) diff += 365;
+      if (diff > daysAfter) diff -= 365;
+      return { member: m, diff };
+    })
+    .filter(({ diff }) => diff >= -daysBefore && diff <= daysAfter)
+    .sort((a, b) => a.diff - b.diff)
+    .map(({ member }) => member);
 }
 
 /** REQUIREMENTS.md §6.3 -- members with no assigned servant yet. */

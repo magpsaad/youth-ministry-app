@@ -42,7 +42,19 @@ export async function deleteMemberAction(memberId: string, groupId: string) {
     data: { user },
   } = await supabase.auth.getUser();
   const { error } = await supabase.from("members").delete().eq("id", memberId);
-  if (error) return { error: error.message };
+  if (error) {
+    // Owner-reported: the raw FK-violation message ("update or delete on
+    // table \"members\" violates foreign key constraint
+    // \"attendance_records_member_id_fkey\" on table \"attendance_records\"")
+    // isn't something a coordinator should ever have to read. Postgres
+    // error code 23503 = foreign_key_violation, regardless of which
+    // specific table (attendance_records, outreach_entries, ...) is
+    // referencing this member.
+    if (error.code === "23503") {
+      return { error: "You cannot delete this member — they have historical records (attendance, outreach, etc.) attached." };
+    }
+    return { error: error.message };
+  }
 
   if (user) await logAudit(user.id, "MEMBER_DELETED", { groupId, details: { memberId } });
   revalidatePath(`/g/${groupId}/members`);
