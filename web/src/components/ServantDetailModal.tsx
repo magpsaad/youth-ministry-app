@@ -148,16 +148,22 @@ export function ServantDetailModal({
                 to pick an existing photo from the library instead. Leaving
                 it unset lets the native picker offer both. */}
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoSelected} className="hidden" />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={pending}
-              title={photoUrl ? "Replace photo" : "Add photo"}
-              className="flex items-center gap-1 text-xs font-semibold text-[#1e3a5f] hover:underline"
-            >
-              <CameraIcon className="h-3.5 w-3.5" />
-              {photoUrl ? "Replace" : "Add"} Photo
-            </button>
+            {/* Owner-reported (follow-up): all three photo actions -- not
+                just Delete -- were reachable at any time, unlike every
+                other field on this modal. Add/Replace now gated behind
+                Edit too, same as Delete below. */}
+            {editing && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={pending}
+                title={photoUrl ? "Replace photo" : "Add photo"}
+                className="flex items-center gap-1 text-xs font-semibold text-[#1e3a5f] hover:underline"
+              >
+                <CameraIcon className="h-3.5 w-3.5" />
+                {photoUrl ? "Replace" : "Add"} Photo
+              </button>
+            )}
             {/* Owner-reported: this was reachable with one click, no
                 confirmation, at any time -- now only shown while editing
                 (matching every other destructive/data-changing control on
