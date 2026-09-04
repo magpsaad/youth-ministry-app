@@ -37,6 +37,7 @@ export function CheckInFlow({
   universities,
   memberLabel,
   serviceDayName,
+  rememberedPersonId,
 }: {
   token: string;
   isServant: boolean;
@@ -47,6 +48,11 @@ export function CheckInFlow({
   /** Owner-reported: the "check back this Friday" message was hardcoded to
    * "Friday" regardless of the actually-configured service day. */
   serviceDayName: string;
+  /** Owner-requested: whoever this device last checked in as a servant with
+   * "Remember me" checked (see servant-checkin-cookie.ts) -- read server-
+   * side so the match is already known on first paint, no flash. Servant
+   * flow only; always null for member self-check-in. */
+  rememberedPersonId: string | null;
 }) {
   const [view, setView] = useState<View>(
     flowType === "intake_only" ? (isServant ? "servant-intake" : "member-intake") : "list",
@@ -78,18 +84,36 @@ export function CheckInFlow({
   // intake form just collected everything already).
   const [missingFields, setMissingFields] = useState<MissingMemberFields>(NO_MISSING_FIELDS);
   const [showMissingFields, setShowMissingFields] = useState(false);
+  // Owner-requested: "Remember me on this device" -- checked by default, so
+  // tapping your own (already pre-highlighted) name needs no extra step;
+  // someone checking in a DIFFERENT person unchecks it first so that tap
+  // doesn't overwrite whoever this device already remembers. Stays
+  // unchecked across multiple taps in the same visit once someone
+  // deliberately unchecks it (no silent revert to checked mid-session).
+  const [remember, setRemember] = useState(true);
+  // Lets "Not you? Undo" restore exactly what this device remembered
+  // before a mis-tap changed it (see markServantAttendanceAction).
+  const [rememberRestore, setRememberRestore] = useState<{ rememberedCookieWritten: boolean; previousRemembered: string | null } | null>(
+    null,
+  );
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    if (!needle) return initialPeople;
-    return initialPeople.filter((p) => p.full_name.toLowerCase().includes(needle));
-  }, [q, initialPeople]);
+    const base = needle ? initialPeople.filter((p) => p.full_name.toLowerCase().includes(needle)) : initialPeople;
+    if (!rememberedPersonId) return base;
+    const idx = base.findIndex((p) => p.id === rememberedPersonId);
+    if (idx <= 0) return base;
+    const reordered = [...base];
+    const [remembered] = reordered.splice(idx, 1);
+    reordered.unshift(remembered);
+    return reordered;
+  }, [q, initialPeople, rememberedPersonId]);
 
   async function handleSelect(person: CheckInPerson) {
     setPending(true);
     setError(null);
     const result = isServant
-      ? await markServantAttendanceAction(token, person.id, person.kind === "pending" ? "pending" : "servant")
+      ? await markServantAttendanceAction(token, person.id, person.kind === "pending" ? "pending" : "servant", remember)
       : await markMemberAttendanceAction(token, person.id);
     setPending(false);
     if (result.error) {
@@ -105,9 +129,15 @@ export function CheckInFlow({
       const memberResult = result as Awaited<ReturnType<typeof markMemberAttendanceAction>>;
       setMissingFields(memberResult.missingFields);
       setShowMissingFields(true);
+      setRememberRestore(null);
     } else {
+      const servantResult = result as Awaited<ReturnType<typeof markServantAttendanceAction>>;
       setMissingFields(NO_MISSING_FIELDS);
       setShowMissingFields(false);
+      setRememberRestore({
+        rememberedCookieWritten: servantResult.rememberedCookieWritten,
+        previousRemembered: servantResult.previousRemembered,
+      });
     }
     setView("success");
   }
@@ -120,6 +150,7 @@ export function CheckInFlow({
     setCanUndo(false);
     setMissingFields(NO_MISSING_FIELDS);
     setShowMissingFields(false);
+    setRememberRestore(null);
     setView("success");
   }
 
@@ -128,7 +159,12 @@ export function CheckInFlow({
     setUndoing(true);
     setError(null);
     const result = isServant
-      ? await undoServantAttendanceAction(token, checkedInPerson.id, checkedInPerson.kind === "pending" ? "pending" : "servant")
+      ? await undoServantAttendanceAction(
+          token,
+          checkedInPerson.id,
+          checkedInPerson.kind === "pending" ? "pending" : "servant",
+          rememberRestore ?? undefined,
+        )
       : await undoMemberAttendanceAction(token, checkedInPerson.id);
     setUndoing(false);
     if (result.error) {
@@ -139,6 +175,7 @@ export function CheckInFlow({
     setCanUndo(false);
     setMissingFields(NO_MISSING_FIELDS);
     setShowMissingFields(false);
+    setRememberRestore(null);
     setView("list");
   }
 
@@ -215,18 +252,36 @@ export function CheckInFlow({
         className="w-full rounded-md border border-[#ddd] px-3 py-3 text-base focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
       />
       {error && <p className="mt-2 text-sm text-[#dc3545]">{error}</p>}
+      {isServant && (
+        <label className="mt-2 flex items-center gap-2 text-xs text-[#666]">
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+            className="h-3.5 w-3.5 rounded border-[#ccc] accent-[#1e3a5f]"
+          />
+          Remember me on this device
+        </label>
+      )}
       <div className="mt-3 max-h-[50vh] overflow-y-auto divide-y divide-[#f0f0f0]">
-        {filtered.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            disabled={pending}
-            onClick={() => handleSelect(p)}
-            className="w-full text-left px-2 py-3 text-[#333] hover:bg-[#f5f5f5] disabled:opacity-50"
-          >
-            {p.full_name}
-          </button>
-        ))}
+        {filtered.map((p) => {
+          const isRemembered = p.id === rememberedPersonId;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              disabled={pending}
+              onClick={() => handleSelect(p)}
+              className={`w-full text-left px-2 py-3 disabled:opacity-50 ${
+                isRemembered
+                  ? "border-l-4 border-[#1e3a5f] bg-[#eef4fa] font-semibold text-[#1e3a5f]"
+                  : "text-[#333] hover:bg-[#f5f5f5]"
+              }`}
+            >
+              {p.full_name}
+            </button>
+          );
+        })}
         {filtered.length === 0 && <p className="px-2 py-3 text-sm text-[#666]">No match.</p>}
       </div>
       <button

@@ -1,7 +1,9 @@
+import { cookies } from "next/headers";
 import { getCheckInFlow, listCheckInMembers, listCheckInServants } from "@/lib/checkin";
 import { getUniversities } from "@/lib/universities";
 import { getAppSettings } from "@/lib/app-settings";
 import { weekdayName } from "@/lib/attendance-window";
+import { SERVANT_CHECKIN_COOKIE, parseRememberedServant } from "@/lib/servant-checkin-cookie";
 import { AppLogo } from "@/components/AppLogo";
 import { CheckInFlow } from "@/components/checkin/CheckInFlow";
 
@@ -28,6 +30,10 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
     flow.isServant ? Promise.resolve([]) : getUniversities(),
   ]);
 
+  const rememberedServantId = flow.isServant
+    ? (parseRememberedServant((await cookies()).get(SERVANT_CHECKIN_COOKIE)?.value)?.id ?? null)
+    : null;
+
   return (
     <div className="min-h-full bg-[#f5f5f5]">
       <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-6 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)]">
@@ -46,6 +52,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
           universities={universities}
           memberLabel={settings.member_label}
           serviceDayName={weekdayName(settings.service_weekday)}
+          rememberedPersonId={rememberedServantId}
         />
       </main>
     </div>

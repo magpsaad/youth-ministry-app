@@ -1,6 +1,8 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { SERVANT_CHECKIN_COOKIE, SERVANT_CHECKIN_COOKIE_MAX_AGE, serializeRememberedServant } from "@/lib/servant-checkin-cookie";
 
 /** Normalizes any phone input to `1 (416) 930-1659` -- REQUIREMENTS.md §6.11
  * item 6. Leaves anything that isn't a recognizable 10/11-digit North
@@ -171,23 +173,76 @@ export async function submitNewMemberAction(token: string, input: NewMemberInput
   return { error: null, attendanceRecorded: row?.attendance_recorded ?? false };
 }
 
-export async function markServantAttendanceAction(token: string, id: string, kind: "servant" | "pending") {
+/** `remember` reflects the owner-requested "Remember me on this device"
+ * checkbox (default checked on the client) -- when true and the tap
+ * succeeds, this device's cookie is updated to this person, so they're
+ * pre-highlighted on future visits without searching again. The PREVIOUS
+ * cookie value is captured and handed back so a following "Not you? Undo"
+ * can restore it exactly (see undoServantAttendanceAction) -- a mis-tap
+ * with the box checked shouldn't permanently overwrite whoever this
+ * device already remembered. When `remember` is false (someone
+ * deliberately checking in a person other than themselves), the cookie
+ * is left untouched entirely. */
+export async function markServantAttendanceAction(token: string, id: string, kind: "servant" | "pending", remember: boolean) {
   const supabase = await createClient();
   const { data, error } =
     kind === "servant"
       ? await supabase.rpc("checkin_mark_servant_attendance", { p_token: token, p_servant_id: id }).single()
       : await supabase.rpc("checkin_mark_pending_servant_attendance", { p_token: token, p_pending_servant_id: id }).single();
   const row = data as { attendance_recorded: boolean; newly_created: boolean } | null;
-  return { error: error?.message ?? null, attendanceRecorded: row?.attendance_recorded ?? false, newlyCreated: row?.newly_created ?? false };
+
+  let rememberedCookieWritten = false;
+  let previousRemembered: string | null = null;
+  if (!error && remember) {
+    const cookieStore = await cookies();
+    previousRemembered = cookieStore.get(SERVANT_CHECKIN_COOKIE)?.value ?? null;
+    cookieStore.set(SERVANT_CHECKIN_COOKIE, serializeRememberedServant({ id, kind }), {
+      maxAge: SERVANT_CHECKIN_COOKIE_MAX_AGE,
+      path: "/",
+      sameSite: "lax",
+    });
+    rememberedCookieWritten = true;
+  }
+
+  return {
+    error: error?.message ?? null,
+    attendanceRecorded: row?.attendance_recorded ?? false,
+    newlyCreated: row?.newly_created ?? false,
+    rememberedCookieWritten,
+    previousRemembered,
+  };
 }
 
-/** Same mis-tap recovery as undoMemberAttendanceAction, for the Servants QR. */
-export async function undoServantAttendanceAction(token: string, id: string, kind: "servant" | "pending") {
+/** Same mis-tap recovery as undoMemberAttendanceAction, for the Servants QR.
+ * `restoreCookie` (from markServantAttendanceAction's result) undoes the
+ * "Remember me" cookie write from that same tap, restoring whatever this
+ * device remembered before it -- so undoing a mis-tap can't leave the
+ * wrong person remembered for next week. */
+export async function undoServantAttendanceAction(
+  token: string,
+  id: string,
+  kind: "servant" | "pending",
+  restoreCookie?: { rememberedCookieWritten: boolean; previousRemembered: string | null },
+) {
   const supabase = await createClient();
   const { error } =
     kind === "servant"
       ? await supabase.rpc("checkin_undo_servant_attendance", { p_token: token, p_servant_id: id })
       : await supabase.rpc("checkin_undo_pending_servant_attendance", { p_token: token, p_pending_servant_id: id });
+
+  if (!error && restoreCookie?.rememberedCookieWritten) {
+    const cookieStore = await cookies();
+    if (restoreCookie.previousRemembered) {
+      cookieStore.set(SERVANT_CHECKIN_COOKIE, restoreCookie.previousRemembered, {
+        maxAge: SERVANT_CHECKIN_COOKIE_MAX_AGE,
+        path: "/",
+        sameSite: "lax",
+      });
+    } else {
+      cookieStore.delete(SERVANT_CHECKIN_COOKIE);
+    }
+  }
+
   return { error: error?.message ?? null };
 }
 
