@@ -56,6 +56,7 @@ export async function uploadServantPhotoAction(servantId: string, formData: Form
 
   await logAudit(user.id, "SERVANT_PHOTO_UPLOADED", { details: { servantId } });
   revalidatePath("/servant-profiles");
+  revalidatePath("/servants-directory");
   return { error: null, photoPath: path };
 }
 

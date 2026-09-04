@@ -1,9 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { ServantDirectoryEntry } from "@/lib/servant-directory";
 import { PhoneLink } from "@/components/PhoneLink";
 import { servantPhotoUrl } from "@/lib/storage";
+import { uploadServantPhotoAction } from "@/app/servant-profiles/actions";
+import { PhotoCropperModal } from "@/components/PhotoCropperModal";
 
 function initials(name: string): string {
   return name
@@ -17,9 +19,14 @@ type Bucket = { label: string; entries: ServantDirectoryEntry[] };
 
 /** REQUIREMENTS.md §6.13 -- read-only, searchable. Categorical (grouped by
  * serving group, then General Coordinators, then Unassigned) and
- * Alphabetical view modes, consistent with Servant Profiles & Assignments. */
+ * Alphabetical view modes, consistent with Servant Profiles & Assignments.
+ *
+ * Owner-requested: a photo can still be ADDED from here when one is
+ * missing (no replace/delete -- that stays on Servant Profiles). Local
+ * state mirrors the initial server data so a successful upload shows up
+ * immediately without a full page reload. */
 export function ServantsDirectoryInteractive({
-  servants,
+  servants: initialServants,
   windowWeeks,
   dayName,
 }: {
@@ -27,8 +34,13 @@ export function ServantsDirectoryInteractive({
   windowWeeks: number | null;
   dayName: string;
 }) {
+  const [servants, setServants] = useState(initialServants);
   const [viewMode, setViewMode] = useState<"categorical" | "alphabetical">("categorical");
   const [search, setSearch] = useState("");
+
+  function handlePhotoUploaded(servantId: string, photoPath: string) {
+    setServants((prev) => prev.map((s) => (s.id === servantId ? { ...s, photo_path: photoPath } : s)));
+  }
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -113,43 +125,109 @@ export function ServantsDirectoryInteractive({
         ? buckets.map((bucket) => (
             <div key={bucket.label} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
               <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">{bucket.label}</h3>
-              <ServantCards entries={bucket.entries} />
+              <ServantCards entries={bucket.entries} onPhotoUploaded={handlePhotoUploaded} />
             </div>
           ))
         : filtered.length > 0 && (
             <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
-              <ServantCards entries={alphabetical} />
+              <ServantCards entries={alphabetical} onPhotoUploaded={handlePhotoUploaded} />
             </div>
           )}
     </div>
   );
 }
 
-function ServantCards({ entries }: { entries: ServantDirectoryEntry[] }) {
+function ServantCards({
+  entries,
+  onPhotoUploaded,
+}: {
+  entries: ServantDirectoryEntry[];
+  onPhotoUploaded: (servantId: string, photoPath: string) => void;
+}) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {entries.map((s) => {
-        const photoUrl = servantPhotoUrl(s.photo_path);
-        return (
-          <div key={s.id} className="flex items-center gap-3 border border-[#f0f0f0] rounded-lg p-3">
-            <div className="h-10 w-10 shrink-0 rounded-full bg-[#1e3a5f] text-white text-sm font-bold flex items-center justify-center overflow-hidden">
-              {photoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={photoUrl} alt={s.full_name} className="h-full w-full object-cover" />
-              ) : (
-                initials(s.full_name)
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-[#333] truncate">{s.full_name}</p>
-              <PhoneLink phone={s.phone} className="text-xs" />
-              <p className="text-[11px] text-[#666]">
-                Attendance: {s.averageAttendance === null ? "N/A" : `${s.averageAttendance}%`}
-              </p>
-            </div>
+      {entries.map((s) => (
+        <div key={s.id} className="flex items-center gap-3 border border-[#f0f0f0] rounded-lg p-3">
+          <ServantAvatar servant={s} onPhotoUploaded={onPhotoUploaded} />
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-[#333] truncate">{s.full_name}</p>
+            <PhoneLink phone={s.phone} className="text-xs" />
+            <p className="text-[11px] text-[#666]">
+              Attendance: {s.averageAttendance === null ? "N/A" : `${s.averageAttendance}%`}
+            </p>
           </div>
-        );
-      })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Owner-requested: when a servant has no photo yet, a small "+" badge under
+ * the avatar lets anyone with directory access add one right here -- no
+ * replace/delete, that stays on Servant Profiles. The upload itself still
+ * goes through uploadServantPhotoAction, so it's still subject to the same
+ * RLS rule as everywhere else in the app (self, or a coordinator). */
+function ServantAvatar({
+  servant,
+  onPhotoUploaded,
+}: {
+  servant: ServantDirectoryEntry;
+  onPhotoUploaded: (servantId: string, photoPath: string) => void;
+}) {
+  const photoUrl = servantPhotoUrl(servant.photo_path);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) setPendingFile(file);
+    e.target.value = "";
+  }
+
+  function handleCropped(blob: Blob) {
+    setPendingFile(null);
+    setUploading(true);
+    const formData = new FormData();
+    formData.set("photo", new File([blob], "photo.jpg", { type: "image/jpeg" }));
+    uploadServantPhotoAction(servant.id, formData).then((result) => {
+      setUploading(false);
+      if (result.error) {
+        alert(result.error);
+        return;
+      }
+      if (result.photoPath) onPhotoUploaded(servant.id, result.photoPath);
+    });
+  }
+
+  const avatar = (
+    <div className="h-10 w-10 shrink-0 rounded-full bg-[#1e3a5f] text-white text-sm font-bold flex items-center justify-center overflow-hidden">
+      {photoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={photoUrl} alt={servant.full_name} className="h-full w-full object-cover" />
+      ) : (
+        initials(servant.full_name)
+      )}
+    </div>
+  );
+
+  if (photoUrl) return avatar;
+
+  return (
+    <div className="flex flex-col items-center gap-0.5 shrink-0">
+      {avatar}
+      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelected} className="hidden" />
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={uploading}
+        title="Add photo"
+        aria-label="Add photo"
+        className="flex h-4 w-4 items-center justify-center rounded-full bg-[#1e3a5f] text-white text-[11px] font-bold leading-none hover:bg-[#152a45] disabled:opacity-60"
+      >
+        +
+      </button>
+      {pendingFile && <PhotoCropperModal file={pendingFile} onCancel={() => setPendingFile(null)} onCropped={handleCropped} />}
     </div>
   );
 }
