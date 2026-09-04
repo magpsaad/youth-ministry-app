@@ -1,10 +1,13 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { getCheckInFlow, listCheckInMembers, listCheckInServants } from "@/lib/checkin";
 import { getUniversities } from "@/lib/universities";
 import { getAppSettings } from "@/lib/app-settings";
 import { weekdayName } from "@/lib/attendance-window";
 import { SERVANT_CHECKIN_COOKIE, MEMBER_CHECKIN_COOKIE, parseRememberedCheckinPerson } from "@/lib/checkin-remember-cookie";
 import { AppLogo } from "@/components/AppLogo";
+import { HomeIcon } from "@/components/icons";
+import { SignOutButton } from "@/components/SignOutButton";
 import { CheckInFlow } from "@/components/checkin/CheckInFlow";
 
 /** REQUIREMENTS.md §6.11/§6.12 -- public, no-login check-in/intake page.
@@ -38,7 +41,25 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
-      <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-6 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)]">
+      <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-6 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative">
+        {/* Owner-requested: servants (unlike anonymous youth self-check-in)
+            are logged-in app users, so give them a way back into the main
+            app and a quick sign-out right from the check-in screen --
+            member self-check-in stays exactly as before. */}
+        {flow.isServant && (
+          <>
+            <Link
+              href="/"
+              title="Home"
+              aria-label="Home"
+              className="absolute top-2.5 left-4 inline-flex items-center gap-1 text-white/70 hover:text-white transition-colors"
+            >
+              <HomeIcon className="h-4 w-4" />
+              <span className="text-xs font-medium">Home</span>
+            </Link>
+            <SignOutButton className="absolute top-2.5 right-4 text-white/70 hover:text-white transition-colors" />
+          </>
+        )}
         <div className="flex justify-center">
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={56} />
         </div>
