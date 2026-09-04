@@ -73,9 +73,14 @@ export function QrCodesInteractive({ qrCodes: initial }: { qrCodes: QrCodeForPri
               // guaranteed blank page after it -- print:last:break-after-auto
               // undoes it for just that one (owner-reported: both a stray
               // blank page mid-list and one at the very end).
-              className="qr-print-card flex flex-col items-center print:break-inside-avoid print:break-after-page print:last:break-after-auto print:pt-12"
+              //
+              // Owner-reported: printed too small on 4x6 paper. globals.css
+              // now sizes each printed page at 4x6 (@page); this fills that
+              // page directly (w-[4in]/h-[6in], centered) instead of the
+              // old fixed-px sizing that assumed a full Letter/A4 sheet.
+              className="qr-print-card flex flex-col items-center print:break-inside-avoid print:break-after-page print:last:break-after-auto print:w-[4in] print:h-[6in] print:justify-center print:pt-0"
             >
-              <div className="rounded-3xl p-3 print:p-6" style={{ backgroundColor: q.color }}>
+              <div className="rounded-3xl p-3 print:p-8" style={{ backgroundColor: q.color }}>
                 {/* Owner-requested: the QR code itself is also a real link
                     to the same check-in page it encodes, so someone
                     viewing this screen can tap it directly instead of
@@ -84,13 +89,13 @@ export function QrCodesInteractive({ qrCodes: initial }: { qrCodes: QrCodeForPri
                     only. */}
                 <a href={q.checkInUrl} title={`Open check-in for ${q.label}`}>
                   <div
-                    className="rounded-2xl bg-white p-3 w-[220px] print:w-[420px] [&_svg]:h-auto [&_svg]:w-full"
+                    className="rounded-2xl bg-white p-3 w-[220px] print:w-[3.2in] [&_svg]:h-auto [&_svg]:w-full"
                     dangerouslySetInnerHTML={{ __html: q.svg }}
                   />
                 </a>
               </div>
               <div
-                className="-mt-4 rounded-full px-6 py-2 text-center font-bold shadow-[0_2px_6px_rgba(0,0,0,0.15)] print:px-10 print:py-4 print:text-2xl"
+                className="-mt-4 rounded-full px-6 py-2 text-center font-bold shadow-[0_2px_6px_rgba(0,0,0,0.15)] print:px-8 print:py-3 print:text-3xl"
                 style={{ backgroundColor: q.color, color: textColor }}
               >
                 {q.label}

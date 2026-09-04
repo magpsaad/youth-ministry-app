@@ -36,6 +36,17 @@ body {
     -webkit-print-color-adjust: exact !important;
   }
 
+  /* Owner-reported: QR codes print too small on 4x6 paper. The card markup
+     was sized in raw px assuming a full Letter/A4 sheet -- printing that
+     onto physical 4x6 paper (or "fit to page" scaling a Letter-sized
+     layout down to 4x6) shrinks everything. @page tells the browser each
+     printed page IS 4x6, so the per-code layout below is authored to fill
+     that page directly instead of being scaled down after the fact. */
+  @page {
+    size: 4in 6in;
+    margin: 0;
+  }
+
   /* Owner-reported: "1 QR code per page" wasn't holding on mobile print.
      Tailwind's print:break-after-page/print:break-inside-avoid utilities
      (QrCodesInteractive.tsx) only emit the modern break-after/break-inside
