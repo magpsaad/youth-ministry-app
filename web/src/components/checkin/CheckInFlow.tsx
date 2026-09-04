@@ -8,9 +8,20 @@ import {
   markServantAttendanceAction,
   undoMemberAttendanceAction,
   undoServantAttendanceAction,
+  type MissingMemberFields,
 } from "@/app/checkin/actions";
 import { MemberIntakeForm } from "./MemberIntakeForm";
 import { ServantIntakeForm } from "./ServantIntakeForm";
+import { MissingFieldsForm } from "./MissingFieldsForm";
+
+const NO_MISSING_FIELDS: MissingMemberFields = {
+  phone: false,
+  email: false,
+  university: false,
+  program: false,
+  dob: false,
+  fatherOfConfession: false,
+};
 
 type View = "list" | "member-intake" | "servant-intake" | "success";
 
@@ -61,6 +72,12 @@ export function CheckInFlow({
   const [checkedInPerson, setCheckedInPerson] = useState<CheckInPerson | null>(null);
   const [canUndo, setCanUndo] = useState(false);
   const [undoing, setUndoing] = useState(false);
+  // Owner-requested: right after "Not you? Undo", offer to fill in whichever
+  // of this member's own fields are currently blank. Member/youth flow only
+  // -- never shown for servants, and never after a fresh registration (the
+  // intake form just collected everything already).
+  const [missingFields, setMissingFields] = useState<MissingMemberFields>(NO_MISSING_FIELDS);
+  const [showMissingFields, setShowMissingFields] = useState(false);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -84,6 +101,14 @@ export function CheckInFlow({
     setWasNewRegistration(false);
     setCheckedInPerson(person);
     setCanUndo(result.attendanceRecorded && result.newlyCreated);
+    if (!isServant) {
+      const memberResult = result as Awaited<ReturnType<typeof markMemberAttendanceAction>>;
+      setMissingFields(memberResult.missingFields);
+      setShowMissingFields(true);
+    } else {
+      setMissingFields(NO_MISSING_FIELDS);
+      setShowMissingFields(false);
+    }
     setView("success");
   }
 
@@ -93,6 +118,8 @@ export function CheckInFlow({
     setWasNewRegistration(true);
     setCheckedInPerson(null);
     setCanUndo(false);
+    setMissingFields(NO_MISSING_FIELDS);
+    setShowMissingFields(false);
     setView("success");
   }
 
@@ -110,6 +137,8 @@ export function CheckInFlow({
     }
     setCheckedInPerson(null);
     setCanUndo(false);
+    setMissingFields(NO_MISSING_FIELDS);
+    setShowMissingFields(false);
     setView("list");
   }
 
@@ -134,11 +163,20 @@ export function CheckInFlow({
               type="button"
               onClick={handleUndo}
               disabled={undoing}
-              className="mt-4 text-sm font-semibold text-[#666] underline hover:text-[#333] disabled:opacity-50"
+              className="mt-4 text-base font-bold text-[#dc3545] underline hover:text-[#c82333] disabled:opacity-50"
             >
               {undoing ? "Removing…" : "Not you? Undo"}
             </button>
           </>
+        )}
+        {!isServant && showMissingFields && checkedInPerson && (
+          <MissingFieldsForm
+            token={token}
+            memberId={checkedInPerson.id}
+            missing={missingFields}
+            universities={universities}
+            onDone={() => setShowMissingFields(false)}
+          />
         )}
       </div>
     );
