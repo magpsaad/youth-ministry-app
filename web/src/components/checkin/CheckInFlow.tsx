@@ -48,10 +48,11 @@ export function CheckInFlow({
   /** Owner-reported: the "check back this Friday" message was hardcoded to
    * "Friday" regardless of the actually-configured service day. */
   serviceDayName: string;
-  /** Owner-requested: whoever this device last checked in as a servant with
-   * "Remember me" checked (see servant-checkin-cookie.ts) -- read server-
-   * side so the match is already known on first paint, no flash. Servant
-   * flow only; always null for member self-check-in. */
+  /** Owner-requested: whoever this device last checked in (as a servant or
+   * a member/youth) with "Remember me" checked (see
+   * checkin-remember-cookie.ts) -- read server-side so the match is
+   * already known on first paint, no flash. Always null for an
+   * intake-only flow (no list to pre-highlight in). */
   rememberedPersonId: string | null;
 }) {
   const [view, setView] = useState<View>(
@@ -114,7 +115,7 @@ export function CheckInFlow({
     setError(null);
     const result = isServant
       ? await markServantAttendanceAction(token, person.id, person.kind === "pending" ? "pending" : "servant", remember)
-      : await markMemberAttendanceAction(token, person.id);
+      : await markMemberAttendanceAction(token, person.id, remember);
     setPending(false);
     if (result.error) {
       setError(result.error);
@@ -125,19 +126,14 @@ export function CheckInFlow({
     setWasNewRegistration(false);
     setCheckedInPerson(person);
     setCanUndo(result.attendanceRecorded && result.newlyCreated);
+    setRememberRestore({ rememberedCookieWritten: result.rememberedCookieWritten, previousRemembered: result.previousRemembered });
     if (!isServant) {
       const memberResult = result as Awaited<ReturnType<typeof markMemberAttendanceAction>>;
       setMissingFields(memberResult.missingFields);
       setShowMissingFields(true);
-      setRememberRestore(null);
     } else {
-      const servantResult = result as Awaited<ReturnType<typeof markServantAttendanceAction>>;
       setMissingFields(NO_MISSING_FIELDS);
       setShowMissingFields(false);
-      setRememberRestore({
-        rememberedCookieWritten: servantResult.rememberedCookieWritten,
-        previousRemembered: servantResult.previousRemembered,
-      });
     }
     setView("success");
   }
@@ -165,7 +161,7 @@ export function CheckInFlow({
           checkedInPerson.kind === "pending" ? "pending" : "servant",
           rememberRestore ?? undefined,
         )
-      : await undoMemberAttendanceAction(token, checkedInPerson.id);
+      : await undoMemberAttendanceAction(token, checkedInPerson.id, rememberRestore ?? undefined);
     setUndoing(false);
     if (result.error) {
       setError(result.error);
@@ -243,26 +239,24 @@ export function CheckInFlow({
 
   return (
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4">
+      <label className="flex items-center gap-2 text-xs text-[#666]">
+        <input
+          type="checkbox"
+          checked={remember}
+          onChange={(e) => setRemember(e.target.checked)}
+          className="h-3.5 w-3.5 rounded border-[#ccc] accent-[#1e3a5f]"
+        />
+        Remember me on this device
+      </label>
       <input
         autoFocus
         type="text"
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Search your name…"
-        className="w-full rounded-md border border-[#ddd] px-3 py-3 text-base focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
+        className="mt-2 w-full rounded-md border border-[#ddd] px-3 py-3 text-base focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10"
       />
       {error && <p className="mt-2 text-sm text-[#dc3545]">{error}</p>}
-      {isServant && (
-        <label className="mt-2 flex items-center gap-2 text-xs text-[#666]">
-          <input
-            type="checkbox"
-            checked={remember}
-            onChange={(e) => setRemember(e.target.checked)}
-            className="h-3.5 w-3.5 rounded border-[#ccc] accent-[#1e3a5f]"
-          />
-          Remember me on this device
-        </label>
-      )}
       <div className="mt-3 max-h-[50vh] overflow-y-auto divide-y divide-[#f0f0f0]">
         {filtered.map((p) => {
           const isRemembered = p.id === rememberedPersonId;

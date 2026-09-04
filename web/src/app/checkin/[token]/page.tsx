@@ -3,7 +3,7 @@ import { getCheckInFlow, listCheckInMembers, listCheckInServants } from "@/lib/c
 import { getUniversities } from "@/lib/universities";
 import { getAppSettings } from "@/lib/app-settings";
 import { weekdayName } from "@/lib/attendance-window";
-import { SERVANT_CHECKIN_COOKIE, parseRememberedServant } from "@/lib/servant-checkin-cookie";
+import { SERVANT_CHECKIN_COOKIE, MEMBER_CHECKIN_COOKIE, parseRememberedCheckinPerson } from "@/lib/checkin-remember-cookie";
 import { AppLogo } from "@/components/AppLogo";
 import { CheckInFlow } from "@/components/checkin/CheckInFlow";
 
@@ -30,9 +30,11 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
     flow.isServant ? Promise.resolve([]) : getUniversities(),
   ]);
 
-  const rememberedServantId = flow.isServant
-    ? (parseRememberedServant((await cookies()).get(SERVANT_CHECKIN_COOKIE)?.value)?.id ?? null)
-    : null;
+  const rememberCookieName = flow.isServant ? SERVANT_CHECKIN_COOKIE : MEMBER_CHECKIN_COOKIE;
+  const rememberedPersonId =
+    flow.flowType === "check_in_and_intake"
+      ? (parseRememberedCheckinPerson((await cookies()).get(rememberCookieName)?.value)?.id ?? null)
+      : null;
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
@@ -52,7 +54,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
           universities={universities}
           memberLabel={settings.member_label}
           serviceDayName={weekdayName(settings.service_weekday)}
-          rememberedPersonId={rememberedServantId}
+          rememberedPersonId={rememberedPersonId}
         />
       </main>
     </div>

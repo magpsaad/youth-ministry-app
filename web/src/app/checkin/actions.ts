@@ -2,7 +2,41 @@
 
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { SERVANT_CHECKIN_COOKIE, SERVANT_CHECKIN_COOKIE_MAX_AGE, serializeRememberedServant } from "@/lib/servant-checkin-cookie";
+import {
+  SERVANT_CHECKIN_COOKIE,
+  MEMBER_CHECKIN_COOKIE,
+  CHECKIN_REMEMBER_COOKIE_MAX_AGE,
+  serializeRememberedCheckinPerson,
+} from "@/lib/checkin-remember-cookie";
+
+/** Shared by mark*AttendanceAction for both the member and servant flows --
+ * writes `id`/`kind` into the given cookie and returns whatever it
+ * previously held, so a following undo can restore it exactly. */
+async function writeRememberCookie(cookieName: string, id: string, kind: "member" | "servant" | "pending") {
+  const cookieStore = await cookies();
+  const previousRemembered = cookieStore.get(cookieName)?.value ?? null;
+  cookieStore.set(cookieName, serializeRememberedCheckinPerson({ id, kind }), {
+    maxAge: CHECKIN_REMEMBER_COOKIE_MAX_AGE,
+    path: "/",
+    sameSite: "lax",
+  });
+  return previousRemembered;
+}
+
+/** Shared by undo*AttendanceAction -- reverts a cookie to exactly what
+ * writeRememberCookie captured before the mis-tap being undone. */
+async function restoreRememberCookie(cookieName: string, previousRemembered: string | null) {
+  const cookieStore = await cookies();
+  if (previousRemembered) {
+    cookieStore.set(cookieName, previousRemembered, {
+      maxAge: CHECKIN_REMEMBER_COOKIE_MAX_AGE,
+      path: "/",
+      sameSite: "lax",
+    });
+  } else {
+    cookieStore.delete(cookieName);
+  }
+}
 
 /** Normalizes any phone input to `1 (416) 930-1659` -- REQUIREMENTS.md §6.11
  * item 6. Leaves anything that isn't a recognizable 10/11-digit North
@@ -55,8 +89,12 @@ export type MissingMemberFields = {
  * University/Program/DOB/Father of Confession are currently blank on this
  * member's record -- computed server-side so the client never has to
  * receive (and could never accidentally display) the record's real values
- * to figure this out itself. */
-export async function markMemberAttendanceAction(token: string, memberId: string) {
+ * to figure this out itself.
+ *
+ * `remember` is the owner-requested "Remember me on this device" checkbox
+ * (default checked) -- see markServantAttendanceAction for the full
+ * rationale, identical here for the member/youth flow. */
+export async function markMemberAttendanceAction(token: string, memberId: string, remember: boolean) {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("checkin_mark_attendance", { p_token: token, p_member_id: memberId }).single();
   const row = data as {
@@ -77,11 +115,21 @@ export async function markMemberAttendanceAction(token: string, memberId: string
     dob: row?.missing_dob ?? false,
     fatherOfConfession: row?.missing_father_of_confession ?? false,
   };
+
+  let rememberedCookieWritten = false;
+  let previousRemembered: string | null = null;
+  if (!error && remember) {
+    previousRemembered = await writeRememberCookie(MEMBER_CHECKIN_COOKIE, memberId, "member");
+    rememberedCookieWritten = true;
+  }
+
   return {
     error: error?.message ?? null,
     attendanceRecorded: row?.attendance_recorded ?? false,
     newlyCreated: row?.newly_created ?? false,
     missingFields,
+    rememberedCookieWritten,
+    previousRemembered,
   };
 }
 
@@ -127,10 +175,20 @@ export async function fillMissingMemberFieldsAction(token: string, memberId: str
 /** Mis-tap recovery for the self-check-in list (owner-reported: a wrong tap
  * had no way to be undone). Only removes a record checkin_mark_attendance
  * itself created within the last couple minutes (see migration 0046) --
- * never something pre-existing. */
-export async function undoMemberAttendanceAction(token: string, memberId: string) {
+ * never something pre-existing. `restoreCookie` reverts the "Remember me"
+ * cookie write from that same tap, same as undoServantAttendanceAction. */
+export async function undoMemberAttendanceAction(
+  token: string,
+  memberId: string,
+  restoreCookie?: { rememberedCookieWritten: boolean; previousRemembered: string | null },
+) {
   const supabase = await createClient();
   const { error } = await supabase.rpc("checkin_undo_attendance", { p_token: token, p_member_id: memberId });
+
+  if (!error && restoreCookie?.rememberedCookieWritten) {
+    await restoreRememberCookie(MEMBER_CHECKIN_COOKIE, restoreCookie.previousRemembered);
+  }
+
   return { error: error?.message ?? null };
 }
 
@@ -194,13 +252,7 @@ export async function markServantAttendanceAction(token: string, id: string, kin
   let rememberedCookieWritten = false;
   let previousRemembered: string | null = null;
   if (!error && remember) {
-    const cookieStore = await cookies();
-    previousRemembered = cookieStore.get(SERVANT_CHECKIN_COOKIE)?.value ?? null;
-    cookieStore.set(SERVANT_CHECKIN_COOKIE, serializeRememberedServant({ id, kind }), {
-      maxAge: SERVANT_CHECKIN_COOKIE_MAX_AGE,
-      path: "/",
-      sameSite: "lax",
-    });
+    previousRemembered = await writeRememberCookie(SERVANT_CHECKIN_COOKIE, id, kind);
     rememberedCookieWritten = true;
   }
 
@@ -231,16 +283,7 @@ export async function undoServantAttendanceAction(
       : await supabase.rpc("checkin_undo_pending_servant_attendance", { p_token: token, p_pending_servant_id: id });
 
   if (!error && restoreCookie?.rememberedCookieWritten) {
-    const cookieStore = await cookies();
-    if (restoreCookie.previousRemembered) {
-      cookieStore.set(SERVANT_CHECKIN_COOKIE, restoreCookie.previousRemembered, {
-        maxAge: SERVANT_CHECKIN_COOKIE_MAX_AGE,
-        path: "/",
-        sameSite: "lax",
-      });
-    } else {
-      cookieStore.delete(SERVANT_CHECKIN_COOKIE);
-    }
+    await restoreRememberCookie(SERVANT_CHECKIN_COOKIE, restoreCookie.previousRemembered);
   }
 
   return { error: error?.message ?? null };
