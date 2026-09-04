@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAppSettings } from "@/lib/app-settings";
 import { createClient } from "@/lib/supabase/server";
+import { AppLogo } from "@/components/AppLogo";
 import { signInWithGoogle, signInWithPassword, signUpWithPassword, requestPasswordReset } from "./actions";
 
 export default async function LoginPage({
@@ -24,13 +25,7 @@ export default async function LoginPage({
     <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] px-4 py-12">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-6">
-          <div className="h-[60px] w-[60px] rounded-full bg-[#1e3a5f] flex items-center justify-center text-white font-bold text-xl shadow-[0_2px_10px_rgba(0,0,0,0.2)]">
-            {settings.app_title_short
-              .split(" ")
-              .map((w) => w[0])
-              .slice(0, 2)
-              .join("")}
-          </div>
+          <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={60} />
           <h1 className="mt-4 text-2xl font-bold text-[#1e3a5f] text-center">
             {settings.app_title_long}
           </h1>
