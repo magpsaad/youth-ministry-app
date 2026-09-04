@@ -15,7 +15,9 @@ import {
 
 const ROLE_LABELS: Record<RoleGrant["role"], string> = {
   servant: "Servant",
-  sub_coordinator: "Sub-Coordinator",
+  // Owner-requested: displayed as just "Coordinator" now (was
+  // "Sub-Coordinator") -- the internal role/key name is unchanged.
+  sub_coordinator: "Coordinator",
   read_only: "Read-only",
   general_coordinator: "Gen. Coord",
 };

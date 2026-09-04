@@ -77,7 +77,7 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
         <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
           <h2 className="text-lg font-bold text-[#1e3a5f] mb-2">Review Servant Assignments (optional)</h2>
           <p className="text-sm text-[#666] mb-3">
-            Servants and Sub-Coordinators who were scoped to the <em>old</em> Yr 5+ group have already been reassigned
+            Servants and Coordinators who were scoped to the <em>old</em> Yr 5+ group have already been reassigned
             to the new Yr 1 cohort automatically — the group that just became the new Yr 5+ keeps its own servants,
             unaffected. Use this to fine-tune anyone&rsquo;s assignment now, or skip and handle it later via Servant
             Assignments.
@@ -133,7 +133,7 @@ export function GroupTransitionInteractive({ initialPreview }: { initialPreview:
                   {" "}
                   <strong>{preview.oldTerminalGroupName}</strong> (the current Yr {preview.currentTerminalPosition}+)
                   is absorbed into it and archived: its members join the new terminal roster, and its
-                  Servants/Sub-Coordinators/Read-Only roll back to serve the new Yr 1 instead.
+                  Servants/Coordinators/Read-Only roll back to serve the new Yr 1 instead.
                 </>
               )}
             </p>
