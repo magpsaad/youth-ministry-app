@@ -54,8 +54,8 @@ async function siteOrigin(): Promise<string> {
  * or has changed (its label, from a future Group Transition rename) since
  * it last was.
  *
- * Ordered Year 0 -> Year 5+, then Servants -- every code, for every app
- * user (owner's explicit call, migration 0040). Reads through
+ * Ordered Servants first, then Year 0 -> Year 5+ (owner-requested) --
+ * every code, for every app user (migration 0040). Reads through
  * get_qr_codes_with_groups() rather than a plain embedded-join select:
  * groups_select's position-0 branch stays Admin-only for every OTHER
  * screen, so a plain select's embedded `groups` join for the Yr0 row
@@ -85,7 +85,7 @@ export async function getQrCodesForPrinting(): Promise<QrCodeForPrinting[]> {
   }[];
 
   const sorted = [...rows].sort((a, b) => {
-    const rank = (r: (typeof rows)[number]) => (r.group_id === null ? 999 : (r.ladder_position ?? 999));
+    const rank = (r: (typeof rows)[number]) => (r.group_id === null ? -1 : (r.ladder_position ?? 999));
     return rank(a) - rank(b);
   });
 
