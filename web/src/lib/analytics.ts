@@ -35,14 +35,22 @@ export type AnalyticsRawData = {
 export async function getAnalyticsRawData(groupId: string | string[]): Promise<AnalyticsRawData> {
   const supabase = await createClient();
 
-  let memberQuery = supabase
-    .from("members")
-    .select(
-      "id, assigned_servant_id, is_visitor, join_date, group_id, phone, email, date_of_birth, father_of_confession, photo_path, university:universities(proximity)",
-    )
-    .eq("status", "active");
-  memberQuery = Array.isArray(groupId) ? memberQuery.in("group_id", groupId) : memberQuery.eq("group_id", groupId);
-  const { data: memberRows } = await memberQuery;
+  // Paged via fetchAllRows -- an unpaged `.select()` silently truncates past
+  // PostgREST's 1000-row cap once the combined member count crosses it (see
+  // lib/members.ts's getGroupMembers for the full story). Ordered by `id`
+  // purely so paging has a stable, deterministic sort to page across.
+  const memberRows = await fetchAllRows((from, to) => {
+    let q = supabase
+      .from("members")
+      .select(
+        "id, assigned_servant_id, is_visitor, join_date, group_id, phone, email, date_of_birth, father_of_confession, photo_path, university:universities(proximity)",
+      )
+      .eq("status", "active")
+      .order("id")
+      .range(from, to);
+    q = Array.isArray(groupId) ? q.in("group_id", groupId) : q.eq("group_id", groupId);
+    return q;
+  });
 
   const members: MemberAnalyticsRow[] = (memberRows ?? []).map((m) => ({
     id: m.id,

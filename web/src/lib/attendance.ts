@@ -66,16 +66,24 @@ function toMinutes(hms: string): number {
 export async function getAttendanceBundle(groupId: string | string[]): Promise<AttendanceBundle> {
   const supabase = await createClient();
 
-  let memberQuery = supabase
-    .from("members")
-    .select("id, full_name, is_visitor, assigned_servant_id, join_date, university:universities(proximity)")
-    .eq("status", "active")
-    .order("full_name");
-  memberQuery = Array.isArray(groupId) ? memberQuery.in("group_id", groupId) : memberQuery.eq("group_id", groupId);
-
-  const [{ data: settings }, { data: memberRows }, windowSettings] = await Promise.all([
+  // Paged via fetchAllRows -- an unpaged `.select()` silently truncates past
+  // PostgREST's 1000-row cap (owner-reported: the combined Youth List and
+  // its sibling tabs, this one included, all fetch every active member the
+  // same unpaged way -- see lib/members.ts's getGroupMembers for the full
+  // story). `id` breaks ties on full_name so paging can't skip/duplicate a row.
+  const [{ data: settings }, memberRows, windowSettings] = await Promise.all([
     supabase.from("app_settings").select("same_day_cutoff_time, timezone").single(),
-    memberQuery,
+    fetchAllRows((from, to) => {
+      let q = supabase
+        .from("members")
+        .select("id, full_name, is_visitor, assigned_servant_id, join_date, university:universities(proximity)")
+        .eq("status", "active")
+        .order("full_name")
+        .order("id")
+        .range(from, to);
+      q = Array.isArray(groupId) ? q.in("group_id", groupId) : q.eq("group_id", groupId);
+      return q;
+    }),
     getAttendanceWindowSettings(),
   ]);
 

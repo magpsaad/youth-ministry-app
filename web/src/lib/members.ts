@@ -68,11 +68,24 @@ const LIST_SELECT =
  */
 export async function getGroupMembers(groupId: string | string[]): Promise<MemberListItem[]> {
   const supabase = await createClient();
-  let query = supabase.from("members").select(LIST_SELECT).eq("status", "active").order("full_name");
-  query = Array.isArray(groupId) ? query.in("group_id", groupId) : query.eq("group_id", groupId);
-  const [{ data }, windowSettings] = await Promise.all([query, getAttendanceWindowSettings()]);
 
-  const members = (data ?? []) as unknown as MemberListItem[];
+  // Owner-reported: the "all cohorts combined" Youth List showed exactly
+  // 1000 -- PostgREST's configured db-max-rows for this project (see
+  // lib/pagination.ts) -- when the real combined total was 1012. A single
+  // unpaged `.select()` silently truncates past that cap; paged via
+  // fetchAllRows like the attendance query below already was. Ties on
+  // full_name alone aren't safe to page across (could skip or duplicate a
+  // row at a page boundary), so `id` is added as a deterministic tiebreaker.
+  const [data, windowSettings] = await Promise.all([
+    fetchAllRows((from, to) => {
+      let q = supabase.from("members").select(LIST_SELECT).eq("status", "active").order("full_name").order("id").range(from, to);
+      q = Array.isArray(groupId) ? q.in("group_id", groupId) : q.eq("group_id", groupId);
+      return q;
+    }),
+    getAttendanceWindowSettings(),
+  ]);
+
+  const members = data as unknown as MemberListItem[];
   if (members.length === 0) return [];
 
   // Filtered by the same group_id(s)/active-status as the members query
@@ -133,10 +146,19 @@ export type MemberBasic = {
  * requires a second full attendance_records fetch this doesn't need. */
 export async function getGroupMembersLite(groupId: string | string[]): Promise<MemberBasic[]> {
   const supabase = await createClient();
-  let query = supabase.from("members").select("id, full_name, phone, assigned_servant_id").eq("status", "active").order("full_name");
-  query = Array.isArray(groupId) ? query.in("group_id", groupId) : query.eq("group_id", groupId);
-  const { data } = await query;
-  return data ?? [];
+  // Paged via fetchAllRows -- see getGroupMembers above for why an unpaged
+  // `.select()` silently truncates past PostgREST's 1000-row cap.
+  return fetchAllRows((from, to) => {
+    let q = supabase
+      .from("members")
+      .select("id, full_name, phone, assigned_servant_id")
+      .eq("status", "active")
+      .order("full_name")
+      .order("id")
+      .range(from, to);
+    q = Array.isArray(groupId) ? q.in("group_id", groupId) : q.eq("group_id", groupId);
+    return q;
+  });
 }
 
 export async function getMember(memberId: string): Promise<MemberDetail | null> {
