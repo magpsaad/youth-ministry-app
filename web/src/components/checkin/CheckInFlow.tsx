@@ -36,6 +36,7 @@ export function CheckInFlow({
   initialPeople,
   universities,
   memberLabel,
+  groupName,
   serviceDayName,
   rememberedPersonId,
 }: {
@@ -45,6 +46,10 @@ export function CheckInFlow({
   initialPeople: CheckInPerson[];
   universities: University[];
   memberLabel: string;
+  /** The scanned QR's own group name -- "Servants" for the servant flow,
+   * meaningless there since the duplicate-detection feature is member-
+   * flow only. Used for the "Move my record to <groupName>" option. */
+  groupName: string;
   /** Owner-reported: the "check back this Friday" message was hardcoded to
    * "Friday" regardless of the actually-configured service day. */
   serviceDayName: string;
@@ -221,6 +226,7 @@ export function CheckInFlow({
         token={token}
         universities={universities}
         memberLabel={memberLabel}
+        currentGroupName={groupName}
         onBack={flowType === "check_in_and_intake" ? () => setView("list") : undefined}
         onSubmitted={handleIntakeSubmitted}
       />

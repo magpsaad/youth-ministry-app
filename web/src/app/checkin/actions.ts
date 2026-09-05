@@ -205,6 +205,125 @@ export type NewMemberInput = {
   comments: string | null;
 };
 
+/** Owner-reported: a youth's real, already-registered record (possibly in
+ * a different cohort) went undetected when she used "New Youth
+ * Registration" instead of finding her name in the tap-a-name list --
+ * which only ever searches the ONE cohort's own roster. Called before
+ * submitNewMemberAction actually creates anything -- searches every
+ * cohort in one query for an exact match on name, phone, or email (see
+ * migration 0054 for the exact ranking rule when more than one
+ * candidate matches). Only ever returns same/different booleans, never
+ * the matched record's actual field values -- the client already has
+ * whatever she typed herself, so there's nothing else it needs to
+ * display without risking exposing someone else's real data. */
+export type DuplicateMatch = {
+  memberId: string;
+  groupName: string;
+  sameGroup: boolean;
+  nameMatches: boolean;
+  phoneMatches: boolean;
+  emailMatches: boolean;
+  universityMatches: boolean | null;
+  programMatches: boolean | null;
+  dobMatches: boolean | null;
+  genderMatches: boolean | null;
+};
+
+export async function checkPossibleDuplicateMemberAction(token: string, input: NewMemberInput): Promise<DuplicateMatch | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .rpc("checkin_find_possible_duplicate_member", {
+      p_token: token,
+      p_full_name: input.full_name.trim(),
+      p_phone: formatPhone(input.phone ?? ""),
+      p_email: input.email?.trim() ?? "",
+      p_university_id: input.university_id,
+      p_program_of_study: input.program_of_study,
+      p_date_of_birth: input.date_of_birth,
+      p_gender: input.gender,
+    })
+    .maybeSingle();
+  if (error || !data) return null;
+
+  const row = data as {
+    member_id: string;
+    group_name: string;
+    same_group: boolean;
+    name_matches: boolean;
+    phone_matches: boolean;
+    email_matches: boolean;
+    university_matches: boolean | null;
+    program_matches: boolean | null;
+    dob_matches: boolean | null;
+    gender_matches: boolean | null;
+  };
+  return {
+    memberId: row.member_id,
+    groupName: row.group_name,
+    sameGroup: row.same_group,
+    nameMatches: row.name_matches,
+    phoneMatches: row.phone_matches,
+    emailMatches: row.email_matches,
+    universityMatches: row.university_matches,
+    programMatches: row.program_matches,
+    dobMatches: row.dob_matches,
+    genderMatches: row.gender_matches,
+  };
+}
+
+export type DuplicateResolution = {
+  updatePhone: boolean;
+  updateDob: boolean;
+  updateGender: boolean;
+  updateUniversity: boolean;
+  updateProgram: boolean;
+  updateHomeAddress: boolean;
+  updateFatherOfConfession: boolean;
+  moveToScannedGroup: boolean;
+};
+
+/** The "yes, it's me" path -- applies only the specific field updates she
+ * opted into, optionally moves her record to the cohort she actually
+ * scanned into, and marks today's attendance against her EXISTING
+ * record. Deliberately not markMemberAttendanceAction/
+ * checkin_mark_attendance -- that requires the member's group to match
+ * the scanned QR's group, which is correct for the normal tap-a-name
+ * flow but wrong here: the whole point is letting her check in today
+ * even if she doesn't move cohorts. */
+export async function resolveDuplicateMemberAction(
+  token: string,
+  memberId: string,
+  input: NewMemberInput,
+  resolution: DuplicateResolution,
+) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .rpc("checkin_resolve_duplicate_member", {
+      p_token: token,
+      p_member_id: memberId,
+      p_move_to_scanned_group: resolution.moveToScannedGroup,
+      p_phone: resolution.updatePhone ? formatPhone(input.phone ?? "") : null,
+      p_update_phone: resolution.updatePhone,
+      p_date_of_birth: resolution.updateDob ? input.date_of_birth : null,
+      p_update_dob: resolution.updateDob,
+      p_gender: resolution.updateGender ? input.gender : null,
+      p_update_gender: resolution.updateGender,
+      p_university_id: resolution.updateUniversity ? input.university_id : null,
+      p_update_university: resolution.updateUniversity,
+      p_program_of_study: resolution.updateProgram ? input.program_of_study : null,
+      p_update_program: resolution.updateProgram,
+      p_home_address: resolution.updateHomeAddress ? input.home_address : null,
+      p_update_home_address: resolution.updateHomeAddress,
+      p_father_of_confession: resolution.updateFatherOfConfession ? input.father_of_confession : null,
+      p_update_father_of_confession: resolution.updateFatherOfConfession,
+    })
+    .single();
+
+  if (error) return { error: error.message, attendanceRecorded: false };
+  const row = data as { attendance_recorded: boolean; newly_created: boolean } | null;
+  return { error: null, attendanceRecorded: row?.attendance_recorded ?? false };
+}
+
 export async function submitNewMemberAction(token: string, input: NewMemberInput) {
   const validationError = validateIntake(input);
   if (validationError) return { error: validationError, attendanceRecorded: false };

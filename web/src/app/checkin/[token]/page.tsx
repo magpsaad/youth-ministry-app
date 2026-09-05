@@ -74,6 +74,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
           initialPeople={people}
           universities={universities}
           memberLabel={settings.member_label}
+          groupName={flow.label}
           serviceDayName={weekdayName(settings.service_weekday)}
           rememberedPersonId={rememberedPersonId}
         />

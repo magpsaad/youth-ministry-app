@@ -2,8 +2,14 @@
 
 import { useState } from "react";
 import type { University } from "@/lib/universities";
-import { submitNewMemberAction, type NewMemberInput } from "@/app/checkin/actions";
+import {
+  submitNewMemberAction,
+  checkPossibleDuplicateMemberAction,
+  type NewMemberInput,
+  type DuplicateMatch,
+} from "@/app/checkin/actions";
 import { todayEastern } from "@/lib/timezone";
+import { PossibleDuplicateMemberModal } from "./PossibleDuplicateMemberModal";
 
 const inputClass =
   "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10";
@@ -50,21 +56,41 @@ export function MemberIntakeForm({
   token,
   universities,
   memberLabel,
+  currentGroupName,
   onBack,
   onSubmitted,
 }: {
   token: string;
   universities: University[];
   memberLabel: string;
+  currentGroupName: string;
   onBack?: () => void;
   onSubmitted: (name: string, attendanceRecorded: boolean) => void;
 }) {
   const [form, setForm] = useState<NewMemberInput>(EMPTY_FORM);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Owner-requested: before actually creating a new record, check whether
+  // a likely match already exists (possibly in another cohort -- the
+  // tap-a-name list only ever searches the one cohort she scanned into,
+  // so it can't catch that case). Non-null while that confirmation step
+  // is showing instead of the form.
+  const [duplicateMatch, setDuplicateMatch] = useState<DuplicateMatch | null>(null);
 
   function field<K extends keyof NewMemberInput>(key: K, value: NewMemberInput[K]) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  async function createNewRecord() {
+    setPending(true);
+    setError(null);
+    const result = await submitNewMemberAction(token, form);
+    setPending(false);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    onSubmitted(form.full_name, result.attendanceRecorded);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -76,13 +102,30 @@ export function MemberIntakeForm({
     }
     setPending(true);
     setError(null);
-    const result = await submitNewMemberAction(token, form);
+    const match = await checkPossibleDuplicateMemberAction(token, form);
     setPending(false);
-    if (result.error) {
-      setError(result.error);
+    if (match) {
+      setDuplicateMatch(match);
       return;
     }
-    onSubmitted(form.full_name, result.attendanceRecorded);
+    await createNewRecord();
+  }
+
+  if (duplicateMatch) {
+    return (
+      <PossibleDuplicateMemberModal
+        token={token}
+        match={duplicateMatch}
+        universities={universities}
+        formInput={form}
+        currentGroupName={currentGroupName}
+        onNotMe={() => {
+          setDuplicateMatch(null);
+          void createNewRecord();
+        }}
+        onResolved={(attendanceRecorded) => onSubmitted(form.full_name, attendanceRecorded)}
+      />
+    );
   }
 
   return (
