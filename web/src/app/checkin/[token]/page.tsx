@@ -54,7 +54,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
               aria-label="Home"
               className="absolute top-2.5 left-4 inline-flex items-center gap-1 text-white/70 hover:text-white transition-colors"
             >
-              <HomeIcon className="h-6 w-6" />
+              <HomeIcon className="h-8 w-8" />
               <span className="text-xs font-medium">Home</span>
             </Link>
             <SignOutButton className="absolute top-2.5 right-4 text-white/70 hover:text-white transition-colors" />
