@@ -205,6 +205,8 @@ export function AccessMaintenanceInteractive({
               onClick={() => {
                 setSelectedProfileId(p.id);
                 setError(null);
+                setShowMerge(false);
+                setMergeSearch("");
               }}
               className={`w-full text-left py-2 px-2 text-sm rounded-md ${
                 selectedProfileId === p.id ? "bg-[#1e3a5f] text-white" : "hover:bg-[#f5f5f5] text-[#333]"
