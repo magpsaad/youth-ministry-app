@@ -54,7 +54,7 @@ export function ExportListsInteractive({
   }
 
   function handleDownloadCsv() {
-    const csv = ["Name", ...names.map((n) => `"${n.replace(/"/g, '""')}"`)].join("\r\n");
+    const csv = [`"${listTitle.replace(/"/g, '""')}"`, ...names.map((n) => `"${n.replace(/"/g, '""')}"`)].join("\r\n");
     downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8;" }), `${listTitle}.csv`);
   }
 

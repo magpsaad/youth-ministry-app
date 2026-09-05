@@ -146,7 +146,7 @@ export default async function LandingPage() {
                 href="/export-lists"
                 className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
               >
-                Export Lists
+                Print/Export Lists
               </Link>
               {(access.isAdmin || access.isGeneralCoordinator) && (
                 <Link
