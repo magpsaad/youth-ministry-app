@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAppSettings } from "@/lib/app-settings";
-import { getAccessibleGroups } from "@/lib/groups";
+import { getAccessibleGroups, filterSelectableGroups } from "@/lib/groups";
 import { getAccessSummary } from "@/lib/roles";
 import { getPendingServantsCount } from "@/lib/pending-servants";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
@@ -46,9 +46,7 @@ export default async function LandingPage() {
   // narrower answer, computed from the user's own real grants instead:
   // every cohort for an Admin/General Coordinator, or only the specific
   // ones a Sub-Coordinator/Servant/Read-Only actually holds a role at.
-  const hasFullGroupAccess = access.isAdmin || access.isGeneralCoordinator;
-  const ownGroupIds = new Set(access.roles.map((r) => r.group_id).filter((id): id is string => id !== null));
-  const selectableGroups = groups.filter((g) => g.ladder_position > 0 && (hasFullGroupAccess || ownGroupIds.has(g.id)));
+  const selectableGroups = filterSelectableGroups(groups, access);
   const yr0Group = groups.find((g) => g.ladder_position === 0);
 
   return (
@@ -139,6 +137,16 @@ export default async function LandingPage() {
                 className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
               >
                 Servants Attendance
+              </Link>
+              {/* Owner-requested: export/print a names-only list -- every
+                  Coordinator/General Coordinator (and Admin), not just
+                  General Coordinators -- a Sub-Coordinator has real use for
+                  this even though they only load one cohort's full data. */}
+              <Link
+                href="/export-lists"
+                className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+              >
+                Export Lists
               </Link>
               {(access.isAdmin || access.isGeneralCoordinator) && (
                 <Link
