@@ -55,17 +55,27 @@ const FALLBACK: AppSettings = {
  * REQUIREMENTS.md §2 -- everything about the app's identity and vocabulary
  * is driven by this one row, never hardcoded. Falls back to sane generic
  * defaults if the row can't be read (e.g. logged out, on the login page).
+ *
+ * Owner-requested (Version Control screen, migration 0055): the displayed
+ * `app_version` now comes from app_releases -- whichever release has the
+ * most recent `released_on` date -- not the app_settings.app_version
+ * column directly. That column is left in place purely as a last-resort
+ * fallback if app_releases is ever empty (shouldn't happen; it's seeded).
  */
 export async function getAppSettings(): Promise<AppSettings> {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("app_settings")
-    .select(
-      "app_title_long, app_title_short, app_subtitle, logo_url, theme_color, group_label, member_label, app_version, birthday_window_days_before, birthday_window_days_after, service_weekday, same_day_cutoff_time, timezone",
-    )
-    .single();
+  const [{ data }, { data: latestRelease }] = await Promise.all([
+    supabase
+      .from("app_settings")
+      .select(
+        "app_title_long, app_title_short, app_subtitle, logo_url, theme_color, group_label, member_label, app_version, birthday_window_days_before, birthday_window_days_after, service_weekday, same_day_cutoff_time, timezone",
+      )
+      .single(),
+    supabase.from("app_releases").select("version").order("released_on", { ascending: false }).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+  ]);
 
-  return data ?? FALLBACK;
+  const base = data ?? FALLBACK;
+  return { ...base, app_version: latestRelease?.version ?? base.app_version };
 }
 
 const ATTENDANCE_WINDOW_FALLBACK: AttendanceWindowSettings = {
