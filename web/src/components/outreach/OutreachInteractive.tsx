@@ -11,6 +11,7 @@ import { PencilIcon, TrashIcon } from "@/components/icons";
 import { AddOutreachEntryModal } from "./AddOutreachEntryModal";
 import { EditOutreachEntryModal } from "./EditOutreachEntryModal";
 import { DateFilterModal } from "./DateFilterModal";
+import { easternDateKey, formatEasternDateTime } from "@/lib/timezone";
 
 /** REQUIREMENTS.md §6.6 -- full Outreach tab: search + filter (Member,
  * Servant, Date range, My Assigned List), "+ Add Outreach Entry", Edit/
@@ -58,8 +59,8 @@ export function OutreachInteractive({
     }
     if (memberId) result = result.filter((e) => e.member_id === memberId);
     if (servantId) result = result.filter((e) => e.servant_id === servantId);
-    if (dateFrom) result = result.filter((e) => e.occurred_at.slice(0, 10) >= dateFrom);
-    if (dateTo) result = result.filter((e) => e.occurred_at.slice(0, 10) <= dateTo);
+    if (dateFrom) result = result.filter((e) => easternDateKey(e.occurred_at) >= dateFrom);
+    if (dateTo) result = result.filter((e) => easternDateKey(e.occurred_at) <= dateTo);
     return result;
   }, [entries, hydrated, myAssignedOnly, currentUserId, q, memberId, servantId, dateFrom, dateTo]);
 
@@ -151,10 +152,7 @@ export function OutreachInteractive({
                     {entry.type ? ` — ${entry.type}` : ""}
                   </p>
                   <p className="text-xs text-[#666]">
-                    {new Date(entry.occurred_at).toLocaleString(undefined, {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}{" "}
+                    {formatEasternDateTime(entry.occurred_at, { dateStyle: "medium", timeStyle: "short" })}{" "}
                     · By {entry.servant_name}
                   </p>
                   {entry.notes && <p className="mt-1 text-sm text-[#333] break-words">{entry.notes}</p>}

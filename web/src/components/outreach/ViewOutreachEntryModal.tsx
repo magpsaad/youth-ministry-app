@@ -1,6 +1,7 @@
 "use client";
 
 import type { OutreachEntryFull } from "@/lib/outreach";
+import { formatEasternDateTime } from "@/lib/timezone";
 
 /** REQUIREMENTS.md §6.3/§7.1 -- read-only reminder of what a past outreach
  * entry actually said, opened from a Follow-up Due Actions Needed card's
@@ -33,7 +34,7 @@ export function ViewOutreachEntryModal({
           </p>
           <p>
             <span className="font-semibold">Date &amp; Time:</span>{" "}
-            {new Date(entry.occurred_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+            {formatEasternDateTime(entry.occurred_at, { dateStyle: "medium", timeStyle: "short" })}
           </p>
           <p>
             <span className="font-semibold">Type:</span> {entry.type ?? "—"}

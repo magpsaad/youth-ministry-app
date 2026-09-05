@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { easternMidnightUtcIso } from "@/lib/timezone";
 
 export type AuditLogRow = {
   id: number;
@@ -29,8 +30,17 @@ export async function getAuditLogsAction(filters: AuditLogFilters): Promise<Audi
 
   if (filters.actionType) query = query.eq("action_type", filters.actionType);
   if (filters.userId) query = query.eq("user_id", filters.userId);
-  if (filters.fromDate) query = query.gte("occurred_at", filters.fromDate);
-  if (filters.toDate) query = query.lte("occurred_at", `${filters.toDate}T23:59:59`);
+  // fromDate/toDate are plain "YYYY-MM-DD" pickers meant as Eastern calendar
+  // days -- handing them to Postgres as bare strings would compare against
+  // occurred_at (timestamptz) in the DB session's own timezone (UTC on
+  // Supabase), shifting the filter boundary by 4-5 hours. Converted to the
+  // actual UTC instant of that Eastern day's start/end instead.
+  if (filters.fromDate) query = query.gte("occurred_at", easternMidnightUtcIso(filters.fromDate));
+  if (filters.toDate) {
+    const [y, m, d] = filters.toDate.split("-").map(Number);
+    const nextDay = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+    query = query.lt("occurred_at", easternMidnightUtcIso(nextDay));
+  }
 
   const { data } = await query;
   return (data ?? []).map((r) => ({

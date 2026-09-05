@@ -2,14 +2,10 @@
 
 import { useMemo, useState } from "react";
 import type { AuditReportRow, AuditReportUser } from "@/app/admin/audit-report/actions";
+import { easternDateKey, formatDateKey } from "@/lib/timezone";
 
 function formatDay(dateKey: string): string {
-  return new Date(`${dateKey}T00:00:00`).toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+  return formatDateKey(dateKey, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 }
 
 /** REQUIREMENTS.md §6.14 -- by day (latest first), each day showing every
@@ -23,7 +19,7 @@ export function AuditReportInteractive({ initial, users }: { initial: AuditRepor
     const days = new Map<string, Map<string, number>>(); // day -> (userLabel -> count)
     for (const r of initial) {
       if (userId && r.user_id !== userId) continue;
-      const day = r.occurred_at.slice(0, 10);
+      const day = easternDateKey(r.occurred_at);
       const label = r.user_name ?? "Unknown";
       if (!days.has(day)) days.set(day, new Map());
       const users = days.get(day)!;

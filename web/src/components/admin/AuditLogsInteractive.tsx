@@ -4,15 +4,10 @@ import { useEffect, useState, useTransition } from "react";
 import type { AuditLogRow, AuditConfigRow, AuditLogUser } from "@/app/admin/audit-logs/actions";
 import { getAuditLogsAction, toggleAuditConfigAction, archiveAuditLogAction } from "@/app/admin/audit-logs/actions";
 import { DateFilterModal } from "@/components/outreach/DateFilterModal";
+import { formatEasternDateTime } from "@/lib/timezone";
 
 function formatWhen(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return formatEasternDateTime(iso, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 export function AuditLogsInteractive({

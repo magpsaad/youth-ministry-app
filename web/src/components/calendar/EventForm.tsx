@@ -12,6 +12,7 @@ import {
   removeEventAttachmentAction,
   type EventInput,
 } from "@/app/calendar/actions";
+import { todayEastern } from "@/lib/timezone";
 
 const inputClass =
   "w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10";
@@ -23,10 +24,6 @@ const DESCRIPTION_TEMPLATES: Partial<Record<CalendarEventType, string>> = {
   "Speaker Session": "Speaker: \nTopic: \n",
   "Group Discussion": "Discussion Topic: \nLeader: \n",
 };
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 /** Create/edit modal for a Service Calendar event (§6.8) -- open to all
  * Servants (RLS enforces this regardless of the UI). The attachment field
@@ -48,8 +45,8 @@ export function EventForm({
     title: event?.title ?? "",
     description: event?.description ?? "",
     event_type: event?.event_type ?? "Event",
-    start_date: event?.start_date ?? defaultDate ?? todayISO(),
-    end_date: event?.end_date ?? defaultDate ?? todayISO(),
+    start_date: event?.start_date ?? defaultDate ?? todayEastern(),
+    end_date: event?.end_date ?? defaultDate ?? todayEastern(),
     all_day: event?.all_day ?? true,
     start_time: event?.start_time ?? null,
     end_time: event?.end_time ?? null,

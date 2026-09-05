@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getMemberOutreachAction } from "@/app/g/[groupId]/outreach/actions";
 import type { OutreachEntry } from "@/lib/outreach";
+import { formatEasternDateTime } from "@/lib/timezone";
 
 export function PrevOutreachModal({
   memberId,
@@ -41,10 +42,7 @@ export function PrevOutreachModal({
             {entries.map((e) => (
               <li key={e.id} className="rounded-md border border-[#eee] p-3 text-sm">
                 <p className="font-semibold text-[#1e3a5f]">
-                  {new Date(e.occurred_at).toLocaleString(undefined, {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                  })}
+                  {formatEasternDateTime(e.occurred_at, { dateStyle: "medium", timeStyle: "short" })}
                   {e.type ? ` — ${e.type}` : ""}
                 </p>
                 <p className="text-xs text-[#666]">By {e.servant?.full_name ?? "Unknown"}</p>

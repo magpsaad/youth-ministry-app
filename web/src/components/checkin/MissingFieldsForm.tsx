@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { University } from "@/lib/universities";
 import { fillMissingMemberFieldsAction, type MissingFieldsInput, type MissingMemberFields } from "@/app/checkin/actions";
+import { todayEastern } from "@/lib/timezone";
 
 const inputClass =
   "w-full rounded-md border border-[#ddd] px-3 py-2.5 text-base focus:border-[#1e3a5f] focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10";
@@ -101,7 +102,7 @@ export function MissingFieldsForm({
           <Field label="Date of Birth">
             <input
               type="date"
-              max={new Date().toISOString().slice(0, 10)}
+              max={todayEastern()}
               value={form.date_of_birth ?? ""}
               onChange={(e) => field("date_of_birth", e.target.value || null)}
               className={inputClass}

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { todayEastern } from "@/lib/timezone";
 
 export type OutreachEntry = {
   id: string;
@@ -88,7 +89,7 @@ export type FollowUpDueEntry = OutreachEntryFull & { member_photo_path: string |
  * second fetch. */
 export async function getFollowUpsDue(groupId: string): Promise<FollowUpDueEntry[]> {
   const supabase = await createClient();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayEastern();
 
   const { data } = await supabase
     .from("outreach_entries")
