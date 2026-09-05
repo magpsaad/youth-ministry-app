@@ -5,11 +5,13 @@ import { createPortal } from "react-dom";
 import type { MemberDetail } from "@/lib/members";
 import type { University } from "@/lib/universities";
 import type { ServantOption } from "@/lib/servants";
+import type { GroupSummary } from "@/lib/groups";
 import { memberPhotoUrl } from "@/lib/storage";
 import {
   updateMemberAction,
   deleteMemberAction,
   assignServantAction,
+  moveMemberGroupAction,
   uploadMemberPhotoAction,
   removeMemberPhotoAction,
   type UpdateMemberInput,
@@ -31,6 +33,8 @@ const inputClass = (editing: boolean) =>
 export function MemberDetailModal({
   member,
   groupId,
+  groups,
+  groupLabel,
   universities,
   servants,
   memberLabel,
@@ -41,6 +45,8 @@ export function MemberDetailModal({
 }: {
   member: MemberDetail;
   groupId: string;
+  groups: GroupSummary[];
+  groupLabel: string;
   universities: University[];
   servants: ServantOption[];
   memberLabel: string;
@@ -70,6 +76,7 @@ export function MemberDetailModal({
     is_visitor: member.is_visitor,
   });
   const [assignedServantId, setAssignedServantId] = useState(member.assigned_servant_id);
+  const [memberGroupId, setMemberGroupId] = useState(member.group_id);
   // "Load Youth Data for all cohorts" combined view (REQUIREMENTS.md §6.1
   // addendum) -- owner-reported: reassigning from here isn't safe, since
   // the servant list shown across a combined member set spans the whole
@@ -108,6 +115,7 @@ export function MemberDetailModal({
       is_visitor: member.is_visitor,
     });
     setAssignedServantId(member.assigned_servant_id);
+    setMemberGroupId(member.group_id);
   }
 
   function handleSave() {
@@ -118,7 +126,13 @@ export function MemberDetailModal({
         setError(result.error);
         return;
       }
-      if (assignedServantId !== member.assigned_servant_id) {
+      if (memberGroupId !== member.group_id) {
+        const moveResult = await moveMemberGroupAction(member.id, member.group_id, memberGroupId);
+        if (moveResult.error) {
+          setError(moveResult.error);
+          return;
+        }
+      } else if (assignedServantId !== member.assigned_servant_id) {
         await assignServantAction(member.id, groupId, assignedServantId);
       }
       setEditing(false);
@@ -354,6 +368,27 @@ export function MemberDetailModal({
           <FieldRow label="Join Date">
             <input value={member.join_date ?? "Not yet attended"} readOnly className={inputClass(false)} />
           </FieldRow>
+          {isCombined && (
+            <FieldRow label={groupLabel}>
+              <select
+                value={memberGroupId}
+                onChange={(e) => setMemberGroupId(e.target.value)}
+                disabled={!editing || !canDelete}
+                className={inputClass(editing && canDelete)}
+              >
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+              {editing && canDelete && memberGroupId !== member.group_id && (
+                <p className="mt-1 text-xs text-[#b35900]">
+                  Moving cohorts will unassign their current servant.
+                </p>
+              )}
+            </FieldRow>
+          )}
           <FieldRow label="Assigned Servant">
             <select
               value={assignedServantId ?? ""}

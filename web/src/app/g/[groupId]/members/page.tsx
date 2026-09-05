@@ -22,7 +22,7 @@ export default async function MembersPage({ params }: { params: Promise<{ groupI
   // service instead of just this one cohort's.
   const groupIds = groupId === ALL_COHORTS_GROUP_ID ? (await getCombinedGroups()).map((g) => g.id) : groupId;
 
-  const [members, universities, servants, settings, windowSettings, access, profile] = await Promise.all([
+  const [members, universities, servants, settings, windowSettings, access, profile, combinedGroups] = await Promise.all([
     getGroupMembers(groupIds),
     getUniversities(),
     getServantsForGroup(groupIds),
@@ -32,6 +32,7 @@ export default async function MembersPage({ params }: { params: Promise<{ groupI
     user
       ? supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle().then((r) => r.data)
       : Promise.resolve(null),
+    groupId === ALL_COHORTS_GROUP_ID ? getCombinedGroups() : Promise.resolve([]),
   ]);
 
   return (
@@ -39,9 +40,11 @@ export default async function MembersPage({ params }: { params: Promise<{ groupI
       <MemberListInteractive
         members={members}
         groupId={groupId}
+        groups={combinedGroups}
         universities={universities}
         servants={servants}
         memberLabel={settings.member_label}
+        groupLabel={settings.group_label}
         canDelete={access?.isAdmin || access?.isGeneralCoordinator || false}
         currentUserId={user?.id ?? ""}
         currentUserName={profile?.full_name ?? user?.email ?? "Unknown"}

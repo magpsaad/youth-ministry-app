@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { MemberDetail } from "@/lib/members";
 import type { University } from "@/lib/universities";
 import type { ServantOption } from "@/lib/servants";
+import type { GroupSummary } from "@/lib/groups";
 import { getMemberAction } from "@/app/g/[groupId]/members/data-actions";
 import { MemberDetailModal } from "./MemberDetailModal";
 
@@ -15,6 +16,8 @@ import { MemberDetailModal } from "./MemberDetailModal";
 export function MemberDetailLink({
   memberId,
   groupId,
+  groups,
+  groupLabel,
   universities,
   servants,
   memberLabel,
@@ -25,6 +28,8 @@ export function MemberDetailLink({
 }: {
   memberId: string;
   groupId: string;
+  groups?: GroupSummary[];
+  groupLabel?: string;
   universities: University[];
   servants: ServantOption[];
   memberLabel: string;
@@ -53,6 +58,8 @@ export function MemberDetailLink({
         <MemberDetailModal
           member={detail}
           groupId={groupId}
+          groups={groups ?? []}
+          groupLabel={groupLabel ?? "Cohort"}
           universities={universities}
           servants={servants}
           memberLabel={memberLabel}

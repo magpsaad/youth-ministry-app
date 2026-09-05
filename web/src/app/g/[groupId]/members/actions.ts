@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { photosBucket } from "@/lib/storage";
 import { logAudit } from "@/lib/audit";
+import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 
 export type UpdateMemberInput = {
   phone: string | null;
@@ -81,6 +82,39 @@ export async function assignServantAction(memberId: string, groupId: string, ser
   if (user) await logAudit(user.id, "SERVANT_ASSIGNED", { groupId, details: { memberId, servantId } });
   revalidatePath(`/g/${groupId}/members`);
   revalidatePath(`/g/${groupId}/dashboard`);
+  return { error: null };
+}
+
+/** Owner-requested (combined "all cohorts" view): move a member to a
+ * different cohort. Admin/General Coordinator only -- enforced both by the
+ * UI (only they ever reach the combined view to begin with) and by RLS: the
+ * `members_update` policy has no separate `with check`, so Postgres reuses
+ * its `using (has_group_access(group_id))` clause against the NEW row too,
+ * meaning a Sub-Coordinator could never move someone into a cohort they
+ * don't themselves have access to even if they somehow called this.
+ *
+ * Always clears the assigned servant -- servants are scoped per-cohort, so
+ * whoever was assigned in the old cohort is almost certainly not a servant
+ * of the new one. The member then shows up as "Unassigned" on the new
+ * cohort's dashboard, prompting that cohort's coordinator to reassign. */
+export async function moveMemberGroupAction(memberId: string, oldGroupId: string, newGroupId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { error } = await supabase
+    .from("members")
+    .update({ group_id: newGroupId, assigned_servant_id: null, is_new_assignment: false })
+    .eq("id", memberId);
+  if (error) return { error: error.message };
+
+  if (user) await logAudit(user.id, "MEMBER_EDITED", { groupId: newGroupId, details: { memberId, action: "moved_cohort", from: oldGroupId, to: newGroupId } });
+  revalidatePath(`/g/${oldGroupId}/members`);
+  revalidatePath(`/g/${oldGroupId}/dashboard`);
+  revalidatePath(`/g/${newGroupId}/members`);
+  revalidatePath(`/g/${newGroupId}/dashboard`);
+  revalidatePath(`/g/${ALL_COHORTS_GROUP_ID}/members`);
+  revalidatePath(`/g/${ALL_COHORTS_GROUP_ID}/dashboard`);
   return { error: null };
 }
 

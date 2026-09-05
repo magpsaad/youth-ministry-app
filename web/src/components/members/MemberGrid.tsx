@@ -1,9 +1,11 @@
 import type { MemberListItem } from "@/lib/members";
 import type { University } from "@/lib/universities";
 import type { ServantOption } from "@/lib/servants";
+import type { GroupSummary } from "@/lib/groups";
 import { MemberDetailLink } from "./MemberDetailLink";
 import { PhoneLink } from "@/components/PhoneLink";
 import { memberPhotoUrl } from "@/lib/storage";
+import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 
 const PROXIMITY_BADGE: Record<string, string> = {
   Local: "bg-[#d1ecf1] text-[#0c5460]",
@@ -15,6 +17,8 @@ const PROXIMITY_BADGE: Record<string, string> = {
 export function MemberGrid({
   members,
   groupId,
+  groups,
+  groupLabel,
   universities,
   servants,
   memberLabel,
@@ -23,12 +27,16 @@ export function MemberGrid({
 }: {
   members: MemberListItem[];
   groupId: string;
+  groups: GroupSummary[];
+  groupLabel: string;
   universities: University[];
   servants: ServantOption[];
   memberLabel: string;
   canDelete: boolean;
   currentUserName: string;
 }) {
+  const isCombined = groupId === ALL_COHORTS_GROUP_ID;
+
   if (members.length === 0) {
     return <p className="mt-6 text-center text-sm text-[#666]">No {memberLabel.toLowerCase()}s match these filters.</p>;
   }
@@ -60,6 +68,8 @@ export function MemberGrid({
                 <MemberDetailLink
                   memberId={m.id}
                   groupId={groupId}
+                  groups={groups}
+                  groupLabel={groupLabel}
                   universities={universities}
                   servants={servants}
                   memberLabel={memberLabel}
@@ -81,11 +91,16 @@ export function MemberGrid({
                 {m.phone && <PhoneLink phone={m.phone} className="text-xs" />}
               </div>
             </div>
-            <div className="mt-2 flex items-center justify-between">
+            <div className="mt-2 flex items-center justify-between gap-2">
               <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${PROXIMITY_BADGE[proximity]}`}>
                 {proximity}
               </span>
-              <span className="text-[11px] text-[#666]">
+              {isCombined && m.group && (
+                <span className="rounded-full bg-[#e2e8f0] text-[#1e3a5f] text-[11px] font-semibold px-2.5 py-0.5 truncate">
+                  {m.group.name}
+                </span>
+              )}
+              <span className="text-[11px] text-[#666] truncate">
                 {m.assigned_servant?.full_name ?? "Unassigned"}
               </span>
             </div>

@@ -4,18 +4,22 @@ import { useMemo, useState } from "react";
 import type { MemberListItem } from "@/lib/members";
 import type { University } from "@/lib/universities";
 import type { ServantOption } from "@/lib/servants";
+import type { GroupSummary } from "@/lib/groups";
 import { useMyAssigned } from "@/components/MyAssignedContext";
 import { SearchIcon } from "@/components/icons";
 import { MemberGrid } from "./MemberGrid";
+import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
 
 const PROXIMITIES = ["Local", "Regional", "Abroad", "Unknown"];
 
 export function MemberListInteractive({
   members,
   groupId,
+  groups,
   universities,
   servants,
   memberLabel,
+  groupLabel,
   canDelete,
   currentUserId,
   currentUserName,
@@ -24,18 +28,22 @@ export function MemberListInteractive({
 }: {
   members: MemberListItem[];
   groupId: string;
+  groups: GroupSummary[];
   universities: University[];
   servants: ServantOption[];
   memberLabel: string;
+  groupLabel: string;
   canDelete: boolean;
   currentUserId: string;
   currentUserName: string;
   windowWeeks: number | null;
   dayName: string;
 }) {
+  const isCombined = groupId === ALL_COHORTS_GROUP_ID;
   const { myAssignedOnly, hydrated } = useMyAssigned();
   const [q, setQ] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [cohortIds, setCohortIds] = useState<string[]>([]);
   const [servantIds, setServantIds] = useState<string[]>([]);
   const [universityIds, setUniversityIds] = useState<string[]>([]);
   const [proximities, setProximities] = useState<string[]>([]);
@@ -58,6 +66,9 @@ export function MemberListInteractive({
 
     if (hydrated && myAssignedOnly) {
       result = result.filter((m) => m.assigned_servant_id === currentUserId);
+    }
+    if (cohortIds.length) {
+      result = result.filter((m) => cohortIds.includes(m.group_id));
     }
     if (q.trim()) {
       const needle = q.trim().toLowerCase();
@@ -82,14 +93,42 @@ export function MemberListInteractive({
     }
 
     return result;
-  }, [members, q, excludeVisitors, hasPhoto, male, female, universityIds, proximities, servantIds, myAssignedOnly, hydrated, currentUserId]);
+  }, [members, q, excludeVisitors, hasPhoto, male, female, universityIds, proximities, servantIds, cohortIds, myAssignedOnly, hydrated, currentUserId]);
 
   function multiSelectValues(e: React.ChangeEvent<HTMLSelectElement>): string[] {
     return Array.from(e.target.selectedOptions).map((o) => o.value);
   }
 
+  const isFiltered = filtered.length !== members.length;
+
   return (
     <div>
+      <p className="mb-2 text-sm font-semibold text-[#333]">
+        {isFiltered
+          ? `${filtered.length} of ${members.length} ${memberLabel.toLowerCase()}s shown`
+          : `${members.length} ${memberLabel.toLowerCase()}${members.length === 1 ? "" : "s"}`}
+      </p>
+
+      {isCombined && groups.length > 0 && (
+        <div className="mb-2">
+          <p className="text-xs font-semibold text-[#666] mb-1">Filter by {groupLabel}</p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+          {groups.map((g) => (
+            <label key={g.id} className="flex items-center gap-1.5 text-sm text-[#333]">
+              <input
+                type="checkbox"
+                checked={cohortIds.includes(g.id)}
+                onChange={(e) =>
+                  setCohortIds((prev) => (e.target.checked ? [...prev, g.id] : prev.filter((id) => id !== g.id)))
+                }
+              />
+              {g.name}
+            </label>
+          ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-2">
         <input
           type="text"
@@ -225,6 +264,8 @@ export function MemberListInteractive({
       <MemberGrid
         members={filtered}
         groupId={groupId}
+        groups={groups}
+        groupLabel={groupLabel}
         universities={universities}
         servants={servants}
         memberLabel={memberLabel}

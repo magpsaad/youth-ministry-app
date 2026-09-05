@@ -13,6 +13,8 @@ export type MemberListItem = {
   date_of_birth: string | null;
   assigned_servant_id: string | null;
   join_date: string | null;
+  group_id: string;
+  group: { id: string; name: string } | null;
   university: { id: string; name: string; proximity: string } | null;
   assigned_servant: { full_name: string } | null;
   avgAttendancePercent: number | null;
@@ -45,7 +47,7 @@ export type MemberFilters = {
 };
 
 const LIST_SELECT =
-  "id, full_name, phone, photo_path, program_of_study, is_visitor, gender, date_of_birth, assigned_servant_id, join_date, university:universities(id, name, proximity), assigned_servant:profiles(full_name)";
+  "id, full_name, phone, photo_path, program_of_study, is_visitor, gender, date_of_birth, assigned_servant_id, join_date, group_id, group:groups(id, name), university:universities(id, name, proximity), assigned_servant:profiles(full_name)";
 
 /**
  * Every active member of a group, with a computed average-attendance % per
