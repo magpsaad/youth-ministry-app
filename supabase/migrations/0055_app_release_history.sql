@@ -42,6 +42,13 @@ create policy app_releases_write on app_releases for all
 grant select on app_releases to anon, authenticated;
 grant insert, update, delete on app_releases to authenticated;
 
+-- Every other table got a one-time blanket grant in migration 0035; that
+-- was a snapshot of tables existing AT THAT TIME, not a standing default
+-- for tables created later -- this is the first new table since, so it
+-- needs its own explicit grant (found the hard way: a service-role script
+-- couldn't read this table at all until this line was added).
+grant all privileges on app_releases to service_role;
+
 -- Seed with the current known version so the badge never regresses.
 insert into app_releases (version, description, released_on)
 values ('4.1', 'Duplicate-member detection on self check-in, cross-cohort Export Lists, self check-in timezone fixes, and several smaller fixes.', current_date);
