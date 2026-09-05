@@ -34,7 +34,7 @@ export default async function CalendarMaintenancePage() {
           aria-label="Home"
           className="absolute top-2.5 left-4 inline-flex items-center gap-1 text-white/70 hover:text-white transition-colors"
         >
-          <HomeIcon className="h-4 w-4" />
+          <HomeIcon className="h-6 w-6" />
           <span className="text-xs font-medium">Home</span>
         </Link>
         <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">
