@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { AppRelease } from "@/app/admin/version-control/actions";
-import { addReleaseAction, updateReleaseAction } from "@/app/admin/version-control/actions";
+import type { AppRelease } from "@/app/version-control/actions";
+import { addReleaseAction, updateReleaseAction } from "@/app/version-control/actions";
 import { todayEastern, formatDateKey } from "@/lib/timezone";
 
 /** Owner-requested: replaces the "run SQL every time the version changes"
@@ -10,8 +10,16 @@ import { todayEastern, formatDateKey } from "@/lib/timezone";
  * "Version X" badge, which always shows whichever release has the most
  * recent released date), lets an Admin add new ones and edit even old
  * entries. No delete -- not asked for, and a release history is meant to
- * stay a durable record. */
-export function VersionControlInteractive({ initial }: { initial: AppRelease[] }) {
+ * stay a durable record.
+ *
+ * Owner-requested: viewable by everyone now, but `canManage` (Admin-only,
+ * decided by the page) hides both the per-row Edit control and the
+ * entire "Add a Release" section for anyone else -- not just disables
+ * them, since the ask was specifically that non-Admins can't even see
+ * those controls. Backed by app_releases' own write RLS too (is_admin()),
+ * so this is a UI convenience on top of a real enforced restriction, not
+ * the only thing stopping a non-Admin from writing. */
+export function VersionControlInteractive({ initial, canManage }: { initial: AppRelease[]; canManage: boolean }) {
   const [releases, setReleases] = useState(initial);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +90,7 @@ export function VersionControlInteractive({ initial }: { initial: AppRelease[] }
 
   return (
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Version Control</h2>
+      <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Release History</h2>
       <p className="text-sm text-[#666] mb-3">
         The most recent release below is what shows as the app&rsquo;s &ldquo;Version&rdquo; badge everywhere.
       </p>
@@ -137,9 +145,11 @@ export function VersionControlInteractive({ initial }: { initial: AppRelease[] }
                   </p>
                   {r.description && <p className="text-[#666] mt-0.5">{r.description}</p>}
                 </div>
-                <button type="button" onClick={() => startEdit(r)} className="text-[#1e3a5f] text-xs font-semibold shrink-0">
-                  Edit
-                </button>
+                {canManage && (
+                  <button type="button" onClick={() => startEdit(r)} className="text-[#1e3a5f] text-xs font-semibold shrink-0">
+                    Edit
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -147,39 +157,41 @@ export function VersionControlInteractive({ initial }: { initial: AppRelease[] }
         {releases.length === 0 && <p className="py-2 text-sm text-[#666]">No releases logged yet.</p>}
       </div>
 
-      <div className="border-t border-[#f0f0f0] pt-3 space-y-2">
-        <h3 className="text-sm font-bold text-[#1e3a5f]">Add a Release</h3>
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="Version (e.g. 4.2)"
-            value={newVersion}
-            onChange={(e) => setNewVersion(e.target.value)}
-            className="w-28 rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+      {canManage && (
+        <div className="border-t border-[#f0f0f0] pt-3 space-y-2">
+          <h3 className="text-sm font-bold text-[#1e3a5f]">Add a Release</h3>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Version (e.g. 4.2)"
+              value={newVersion}
+              onChange={(e) => setNewVersion(e.target.value)}
+              className="w-28 rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            />
+            <input
+              type="date"
+              value={newReleasedOn}
+              onChange={(e) => setNewReleasedOn(e.target.value)}
+              className="rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+            />
+          </div>
+          <textarea
+            placeholder="What's in this release?"
+            value={newDescription}
+            onChange={(e) => setNewDescription(e.target.value)}
+            rows={2}
+            className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
           />
-          <input
-            type="date"
-            value={newReleasedOn}
-            onChange={(e) => setNewReleasedOn(e.target.value)}
-            className="rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
-          />
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={pending}
+            className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+          >
+            Add
+          </button>
         </div>
-        <textarea
-          placeholder="What's in this release?"
-          value={newDescription}
-          onChange={(e) => setNewDescription(e.target.value)}
-          rows={2}
-          className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
-        />
-        <button
-          type="button"
-          onClick={handleAdd}
-          disabled={pending}
-          className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] disabled:opacity-60 shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
-        >
-          Add
-        </button>
-      </div>
+      )}
     </div>
   );
 }

@@ -3,29 +3,22 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings } from "@/lib/app-settings";
-import { getReleasesAction } from "@/app/admin/version-control/actions";
+import { getReleasesAction } from "@/app/version-control/actions";
 import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon } from "@/components/icons";
 import { SignOutButton } from "@/components/SignOutButton";
-import { VersionControlInteractive } from "@/components/admin/VersionControlInteractive";
+import { VersionControlInteractive } from "@/components/VersionControlInteractive";
 
-/** Owner-requested: System Admin Corner, Admins only for now -- the owner
- * may later open this screen to everyone as view-only (app_releases'
- * own RLS is already public-select, see migration 0055; only this
- * page-level gate would need loosening then). */
+/** Owner-requested: Servant Corner, viewable by every app user -- adding a
+ * release and editing existing ones stays System Admin only, enforced
+ * both here (canManage passed down) and by app_releases' own write RLS
+ * (is_admin(), migration 0055), so this is defense-in-depth, not the
+ * only gate. */
 export default async function VersionControlPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   const access = await getAccessSummary(user.id);
-  if (!access.isAdmin) {
-    return (
-      <div className="min-h-full flex items-center justify-center bg-[#f5f5f5] p-4">
-        <p className="text-sm text-[#666]">You don&rsquo;t have access to this page.</p>
-      </div>
-    );
-  }
-
   const [settings, releases] = await Promise.all([getAppSettings(), getReleasesAction()]);
 
   return (
@@ -48,10 +41,10 @@ export default async function VersionControlPage() {
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={32} circular={false} />
           <h1 className="text-2xl font-bold">{settings.app_title_short}</h1>
         </Link>
-        <p className="mt-1 text-sm opacity-90">Version Control</p>
+        <p className="mt-1 text-sm opacity-90">Release History</p>
       </header>
       <main className="max-w-2xl mx-auto px-4 py-6">
-        <VersionControlInteractive initial={releases} />
+        <VersionControlInteractive initial={releases} canManage={access.isAdmin} />
       </main>
     </div>
   );

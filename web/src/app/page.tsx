@@ -88,6 +88,17 @@ export default async function LandingPage() {
               Checkin - QR Codes
             </Link>
           </div>
+          {/* Owner-requested: moved here from System Admin Corner so
+              everyone can view the release history -- adding/editing a
+              release still stays Admin-only, enforced on the page itself
+              (VersionControlInteractive's canManage prop) and by
+              app_releases' own write RLS. */}
+          <Link
+            href="/version-control"
+            className="mt-2 block rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+          >
+            Version Control / Release History
+          </Link>
         </section>
 
         {/* Bible verse -- a fixed, always-visible fixture on the landing
@@ -229,15 +240,6 @@ export default async function LandingPage() {
                 className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
               >
                 Audit Report
-              </Link>
-              {/* Owner-requested: full panel width, at the very bottom.
-                  Admin-only for now -- may open to everyone as view-only
-                  later (see version-control/page.tsx). */}
-              <Link
-                href="/admin/version-control"
-                className="sm:col-span-2 rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
-              >
-                Version Control
               </Link>
             </div>
           </section>
