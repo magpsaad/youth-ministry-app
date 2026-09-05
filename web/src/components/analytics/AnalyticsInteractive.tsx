@@ -1,8 +1,9 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
-import type { AnalyticsRawData } from "@/lib/analytics";
+import type { AnalyticsRawData, MemberAnalyticsRow } from "@/lib/analytics";
 import type { ServantOption } from "@/lib/servants";
+import type { GroupSummary } from "@/lib/groups";
 import { useMyAssigned } from "@/components/MyAssignedContext";
 import { isOnServiceWeekday, resolveAttendanceSince, weekdayName } from "@/lib/attendance-window";
 import { groupByGender, genderSubheading } from "@/lib/gender-grouping";
@@ -41,6 +42,7 @@ export function AnalyticsInteractive({
   memberLabel,
   currentUserId,
   combined = false,
+  groups = [],
   serviceWeekday,
   windowWeeks,
 }: {
@@ -50,6 +52,10 @@ export function AnalyticsInteractive({
   memberLabel: string;
   currentUserId: string;
   combined?: boolean;
+  /** Owner-requested: in the combined "all cohorts" view, Average
+   * Attendance by Month also breaks out each cohort's own curve after the
+   * amalgamated one. Only meaningful when `combined` is true. */
+  groups?: GroupSummary[];
   /** Owner-reported (§6.7/§6.4 alignment): Average Attendance by Month used
    * to count every tracked date with no rolling-window cap, while the
    * Member List's per-person average attendance % only counts the
@@ -97,10 +103,13 @@ export function AnalyticsInteractive({
   // attendance % for no real reason -- aligned to the exact same rules now
   // (isOnServiceWeekday/resolveAttendanceSince, lib/attendance-window.ts),
   // just aggregated per month instead of per person.
-  const monthly = useMemo(() => {
-    const filteredIds = new Set(filteredMembers.map((m) => m.id));
+  // Extracted so the same rules (isOnServiceWeekday/resolveAttendanceSince)
+  // can compute both the amalgamated curve and, in the combined view, each
+  // cohort's own curve from the same raw attendance rows.
+  function computeMonthly(members: MemberAnalyticsRow[]) {
+    const memberIds = new Set(members.map((m) => m.id));
     const relevantAttendance = raw.attendance.filter(
-      (a) => filteredIds.has(a.memberId) && isOnServiceWeekday(a.serviceDate, serviceWeekday),
+      (a) => memberIds.has(a.memberId) && isOnServiceWeekday(a.serviceDate, serviceWeekday),
     );
 
     const datesByMonth = new Map<string, Set<string>>();
@@ -118,7 +127,7 @@ export function AnalyticsInteractive({
         const dates = Array.from(datesByMonth.get(month)!);
         let presentCount = 0;
         let totalSlots = 0;
-        for (const m of filteredMembers) {
+        for (const m of members) {
           const since = resolveAttendanceSince(m.join_date, windowWeeks);
           if (!since) continue;
           for (const d of dates) {
@@ -134,7 +143,23 @@ export function AnalyticsInteractive({
         });
         return { month, label, avgPercent };
       });
-  }, [filteredMembers, raw.attendance, serviceWeekday, windowWeeks]);
+  }
+
+  const monthly = useMemo(
+    () => computeMonthly(filteredMembers),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filteredMembers, raw.attendance, serviceWeekday, windowWeeks],
+  );
+
+  const monthlyByCohort = useMemo(() => {
+    if (!combined || groups.length === 0) return [];
+    const sorted = [...groups].sort((a, b) => a.ladder_position - b.ladder_position);
+    return sorted.map((g) => ({
+      group: g,
+      monthly: computeMonthly(filteredMembers.filter((m) => m.group_id === g.id)),
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [combined, groups, filteredMembers, raw.attendance, serviceWeekday, windowWeeks]);
 
   const sortedServants = useMemo(() => {
     return [...servants].sort((a, b) => {
@@ -233,6 +258,19 @@ export function AnalyticsInteractive({
             ? `Calculated over each ${memberLabel.toLowerCase()}'s entire history since their Join Date, counting only ${weekdayName(serviceWeekday)}s -- same rule as the Member List's average attendance %.`
             : `A rolling trailing ${windowWeeks} week${windowWeeks === 1 ? "" : "s"}, counting only ${weekdayName(serviceWeekday)}s, never counting weeks before someone joined -- same rule as the Member List's average attendance %.`}
         </p>
+
+        {monthlyByCohort.map(({ group, monthly: cohortMonthly }) => (
+          <div key={group.id} className="mt-6 border-t border-[#f0f0f0] pt-4">
+            <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">{group.name}</h3>
+            {cohortMonthly.length === 0 ? (
+              <p className="text-sm text-[#666]">No tracked service dates yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <AttendanceTrendChart data={[...cohortMonthly].reverse()} />
+              </div>
+            )}
+          </div>
+        ))}
       </section>
 
       <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">

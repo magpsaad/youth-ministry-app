@@ -11,10 +11,13 @@ export default async function AnalyticsPage({ params }: { params: Promise<{ grou
   const combined = groupId === ALL_COHORTS_GROUP_ID;
 
   // "Load Youth Data for all cohorts" (REQUIREMENTS.md §6.1 addendum) --
-  // Data Completeness/Proximity/Average Attendance by Month are all "No
-  // change" per the owner, just computed over the combined data; Servant
-  // Assignments additionally gets a Cohort column (`combined` prop below).
-  const groupIds = combined ? (await getCombinedGroups()).map((g) => g.id) : groupId;
+  // Data Completeness/Proximity are "No change" per the owner, just
+  // computed over the combined data; Servant Assignments additionally gets
+  // a Cohort column, and Average Attendance by Month additionally shows
+  // each cohort's own curve after the combined one (`combined`/`groups`
+  // props below).
+  const combinedGroups = combined ? await getCombinedGroups() : [];
+  const groupIds = combined ? combinedGroups.map((g) => g.id) : groupId;
 
   const [raw, assignments, settings, windowSettings] = await Promise.all([
     getAnalyticsRawData(groupIds),
@@ -31,6 +34,7 @@ export default async function AnalyticsPage({ params }: { params: Promise<{ grou
       memberLabel={settings.member_label}
       currentUserId={user?.id ?? ""}
       combined={combined}
+      groups={combinedGroups}
       serviceWeekday={windowSettings.service_weekday}
       windowWeeks={windowSettings.youth_attendance_window_weeks}
     />

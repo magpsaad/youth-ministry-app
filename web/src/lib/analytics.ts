@@ -7,6 +7,7 @@ export type MemberAnalyticsRow = {
   assigned_servant_id: string | null;
   is_visitor: boolean;
   join_date: string | null;
+  group_id: string;
   proximity: "Local" | "Regional" | "Abroad" | "Unknown";
   hasPhone: boolean;
   hasEmail: boolean;
@@ -37,7 +38,7 @@ export async function getAnalyticsRawData(groupId: string | string[]): Promise<A
   let memberQuery = supabase
     .from("members")
     .select(
-      "id, assigned_servant_id, is_visitor, join_date, phone, email, date_of_birth, father_of_confession, photo_path, university:universities(proximity)",
+      "id, assigned_servant_id, is_visitor, join_date, group_id, phone, email, date_of_birth, father_of_confession, photo_path, university:universities(proximity)",
     )
     .eq("status", "active");
   memberQuery = Array.isArray(groupId) ? memberQuery.in("group_id", groupId) : memberQuery.eq("group_id", groupId);
@@ -48,6 +49,7 @@ export async function getAnalyticsRawData(groupId: string | string[]): Promise<A
     assigned_servant_id: m.assigned_servant_id,
     is_visitor: m.is_visitor,
     join_date: m.join_date,
+    group_id: m.group_id,
     proximity: ((m.university as unknown as { proximity?: string } | null)?.proximity ?? "Unknown") as MemberAnalyticsRow["proximity"],
     hasPhone: !!m.phone,
     hasEmail: !!m.email,
