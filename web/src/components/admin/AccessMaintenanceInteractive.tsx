@@ -160,7 +160,10 @@ export function AccessMaintenanceInteractive({
             <button
               key={p.id}
               type="button"
-              onClick={() => setSelectedProfileId(p.id)}
+              onClick={() => {
+                setSelectedProfileId(p.id);
+                setError(null);
+              }}
               className={`w-full text-left py-2 px-2 text-sm rounded-md ${
                 selectedProfileId === p.id ? "bg-[#1e3a5f] text-white" : "hover:bg-[#f5f5f5] text-[#333]"
               }`}
