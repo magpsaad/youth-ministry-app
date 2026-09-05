@@ -118,3 +118,25 @@ export async function removeProfileCompletelyAction(profileId: string) {
   revalidatePath("/admin/access-maintenance");
   return { error: null };
 }
+
+/** Owner-requested: a servant with two accounts (signed in with a different
+ * email) -- unlike Remove Person, both accounts may have real history, and
+ * neither side's should be lost. `keepId` stays; `removeId`'s attendance,
+ * outreach, assignments, calendar events, role grants, and audit history
+ * all move onto `keepId` (migration 0056), then `removeId`'s now-empty
+ * profile is deleted. See that migration for exactly what does and doesn't
+ * carry over, and why the underlying auth.users login isn't touched. */
+export async function mergeServantAccountsAction(keepId: string, removeId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in" };
+
+  const { error } = await supabase.rpc("merge_servant_accounts", { p_keep_id: keepId, p_remove_id: removeId });
+  if (error) return { error: error.message };
+
+  await logAudit(user.id, "ADMIN_ACCESS_MAINTENANCE", { details: { action: "merge_accounts", keepId, removeId } });
+  revalidatePath("/admin/access-maintenance");
+  return { error: null };
+}

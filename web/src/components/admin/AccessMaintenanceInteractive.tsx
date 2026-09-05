@@ -3,7 +3,12 @@
 import { useMemo, useState, useTransition } from "react";
 import type { AccessProfile, AccessRoleRow } from "@/app/admin/access-maintenance/actions";
 import type { GroupSummary } from "@/lib/groups";
-import { grantRoleAction, revokeRoleAction, removeProfileCompletelyAction } from "@/app/admin/access-maintenance/actions";
+import {
+  grantRoleAction,
+  revokeRoleAction,
+  removeProfileCompletelyAction,
+  mergeServantAccountsAction,
+} from "@/app/admin/access-maintenance/actions";
 
 const ROLE_LABELS: Record<AccessRoleRow["role"], string> = {
   // "System Admin" (not just "Admin") deliberately -- owner-reported:
@@ -51,6 +56,8 @@ export function AccessMaintenanceInteractive({
   const [newGroupId, setNewGroupId] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [showMerge, setShowMerge] = useState(false);
+  const [mergeSearch, setMergeSearch] = useState("");
 
   const filteredProfiles = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -61,6 +68,13 @@ export function AccessMaintenanceInteractive({
     if (!q) return profiles;
     return profiles.filter((p) => p.full_name.toLowerCase().includes(q) || p.email?.toLowerCase().includes(q));
   }, [profiles, search]);
+
+  const mergeCandidates = useMemo(() => {
+    const q = mergeSearch.trim().toLowerCase();
+    const others = profiles.filter((p) => p.id !== selectedProfileId);
+    if (!q) return others;
+    return others.filter((p) => p.full_name.toLowerCase().includes(q) || p.email?.toLowerCase().includes(q));
+  }, [profiles, mergeSearch, selectedProfileId]);
 
   const selectedProfile = profiles.find((p) => p.id === selectedProfileId) ?? null;
   const selectedRoles = roles.filter((r) => r.user_id === selectedProfileId);
@@ -127,6 +141,34 @@ export function AccessMaintenanceInteractive({
     });
   }
 
+  /** Owner-requested: for a servant who ended up with two accounts (a
+   * different email each time). The currently-selected person is "the one
+   * to keep"; this picks the duplicate to merge away. Unlike Remove
+   * Person, both accounts may have real history -- migration 0056 folds
+   * the duplicate's attendance, outreach, assignments, calendar events,
+   * and role grants onto the kept account rather than refusing. A full
+   * reload afterward (rather than hand-updating local state) so the roles
+   * list reflects the merge's own dedup rules exactly as the server
+   * applied them. */
+  function handleMerge(removeId: string, removeName: string) {
+    if (!selectedProfileId || !selectedProfile) return;
+    if (
+      !confirm(
+        `Merge ${removeName}'s history into ${selectedProfile.full_name}? All of ${removeName}'s attendance, outreach, assignments, calendar events, and role grants will move onto ${selectedProfile.full_name}, and ${removeName}'s record will then be permanently deleted. This cannot be undone.`,
+      )
+    )
+      return;
+    setError(null);
+    startTransition(async () => {
+      const res = await mergeServantAccountsAction(selectedProfileId, removeId);
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      window.location.reload();
+    });
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
@@ -183,17 +225,67 @@ export function AccessMaintenanceInteractive({
           <>
             <div className="mb-3 flex items-center justify-between gap-2">
               <h2 className="text-lg font-bold text-[#1e3a5f]">{selectedProfile.full_name}</h2>
-              <button
-                type="button"
-                onClick={handleRemoveProfile}
-                disabled={pending}
-                title="Permanently delete this person's record"
-                className="shrink-0 text-xs font-semibold text-[#dc3545] hover:underline disabled:opacity-60"
-              >
-                Remove Person
-              </button>
+              <div className="flex shrink-0 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMerge((v) => !v);
+                    setMergeSearch("");
+                    setError(null);
+                  }}
+                  disabled={pending}
+                  title="Merge a duplicate account's history into this one"
+                  className="text-xs font-semibold text-[#1e3a5f] hover:underline disabled:opacity-60"
+                >
+                  Merge Duplicate Into This
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRemoveProfile}
+                  disabled={pending}
+                  title="Permanently delete this person's record"
+                  className="text-xs font-semibold text-[#dc3545] hover:underline disabled:opacity-60"
+                >
+                  Remove Person
+                </button>
+              </div>
             </div>
             {error && <p className="mb-3 text-sm text-[#dc3545]">{error}</p>}
+
+            {showMerge && (
+              <div className="mb-4 rounded-md border border-[#ddd] p-3 bg-[#f9f9f9]">
+                <p className="text-xs text-[#666] mb-2">
+                  Pick the duplicate account to merge into <strong>{selectedProfile.full_name}</strong>. That
+                  account&rsquo;s history moves here, then its record is permanently deleted.
+                </p>
+                <input
+                  type="text"
+                  placeholder="Search by name or email..."
+                  value={mergeSearch}
+                  onChange={(e) => setMergeSearch(e.target.value)}
+                  className="w-full rounded-md border border-[#ddd] px-3 py-2 text-sm mb-2 focus:border-[#1e3a5f] focus:outline-none"
+                />
+                <div className="divide-y divide-[#f0f0f0] max-h-48 overflow-y-auto">
+                  {mergeCandidates.map((p) => (
+                    <div key={p.id} className="py-1.5 flex items-center justify-between gap-2 text-sm">
+                      <div className="min-w-0">
+                        <p className="font-medium text-[#333] truncate">{p.full_name}</p>
+                        <p className="text-xs text-[#666] truncate">{p.email}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleMerge(p.id, p.full_name)}
+                        disabled={pending}
+                        className="shrink-0 rounded-md bg-[#1e3a5f] px-3 py-1 text-xs font-semibold text-white hover:bg-[#152a45] disabled:opacity-60"
+                      >
+                        Merge
+                      </button>
+                    </div>
+                  ))}
+                  {mergeCandidates.length === 0 && <p className="py-2 text-sm text-[#666]">No matches.</p>}
+                </div>
+              </div>
+            )}
 
             <div className="divide-y divide-[#f0f0f0] mb-4">
               {selectedRoles.map((r) => (
