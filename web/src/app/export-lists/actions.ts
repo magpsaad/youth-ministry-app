@@ -6,15 +6,18 @@ import { createClient } from "@/lib/supabase/server";
  * -- every query below selects exactly one column, on purpose, so there's
  * never any other field to accidentally include in an export. */
 
+/** Owner-requested: any Coordinator/General Coordinator (and Admin) can
+ * export any cohort's names, not just one they're personally assigned to
+ * -- "no risk of data leaking since it's just a list of names." Goes
+ * through export_group_member_names() (migration 0052) rather than a
+ * plain select -- members_select's RLS stays scoped to
+ * has_readonly_or_full_group_access(group_id) for every OTHER screen, so
+ * a security-definer RPC is what actually grants this screen's
+ * intentionally broader read. */
 export async function getGroupMemberNamesAction(groupId: string): Promise<string[]> {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("members")
-    .select("full_name")
-    .eq("group_id", groupId)
-    .eq("status", "active")
-    .order("full_name");
-  return (data ?? []).map((r) => r.full_name);
+  const { data } = await supabase.rpc("export_group_member_names", { p_group_id: groupId });
+  return ((data ?? []) as { full_name: string }[]).map((r) => r.full_name);
 }
 
 /** Same "servant" definition as the Servant Directory (holds a 'servant',

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
 import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings } from "@/lib/app-settings";
-import { getAccessibleGroups, filterSelectableGroups } from "@/lib/groups";
+import { getCombinedGroups } from "@/lib/groups";
 import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon } from "@/components/icons";
 import { SignOutButton } from "@/components/SignOutButton";
@@ -11,7 +11,13 @@ import { ExportListsInteractive } from "@/components/ExportListsInteractive";
 
 /** Owner-requested: Coordinator Corner, General/Sub-Coordinators and Admins
  * -- export or print a names-only list, either one cohort's roster (never
- * the hidden Yr0 pre-entry group) or the overall Servants list. */
+ * the hidden Yr0 pre-entry group) or the overall Servants list. Every real
+ * cohort is offered to any Coordinator here, not just the ones they're
+ * personally assigned to -- "no risk of data leaking since it's just a
+ * list of names" (owner's explicit call, unlike every other screen's real
+ * per-cohort data access). export_group_member_names() (migration 0052)
+ * is what actually grants the broader read; the page-level gate above
+ * still keeps this to Coordinators/Admins only. */
 export default async function ExportListsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -25,8 +31,7 @@ export default async function ExportListsPage() {
     );
   }
 
-  const [settings, groups] = await Promise.all([getAppSettings(), getAccessibleGroups()]);
-  const selectableGroups = filterSelectableGroups(groups, access);
+  const [settings, selectableGroups] = await Promise.all([getAppSettings(), getCombinedGroups()]);
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
