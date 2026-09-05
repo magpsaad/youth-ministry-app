@@ -5,6 +5,7 @@ export type ServantAttendanceMember = {
   id: string;
   full_name: string;
   groupLabel: string; // serving group name, "General Coordinator", or "Unassigned"
+  join_date: string | null;
   averageAttendance: number | null; // rolling window, floored at join_date
 };
 
@@ -12,6 +13,11 @@ export type ServantAttendanceBundle = {
   members: ServantAttendanceMember[];
   attendanceByServant: Record<string, string[]>;
   trackedDates: string[];
+  /** Ascending, service-weekday-only dates -- same set `averageAttendance`
+   * is computed from; the click-to-view weekly-breakdown modal (owner-
+   * requested) lists exactly this set per person, client-side. */
+  serviceWeekdayDates: string[];
+  windowWeeks: number | null;
   todayDate: string;
   todayAvailable: boolean;
 };
@@ -107,7 +113,9 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
   const members: ServantAttendanceMember[] = ids.map((id) => {
     const info = byUser.get(id)!;
     const since = resolveAttendanceSince(info.join_date, windowSettings.servant_attendance_window_weeks);
-    if (!since) return { id, full_name: info.full_name, groupLabel: info.groupLabel, averageAttendance: null };
+    if (!since) {
+      return { id, full_name: info.full_name, groupLabel: info.groupLabel, join_date: info.join_date, averageAttendance: null };
+    }
 
     const relevantDates = allDates.filter((d) => d >= since);
     const presentSet = new Set(attendanceByServant[id] ?? []);
@@ -115,9 +123,17 @@ export async function getServantAttendanceBundle(): Promise<ServantAttendanceBun
       relevantDates.length > 0
         ? Math.round((relevantDates.filter((d) => presentSet.has(d)).length / relevantDates.length) * 100)
         : null;
-    return { id, full_name: info.full_name, groupLabel: info.groupLabel, averageAttendance };
+    return { id, full_name: info.full_name, groupLabel: info.groupLabel, join_date: info.join_date, averageAttendance };
   });
   members.sort((a, b) => a.full_name.localeCompare(b.full_name));
 
-  return { members, attendanceByServant, trackedDates, todayDate, todayAvailable: todayHasRows || cutoffPassed };
+  return {
+    members,
+    attendanceByServant,
+    trackedDates,
+    serviceWeekdayDates: allDates.slice().sort(),
+    windowWeeks: windowSettings.servant_attendance_window_weeks,
+    todayDate,
+    todayAvailable: todayHasRows || cutoffPassed,
+  };
 }

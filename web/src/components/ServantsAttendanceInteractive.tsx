@@ -2,7 +2,9 @@
 
 import { useMemo, useState, useTransition } from "react";
 import type { ServantAttendanceBundle } from "@/lib/servant-attendance";
+import { resolveAttendanceSince } from "@/lib/attendance-window";
 import { setServantAttendanceAction } from "@/app/servants-attendance/actions";
+import { AttendanceHistoryModal } from "@/components/attendance/AttendanceHistoryModal";
 
 function formatDate(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -27,6 +29,14 @@ export function ServantsAttendanceInteractive({
   const [, startTransition] = useTransition();
   const [sortKey, setSortKey] = useState<"name" | "group" | "attendance" | "status">("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [historyMember, setHistoryMember] = useState<{ id: string; full_name: string } | null>(null);
+
+  function historyFor(servantId: string, joinDate: string | null) {
+    const since = resolveAttendanceSince(joinDate, bundle.windowWeeks);
+    if (!since) return [];
+    const presentSet = new Set(attendanceByServant[servantId] ?? []);
+    return bundle.serviceWeekdayDates.filter((d) => d >= since).map((d) => ({ date: d, present: presentSet.has(d) }));
+  }
 
   function handleSort(key: typeof sortKey) {
     if (key === sortKey) {
@@ -166,7 +176,17 @@ export function ServantsAttendanceInteractive({
                   <td className="px-4 py-2.5 font-medium text-[#333]">{m.full_name}</td>
                   <td className="px-4 py-2.5 text-[#666]">{m.groupLabel}</td>
                   <td className="px-4 py-2.5 text-[#666]">
-                    {m.averageAttendance === null ? "N/A" : `${m.averageAttendance}%`}
+                    {m.averageAttendance === null ? (
+                      "N/A"
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setHistoryMember({ id: m.id, full_name: m.full_name })}
+                        className="text-[#1e3a5f] font-semibold hover:underline"
+                      >
+                        {m.averageAttendance}%
+                      </button>
+                    )}
                   </td>
                   <td className="px-4 py-2.5 text-right">
                     <button
@@ -197,6 +217,14 @@ export function ServantsAttendanceInteractive({
           </tbody>
         </table>
       </div>
+
+      {historyMember && (
+        <AttendanceHistoryModal
+          fullName={historyMember.full_name}
+          dates={historyFor(historyMember.id, bundle.members.find((m) => m.id === historyMember.id)?.join_date ?? null)}
+          onClose={() => setHistoryMember(null)}
+        />
+      )}
     </div>
   );
 }

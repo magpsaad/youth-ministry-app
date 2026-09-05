@@ -2,8 +2,10 @@
 
 import { useMemo, useState, useTransition } from "react";
 import type { AttendanceBundle } from "@/lib/attendance";
+import { resolveAttendanceSince } from "@/lib/attendance-window";
 import { useMyAssigned } from "@/components/MyAssignedContext";
 import { setAttendanceAction } from "@/app/g/[groupId]/attendance/actions";
+import { AttendanceHistoryModal } from "./AttendanceHistoryModal";
 
 const PROXIMITY_BADGE: Record<string, string> = {
   Local: "bg-[#d1ecf1] text-[#0c5460]",
@@ -48,7 +50,15 @@ export function AttendanceInteractive({
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDesc, setSortDesc] = useState(false);
+  const [historyMember, setHistoryMember] = useState<{ id: string; full_name: string } | null>(null);
   const [, startTransition] = useTransition();
+
+  function historyFor(memberId: string, joinDate: string | null) {
+    const since = resolveAttendanceSince(joinDate, bundle.windowWeeks);
+    if (!since) return [];
+    const presentSet = new Set(attendanceByMember[memberId] ?? []);
+    return bundle.serviceWeekdayDates.filter((d) => d >= since).map((d) => ({ date: d, present: presentSet.has(d) }));
+  }
 
   const dateOptions = useMemo(() => {
     const options = bundle.trackedDates.map((d) => ({
@@ -159,6 +169,7 @@ export function AttendanceInteractive({
                   {sortIndicator("proximity")}
                 </button>
               </th>
+              <th className="px-4 py-2">Attendance %</th>
               <th className="px-4 py-2 text-right">
                 <button type="button" onClick={() => handleSort("status")} className="font-semibold hover:underline">
                   Status
@@ -185,6 +196,19 @@ export function AttendanceInteractive({
                       {m.proximity}
                     </span>
                   </td>
+                  <td className="px-4 py-2.5">
+                    {m.avgAttendancePercent === null ? (
+                      <span className="text-[#666]">N/A</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setHistoryMember({ id: m.id, full_name: m.full_name })}
+                        className="text-[#1e3a5f] font-semibold hover:underline"
+                      >
+                        {m.avgAttendancePercent}%
+                      </button>
+                    )}
+                  </td>
                   <td className="px-4 py-2.5 text-right">
                     <button
                       type="button"
@@ -206,7 +230,7 @@ export function AttendanceInteractive({
             })}
             {visible.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-[#666]">
+                <td colSpan={4} className="px-4 py-6 text-center text-[#666]">
                   No {memberLabel.toLowerCase()}s to show.
                 </td>
               </tr>
@@ -214,6 +238,14 @@ export function AttendanceInteractive({
           </tbody>
         </table>
       </div>
+
+      {historyMember && (
+        <AttendanceHistoryModal
+          fullName={historyMember.full_name}
+          dates={historyFor(historyMember.id, bundle.members.find((m) => m.id === historyMember.id)?.join_date ?? null)}
+          onClose={() => setHistoryMember(null)}
+        />
+      )}
     </div>
   );
 }

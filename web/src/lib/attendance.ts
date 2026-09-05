@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { getAttendanceWindowSettings, isOnServiceWeekday } from "@/lib/app-settings";
+import { getAttendanceWindowSettings, isOnServiceWeekday, resolveAttendanceSince } from "@/lib/app-settings";
 import { fetchAllRows } from "@/lib/pagination";
 
 export type AttendanceMemberBase = {
@@ -8,6 +8,8 @@ export type AttendanceMemberBase = {
   is_visitor: boolean;
   assigned_servant_id: string | null;
   proximity: "Local" | "Regional" | "Abroad" | "Unknown";
+  join_date: string | null;
+  avgAttendancePercent: number | null;
 };
 
 export type AttendanceBundle = {
@@ -15,6 +17,12 @@ export type AttendanceBundle = {
   /** member id -> every service_date they were present for */
   attendanceByMember: Record<string, string[]>;
   trackedDates: string[]; // descending, most recent first
+  /** Ascending, service-weekday-only dates -- the same set the average-%
+   * calculation below uses, and what the click-to-view weekly-breakdown
+   * modal (owner-requested) lists per person, floored at their own
+   * join_date and the configured rolling window client-side. */
+  serviceWeekdayDates: string[];
+  windowWeeks: number | null;
   todayDate: string;
   todayAvailable: boolean;
 };
@@ -60,7 +68,7 @@ export async function getAttendanceBundle(groupId: string | string[]): Promise<A
 
   let memberQuery = supabase
     .from("members")
-    .select("id, full_name, is_visitor, assigned_servant_id, university:universities(proximity)")
+    .select("id, full_name, is_visitor, assigned_servant_id, join_date, university:universities(proximity)")
     .eq("status", "active")
     .order("full_name");
   memberQuery = Array.isArray(groupId) ? memberQuery.in("group_id", groupId) : memberQuery.eq("group_id", groupId);
@@ -80,6 +88,8 @@ export async function getAttendanceBundle(groupId: string | string[]): Promise<A
     full_name: m.full_name,
     is_visitor: m.is_visitor,
     assigned_servant_id: m.assigned_servant_id,
+    join_date: m.join_date,
+    avgAttendancePercent: null,
     proximity: ((m.university as unknown as { proximity?: string } | null)?.proximity ??
       "Unknown") as AttendanceMemberBase["proximity"],
   }));
@@ -119,5 +129,33 @@ export async function getAttendanceBundle(groupId: string | string[]): Promise<A
   // check that today is actually the configured service day.
   const cutoffPassed = isOnServiceWeekday(todayDate, windowSettings.service_weekday) && timeMinutes >= toMinutes(cutoff);
 
-  return { members, attendanceByMember, trackedDates, todayDate, todayAvailable: todayHasRows || cutoffPassed };
+  // Only service-weekday dates count toward average attendance % (and the
+  // weekly-breakdown modal, which lists exactly this set) -- `trackedDates`
+  // above still shows every date, including off-day special events, for the
+  // date-picker (REQUIREMENTS.md §6.5).
+  const serviceWeekdayDates = Array.from(trackedDatesSet)
+    .filter((d) => isOnServiceWeekday(d, windowSettings.service_weekday))
+    .sort();
+
+  const membersWithAttendance = members.map((m) => {
+    const since = resolveAttendanceSince(m.join_date, windowSettings.youth_attendance_window_weeks);
+    if (!since) return m;
+    const trackedInWindow = serviceWeekdayDates.filter((d) => d >= since);
+    const presentSet = new Set(attendanceByMember[m.id] ?? []);
+    const avgAttendancePercent =
+      trackedInWindow.length > 0
+        ? Math.round((trackedInWindow.filter((d) => presentSet.has(d)).length / trackedInWindow.length) * 100)
+        : null;
+    return { ...m, avgAttendancePercent };
+  });
+
+  return {
+    members: membersWithAttendance,
+    attendanceByMember,
+    trackedDates,
+    serviceWeekdayDates,
+    windowWeeks: windowSettings.youth_attendance_window_weeks,
+    todayDate,
+    todayAvailable: todayHasRows || cutoffPassed,
+  };
 }
