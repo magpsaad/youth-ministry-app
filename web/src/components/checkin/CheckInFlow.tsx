@@ -69,6 +69,11 @@ export function CheckInFlow({
   const [successName, setSuccessName] = useState<string | null>(null);
   const [attendanceRecorded, setAttendanceRecorded] = useState(true);
   const [wasNewRegistration, setWasNewRegistration] = useState(false);
+  // Owner-requested: distinguishes "brand new registration" from "matched
+  // an existing record and updated it" -- both go through the same intake
+  // form/success screen, but the not-tracked-today message shouldn't call
+  // an existing, just-updated record a "registration."
+  const [wasResolvedDuplicate, setWasResolvedDuplicate] = useState(false);
   // Owner-reported: a self-check-in mis-tap (wrong name, right next to the
   // intended one) had no way to be undone. The success screen already
   // shows the checked-in name -- a mis-tap is immediately visible there --
@@ -129,6 +134,7 @@ export function CheckInFlow({
     setSuccessName(person.full_name);
     setAttendanceRecorded(result.attendanceRecorded);
     setWasNewRegistration(false);
+    setWasResolvedDuplicate(false);
     setCheckedInPerson(person);
     setCanUndo(result.attendanceRecorded && result.newlyCreated);
     setRememberRestore({ rememberedCookieWritten: result.rememberedCookieWritten, previousRemembered: result.previousRemembered });
@@ -143,10 +149,11 @@ export function CheckInFlow({
     setView("success");
   }
 
-  function handleIntakeSubmitted(name: string, recorded: boolean) {
+  function handleIntakeSubmitted(name: string, recorded: boolean, resolvedDuplicate = false) {
     setSuccessName(name);
     setAttendanceRecorded(recorded);
-    setWasNewRegistration(true);
+    setWasNewRegistration(!resolvedDuplicate);
+    setWasResolvedDuplicate(resolvedDuplicate);
     setCheckedInPerson(null);
     setCanUndo(false);
     setMissingFields(NO_MISSING_FIELDS);
@@ -190,9 +197,11 @@ export function CheckInFlow({
         <p className="mt-1 text-sm text-[#666]">
           {attendanceRecorded
             ? "See you inside."
-            : wasNewRegistration
-              ? "Attendance isn’t tracked today, but your registration is saved."
-              : `Attendance isn’t tracked today — please check back this ${serviceDayName}.`}
+            : wasResolvedDuplicate
+              ? "Attendance isn’t tracked today, but your record has been updated."
+              : wasNewRegistration
+                ? "Attendance isn’t tracked today, but your registration is saved."
+                : `Attendance isn’t tracked today — please check back this ${serviceDayName}.`}
         </p>
         {canUndo && (
           <>

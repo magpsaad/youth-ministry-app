@@ -65,7 +65,7 @@ export function MemberIntakeForm({
   memberLabel: string;
   currentGroupName: string;
   onBack?: () => void;
-  onSubmitted: (name: string, attendanceRecorded: boolean) => void;
+  onSubmitted: (name: string, attendanceRecorded: boolean, wasResolvedDuplicate?: boolean) => void;
 }) {
   const [form, setForm] = useState<NewMemberInput>(EMPTY_FORM);
   const [pending, setPending] = useState(false);
@@ -123,7 +123,7 @@ export function MemberIntakeForm({
           setDuplicateMatch(null);
           void createNewRecord();
         }}
-        onResolved={(attendanceRecorded) => onSubmitted(form.full_name, attendanceRecorded)}
+        onResolved={(attendanceRecorded) => onSubmitted(form.full_name, attendanceRecorded, true)}
       />
     );
   }
