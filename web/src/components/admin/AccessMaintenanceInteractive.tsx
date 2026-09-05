@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import type { AccessProfile, AccessRoleRow } from "@/app/admin/access-maintenance/actions";
 import type { GroupSummary } from "@/lib/groups";
-import { grantRoleAction, revokeRoleAction } from "@/app/admin/access-maintenance/actions";
+import { grantRoleAction, revokeRoleAction, removeProfileCompletelyAction } from "@/app/admin/access-maintenance/actions";
 
 const ROLE_LABELS: Record<AccessRoleRow["role"], string> = {
   // "System Admin" (not just "Admin") deliberately -- owner-reported:
@@ -35,7 +35,7 @@ const ROLES_ALLOWING_GROUP: AccessRoleRow["role"][] = ["sub_coordinator", "serva
  * least once) can be granted a role -- there's no account to attach one to
  * otherwise (matches how the Pending Servants approval flow works). */
 export function AccessMaintenanceInteractive({
-  profiles,
+  profiles: initialProfiles,
   initialRoles,
   groups,
 }: {
@@ -43,6 +43,7 @@ export function AccessMaintenanceInteractive({
   initialRoles: AccessRoleRow[];
   groups: GroupSummary[];
 }) {
+  const [profiles, setProfiles] = useState(initialProfiles);
   const [roles, setRoles] = useState(initialRoles);
   const [search, setSearch] = useState("");
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
@@ -104,6 +105,28 @@ export function AccessMaintenanceInteractive({
     });
   }
 
+  /** Owner-reported: a duplicate/leftover account (all its roles already
+   * revoked above) has no way to be removed outright -- it just sits here
+   * forever, since this is the only screen listing every profile
+   * regardless of role. remove_profile_completely() itself refuses if the
+   * person has left behind any real history, so this can't silently
+   * destroy genuine activity -- that failure surfaces here as an error. */
+  function handleRemoveProfile() {
+    if (!selectedProfileId || !selectedProfile) return;
+    if (!confirm(`Permanently remove ${selectedProfile.full_name}'s record? This cannot be undone.`)) return;
+    setError(null);
+    startTransition(async () => {
+      const res = await removeProfileCompletelyAction(selectedProfileId);
+      if (res.error) {
+        setError(res.error);
+        return;
+      }
+      setProfiles((prev) => prev.filter((p) => p.id !== selectedProfileId));
+      setRoles((prev) => prev.filter((r) => r.user_id !== selectedProfileId));
+      setSelectedProfileId(null);
+    });
+  }
+
   return (
     <div className="space-y-4">
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
@@ -155,7 +178,18 @@ export function AccessMaintenanceInteractive({
           <p className="text-sm text-[#666]">Select a person to view/edit their roles.</p>
         ) : (
           <>
-            <h2 className="text-lg font-bold text-[#1e3a5f] mb-3">{selectedProfile.full_name}</h2>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="text-lg font-bold text-[#1e3a5f]">{selectedProfile.full_name}</h2>
+              <button
+                type="button"
+                onClick={handleRemoveProfile}
+                disabled={pending}
+                title="Permanently delete this person's record"
+                className="shrink-0 text-xs font-semibold text-[#dc3545] hover:underline disabled:opacity-60"
+              >
+                Remove Person
+              </button>
+            </div>
             {error && <p className="mb-3 text-sm text-[#dc3545]">{error}</p>}
 
             <div className="divide-y divide-[#f0f0f0] mb-4">

@@ -96,3 +96,25 @@ export async function revokeRoleAction(roleRowId: string) {
   revalidatePath("/admin/access-maintenance");
   return { error: null };
 }
+
+/** Owner-reported: removing a servant from Servant Profiles only ever
+ * revoked their 'servant' role grant (remove_servant(), migration 0022) --
+ * the underlying profiles row was left behind, orphaned (no role left, so
+ * invisible everywhere role-filtered) but still listed here, with no way
+ * to act on it. This is the real, full delete -- migration 0051's RPC
+ * refuses if the person has left behind any actual history, so it can't
+ * be used to silently destroy someone's genuine activity. */
+export async function removeProfileCompletelyAction(profileId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in" };
+
+  const { error } = await supabase.rpc("remove_profile_completely", { p_profile_id: profileId });
+  if (error) return { error: error.message };
+
+  await logAudit(user.id, "ADMIN_ACCESS_MAINTENANCE", { details: { action: "remove_profile", profileId } });
+  revalidatePath("/admin/access-maintenance");
+  return { error: null };
+}
