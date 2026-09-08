@@ -9,11 +9,15 @@ function formatDay(dateKey: string): string {
   return formatDateKey(dateKey, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 }
 
-/** REQUIREMENTS.md §6.14 -- by day (latest first), each day showing every
- * user active that day and their hit count. Filtering to one user reduces
- * this to only the days that user has any activity, showing just their
- * count for each. */
+/** REQUIREMENTS.md §6.14 -- two views, same User/Date Filter controls
+ * driving both: "By Date" (day-by-day, latest first, each day showing
+ * every user active that day and their hit count) and "By User"
+ * (owner-requested: every user alphabetically, each with the latest date
+ * -- within the current filters -- they accessed the app, or "Not
+ * accessed" if none). Filtering to one user narrows "By Date" to just the
+ * days they have activity, and narrows "By User" to just that one row. */
 export function AuditReportInteractive({ initial, users }: { initial: AuditReportRow[]; users: AuditReportUser[] }) {
+  const [view, setView] = useState<"byDate" | "byUser">("byDate");
   const [userId, setUserId] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -43,9 +47,36 @@ export function AuditReportInteractive({ initial, users }: { initial: AuditRepor
       }));
   }, [initial, userId, dateFrom, dateTo]);
 
+  const byUser = useMemo(() => {
+    const lastAccess = new Map<string, string>(); // user_id -> latest matching day
+    for (const r of initial) {
+      if (!r.user_id) continue;
+      if (userId && r.user_id !== userId) continue;
+      const day = easternDateKey(r.occurred_at);
+      if (dateFrom && day < dateFrom) continue;
+      if (dateTo && day > dateTo) continue;
+      const existing = lastAccess.get(r.user_id);
+      if (!existing || day > existing) lastAccess.set(r.user_id, day);
+    }
+    return users
+      .filter((u) => !userId || u.id === userId)
+      .map((u) => ({ id: u.id, full_name: u.full_name, lastAccessed: lastAccess.get(u.id) ?? null }))
+      .sort((a, b) => a.full_name.localeCompare(b.full_name));
+  }, [initial, users, userId, dateFrom, dateTo]);
+
   return (
     <div className="space-y-4">
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
+        <div className="flex flex-wrap gap-4 mb-3">
+          <label className="flex items-center gap-1.5 text-sm text-[#333]">
+            <input type="radio" name="auditReportView" checked={view === "byDate"} onChange={() => setView("byDate")} />
+            By Date
+          </label>
+          <label className="flex items-center gap-1.5 text-sm text-[#333]">
+            <input type="radio" name="auditReportView" checked={view === "byUser"} onChange={() => setView("byUser")} />
+            By User
+          </label>
+        </div>
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-xs text-[#666]">
             User
@@ -72,7 +103,11 @@ export function AuditReportInteractive({ initial, users }: { initial: AuditRepor
             <span className="text-[#999]">▾</span>
           </button>
         </div>
-        <p className="mt-2 text-xs text-[#666]">{byDay.length} day{byDay.length === 1 ? "" : "s"} with activity.</p>
+        <p className="mt-2 text-xs text-[#666]">
+          {view === "byDate"
+            ? `${byDay.length} day${byDay.length === 1 ? "" : "s"} with activity.`
+            : `${byUser.length} user${byUser.length === 1 ? "" : "s"} shown.`}
+        </p>
       </div>
 
       {showDateFilter && (
@@ -88,26 +123,54 @@ export function AuditReportInteractive({ initial, users }: { initial: AuditRepor
         />
       )}
 
-      <div className="space-y-3">
-        {byDay.map(({ day, users: dayUsers }) => (
-          <div key={day} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-            <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">{formatDay(day)}</h3>
-            <div className="divide-y divide-[#f0f0f0]">
-              {dayUsers.map(([label, count]) => (
-                <div key={label} className="py-1.5 flex items-center justify-between text-sm">
-                  <span className="text-[#333]">{label}</span>
-                  <span className="text-[#666]">{count} hit{count === 1 ? "" : "s"}</span>
-                </div>
-              ))}
+      {view === "byDate" ? (
+        <div className="space-y-3">
+          {byDay.map(({ day, users: dayUsers }) => (
+            <div key={day} className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
+              <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">{formatDay(day)}</h3>
+              <div className="divide-y divide-[#f0f0f0]">
+                {dayUsers.map(([label, count]) => (
+                  <div key={label} className="py-1.5 flex items-center justify-between text-sm">
+                    <span className="text-[#333]">{label}</span>
+                    <span className="text-[#666]">{count} hit{count === 1 ? "" : "s"}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-        {byDay.length === 0 && (
-          <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5 text-center text-sm text-[#666]">
-            No activity to show.
-          </div>
-        )}
-      </div>
+          ))}
+          {byDay.length === 0 && (
+            <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5 text-center text-sm text-[#666]">
+              No activity to show.
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] overflow-hidden overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-[#f5f5f5] text-left text-[#666]">
+                <th className="px-4 py-2 font-semibold">Name</th>
+                <th className="px-4 py-2 font-semibold">Last accessed</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#f0f0f0]">
+              {byUser.map((u) => (
+                <tr key={u.id}>
+                  <td className="px-4 py-2 text-[#333]">{u.full_name}</td>
+                  <td className="px-4 py-2 text-[#666]">{u.lastAccessed ? formatDay(u.lastAccessed) : "Not accessed"}</td>
+                </tr>
+              ))}
+              {byUser.length === 0 && (
+                <tr>
+                  <td colSpan={2} className="px-4 py-6 text-center text-[#666]">
+                    No users to show.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
