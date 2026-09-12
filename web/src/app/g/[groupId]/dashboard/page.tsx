@@ -4,7 +4,7 @@ import { getFollowUpsDue } from "@/lib/outreach";
 import { getServantsForGroup } from "@/lib/servants";
 import { getUniversities } from "@/lib/universities";
 import { getAppSettings } from "@/lib/app-settings";
-import { getAccessSummary } from "@/lib/roles";
+import { getAccessSummary, canEditGroup } from "@/lib/roles";
 import { getCombinedGroups } from "@/lib/groups";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/get-current-user";
@@ -62,6 +62,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
 
   const memberLabel = settings.member_label;
   const canDelete = access?.isAdmin || access?.isGeneralCoordinator || false;
+  const canEdit = access ? canEditGroup(access, groupId) : false;
   const currentUserName = profile?.full_name ?? user?.email ?? "Unknown";
 
   return (
@@ -79,6 +80,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
       universities={universities}
       memberLabel={memberLabel}
       canDelete={canDelete}
+      canEdit={canEdit}
       currentUserId={user?.id ?? ""}
       currentUserName={currentUserName}
     />

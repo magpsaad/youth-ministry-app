@@ -92,6 +92,7 @@ export function DashboardInteractive({
   universities,
   memberLabel,
   canDelete,
+  canEdit,
   currentUserId,
   currentUserName,
 }: {
@@ -108,6 +109,10 @@ export function DashboardInteractive({
   universities: University[];
   memberLabel: string;
   canDelete: boolean;
+  /** Owner-reported (Read-Only role bug follow-up): whether the Member
+   * Detail modal's Edit button shows for this cohort -- Dashboard is
+   * single-cohort, so unlike the Members list this is just one flag. */
+  canEdit: boolean;
   currentUserId: string;
   currentUserName: string;
 }) {
@@ -235,6 +240,7 @@ export function DashboardInteractive({
                         servants={servants}
                         memberLabel={memberLabel}
                         canDelete={canDelete}
+                        canEdit={canEdit}
                         currentUserName={currentUserName}
                         className="font-semibold text-[#1e3a5f] hover:underline text-left truncate"
                       >
@@ -293,6 +299,7 @@ export function DashboardInteractive({
                       servants={servants}
                       memberLabel={memberLabel}
                       canDelete={canDelete}
+                      canEdit={canEdit}
                       currentUserName={currentUserName}
                       className="font-semibold text-[#1e3a5f] hover:underline text-left truncate block"
                     >
@@ -360,6 +367,7 @@ export function DashboardInteractive({
                               servants={servants}
                               memberLabel={memberLabel}
                               canDelete={canDelete}
+                              canEdit={canEdit}
                               currentUserName={currentUserName}
                               className="font-semibold text-[#1e3a5f] hover:underline text-left truncate block"
                             >
@@ -407,6 +415,7 @@ export function DashboardInteractive({
                                 servants={servants}
                                 memberLabel={memberLabel}
                                 canDelete={canDelete}
+                                canEdit={canEdit}
                                 currentUserName={currentUserName}
                                 className="font-semibold text-[#1e3a5f] hover:underline text-left truncate"
                               >
@@ -471,6 +480,7 @@ export function DashboardInteractive({
                             servants={servants}
                             memberLabel={memberLabel}
                             canDelete={canDelete}
+                            canEdit={canEdit}
                             currentUserName={currentUserName}
                             className="font-semibold text-[#1e3a5f] hover:underline text-left truncate block"
                           >

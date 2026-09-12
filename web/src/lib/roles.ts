@@ -40,3 +40,20 @@ export async function getAccessSummary(userId: string): Promise<AccessSummary> {
     isCoordinator: has("general_coordinator") || has("sub_coordinator"),
   };
 }
+
+/**
+ * Owner-reported (Read-Only role bug follow-up): whether this person can
+ * edit a specific cohort's data, not just view it -- mirrors
+ * has_group_access() exactly (migration 0024/0057): Admin/General
+ * Coordinator can edit anywhere, otherwise only if they hold some
+ * NON-read_only role row at that exact group. A person can hold Read-Only
+ * at one cohort and a real role (servant/sub_coordinator) at another, so
+ * this is always resolved per-group, never as a single blanket flag.
+ */
+export function canEditGroup(access: AccessSummary, groupId: string): boolean {
+  return (
+    access.isAdmin ||
+    access.isGeneralCoordinator ||
+    access.roles.some((r) => r.group_id === groupId && r.role !== "read_only")
+  );
+}

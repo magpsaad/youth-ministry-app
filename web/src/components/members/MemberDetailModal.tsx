@@ -256,13 +256,17 @@ export function MemberDetailModal({
               onChange={handlePhotoSelected}
               className="hidden"
             />
-            {/* Owner-reported (follow-up, then revised): Add Photo (no
-                photo yet) stays available any time -- only Replace and
-                Delete, which act on an existing photo, are gated behind
-                Edit. Both still require canEdit -- a Read-Only servant
-                shouldn't get an Add Photo button just because there's no
-                existing photo to protect. */}
-            {canEdit && (!photoUrl || editing) && (
+            {/* Owner-reported (follow-up, then revised, then clarified
+                again): Add Photo (no photo yet) stays available to EVERYONE
+                who can view this record, Read-Only included -- explicitly
+                the one exception to the Edit lockout ("they CAN add
+                photos"). Only Replace and Delete, which act on an existing
+                photo, require canEdit. Since `editing` can never become
+                true without canEdit (the Edit button itself is hidden
+                otherwise), `canEdit && editing` here already collapses to
+                "always false" for a Read-Only viewer, leaving just
+                `!photoUrl` -- no separate flag needed. */}
+            {(!photoUrl || (canEdit && editing)) && (
               <button
                 type="button"
                 onClick={handleAddOrReplaceClick}

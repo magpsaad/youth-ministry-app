@@ -169,6 +169,15 @@ export async function dismissNewAssignmentAction(memberId: string, groupId: stri
  * (the current app's Cropper.js step) -- uploads the picked/captured file
  * as-is; cropping/resizing is a reasonable follow-up polish item.
  *
+ * Owner-clarified: a Read-Only servant may ADD a photo when none exists yet,
+ * even though they can't replace, remove, or edit anything else. A plain
+ * `.update()` would still be blocked by members_update's RLS for that case
+ * too (has_group_access excludes read_only entirely), so adding goes
+ * through add_member_photo() (migration 0058) -- a narrow security-definer
+ * RPC that only ever sets photo_path when it's currently null. Replacing an
+ * existing photo still goes through the regular RLS-gated update, which
+ * stays out of reach for Read-Only.
+ *
  * Each upload gets a unique path (timestamped) rather than overwriting the
  * previous one at a fixed `{memberId}.{ext}` path -- reusing the same path
  * produced the same public URL, which the browser/CDN would keep serving
@@ -192,9 +201,24 @@ export async function uploadMemberPhotoAction(memberId: string, groupId: string,
     .upload(path, file, { contentType: file.type });
   if (uploadError) return { error: uploadError.message };
 
-  const { data: updated, error: updateError } = await supabase.from("members").update({ photo_path: path }).eq("id", memberId).select("id");
-  if (updateError) return { error: updateError.message };
-  if (!updated || updated.length === 0) {
+  let updateOk: boolean;
+  if (existing?.photo_path) {
+    const { data: updated, error: updateError } = await supabase.from("members").update({ photo_path: path }).eq("id", memberId).select("id");
+    if (updateError) {
+      await supabase.storage.from(photosBucket()).remove([path]);
+      return { error: updateError.message };
+    }
+    updateOk = !!updated && updated.length > 0;
+  } else {
+    const { data: added, error: addError } = await supabase.rpc("add_member_photo", { p_member_id: memberId, p_photo_path: path });
+    if (addError) {
+      await supabase.storage.from(photosBucket()).remove([path]);
+      return { error: addError.message };
+    }
+    updateOk = added === true;
+  }
+
+  if (!updateOk) {
     // The file itself already made it into storage (storage policies are
     // separate from this table's RLS) -- clean up the now-orphaned upload
     // rather than leaving it unlinked.
