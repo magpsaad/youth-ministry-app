@@ -12,6 +12,7 @@ import { LoadGroupPanel } from "@/components/LoadGroupPanel";
 import { LoadAllCohortsButton } from "@/components/LoadAllCohortsButton";
 import { AppLogo } from "@/components/AppLogo";
 import { SignOutButton } from "@/components/SignOutButton";
+import { RefreshButton } from "@/components/RefreshButton";
 import { ServiceCalendarButton } from "@/components/calendar/ServiceCalendarButton";
 
 export default async function LandingPage() {
@@ -61,6 +62,12 @@ export default async function LandingPage() {
         <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">
           <SignOutButton className="text-white/70 hover:text-white transition-colors" />
           <span className="text-[10px] text-white/60">Version {settings.app_version}</span>
+        </div>
+
+        {/* No Home link here (this already is Home) -- Refresh takes its
+            usual top-left spot on its own. */}
+        <div className="absolute top-2.5 left-4">
+          <RefreshButton />
         </div>
       </header>
 

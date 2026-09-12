@@ -7,6 +7,7 @@ import { weekdayName } from "@/lib/attendance-window";
 import { SERVANT_CHECKIN_COOKIE, MEMBER_CHECKIN_COOKIE, parseRememberedCheckinPerson } from "@/lib/checkin-remember-cookie";
 import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon } from "@/components/icons";
+import { RefreshButton } from "@/components/RefreshButton";
 import { SignOutButton } from "@/components/SignOutButton";
 import { CheckInFlow } from "@/components/checkin/CheckInFlow";
 
@@ -48,15 +49,18 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
             member self-check-in stays exactly as before. */}
         {flow.isServant && (
           <>
-            <Link
-              href="/"
-              title="Home"
-              aria-label="Home"
-              className="absolute top-2.5 left-4 inline-flex items-center gap-1 text-white/70 hover:text-white transition-colors"
-            >
-              <HomeIcon className="h-8 w-8" />
-              <span className="text-xs font-medium">Home</span>
-            </Link>
+            <div className="absolute top-2.5 left-4 flex flex-col items-start gap-1">
+              <Link
+                href="/"
+                title="Home"
+                aria-label="Home"
+                className="inline-flex items-center gap-1 text-white/70 hover:text-white transition-colors"
+              >
+                <HomeIcon className="h-8 w-8" />
+                <span className="text-xs font-medium">Home</span>
+              </Link>
+              <RefreshButton />
+            </div>
             <SignOutButton className="absolute top-2.5 right-4 text-white/70 hover:text-white transition-colors" />
           </>
         )}

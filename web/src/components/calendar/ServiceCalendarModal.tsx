@@ -7,6 +7,7 @@ import type { CalendarEvent } from "@/lib/calendar-types";
 import { EVENT_TYPE_COLORS, contrastText } from "@/lib/calendar-types";
 import { AppLogo } from "@/components/AppLogo";
 import { HomeIcon } from "@/components/icons";
+import { RefreshButton } from "@/components/RefreshButton";
 import { SignOutButton } from "@/components/SignOutButton";
 import { EventForm } from "./EventForm";
 
@@ -246,15 +247,18 @@ export function ServiceCalendarModal({
   return createPortal(
     <div className="fixed inset-0 z-[70] bg-[#f5f5f5] flex flex-col">
       <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative shrink-0">
-        <button
-          onClick={onClose}
-          title="Home"
-          aria-label="Home"
-          className="absolute top-2.5 left-4 inline-flex items-center gap-1 text-white/70 hover:text-white transition-colors"
-        >
-          <HomeIcon className="h-8 w-8" />
-          <span className="text-xs font-medium">Home</span>
-        </button>
+        <div className="absolute top-2.5 left-4 flex flex-col items-start gap-1">
+          <button
+            onClick={onClose}
+            title="Home"
+            aria-label="Home"
+            className="inline-flex items-center gap-1 text-white/70 hover:text-white transition-colors"
+          >
+            <HomeIcon className="h-8 w-8" />
+            <span className="text-xs font-medium">Home</span>
+          </button>
+          <RefreshButton onRefresh={onRefresh} />
+        </div>
         <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">
           <SignOutButton className="text-white/70 hover:text-white transition-colors" />
           <span className="text-[10px] text-white/60">Version {appVersion}</span>
