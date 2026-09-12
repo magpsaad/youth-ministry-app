@@ -19,14 +19,23 @@ export type UpdateMemberInput = {
   is_visitor: boolean;
 };
 
-/** Full Name and Registration Comments are always read-only (REQUIREMENTS.md §6.4) -- never accepted here. */
+/** Full Name and Registration Comments are always read-only (REQUIREMENTS.md §6.4) -- never accepted here.
+ *
+ * Owner-reported (Read-Only role bug): a plain `.update()` with no
+ * `.select()` returns `error: null` even when RLS's `using` clause quietly
+ * matches zero rows -- Postgres reports that as a successful 0-row update,
+ * not a permission error. That let a Read-Only servant's blocked edit look
+ * like it saved (no error shown, modal closed) even though nothing actually
+ * changed. `.select("id")` + checking the returned rows is the only way to
+ * tell "saved" apart from "silently blocked" here. */
 export async function updateMemberAction(memberId: string, groupId: string, input: UpdateMemberInput) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const { error } = await supabase.from("members").update(input).eq("id", memberId);
+  const { data, error } = await supabase.from("members").update(input).eq("id", memberId).select("id");
   if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "You don't have permission to edit this record." };
 
   if (user) await logAudit(user.id, "MEMBER_EDITED", { groupId, details: { memberId } });
   revalidatePath(`/g/${groupId}/members`);
@@ -42,7 +51,7 @@ export async function deleteMemberAction(memberId: string, groupId: string) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const { error } = await supabase.from("members").delete().eq("id", memberId);
+  const { data, error } = await supabase.from("members").delete().eq("id", memberId).select("id");
   if (error) {
     // Owner-reported: the raw FK-violation message ("update or delete on
     // table \"members\" violates foreign key constraint
@@ -56,6 +65,7 @@ export async function deleteMemberAction(memberId: string, groupId: string) {
     }
     return { error: error.message };
   }
+  if (!data || data.length === 0) return { error: "You don't have permission to delete this record." };
 
   if (user) await logAudit(user.id, "MEMBER_DELETED", { groupId, details: { memberId } });
   revalidatePath(`/g/${groupId}/members`);
@@ -73,11 +83,13 @@ export async function assignServantAction(memberId: string, groupId: string, ser
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("members")
     .update({ assigned_servant_id: servantId, is_new_assignment: servantId !== null })
-    .eq("id", memberId);
+    .eq("id", memberId)
+    .select("id");
   if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "You don't have permission to make this change." };
 
   if (user) await logAudit(user.id, "SERVANT_ASSIGNED", { groupId, details: { memberId, servantId } });
   revalidatePath(`/g/${groupId}/members`);
@@ -102,11 +114,13 @@ export async function moveMemberGroupAction(memberId: string, oldGroupId: string
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("members")
     .update({ group_id: newGroupId, assigned_servant_id: null, is_new_assignment: false })
-    .eq("id", memberId);
+    .eq("id", memberId)
+    .select("id");
   if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "You don't have permission to make this change." };
 
   if (user) await logAudit(user.id, "MEMBER_EDITED", { groupId: newGroupId, details: { memberId, action: "moved_cohort", from: oldGroupId, to: newGroupId } });
   revalidatePath(`/g/${oldGroupId}/members`);
@@ -141,8 +155,9 @@ export async function dismissNewAssignmentAction(memberId: string, groupId: stri
     return { error: "Only the assigned servant can dismiss this." };
   }
 
-  const { error } = await supabase.from("members").update({ is_new_assignment: false }).eq("id", memberId);
+  const { data, error } = await supabase.from("members").update({ is_new_assignment: false }).eq("id", memberId).select("id");
   if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "You don't have permission to make this change." };
 
   await logAudit(user.id, "MEMBER_EDITED", { groupId, details: { memberId, action: "new_assignment_dismissed" } });
   revalidatePath(`/g/${groupId}/dashboard`);
@@ -177,8 +192,15 @@ export async function uploadMemberPhotoAction(memberId: string, groupId: string,
     .upload(path, file, { contentType: file.type });
   if (uploadError) return { error: uploadError.message };
 
-  const { error: updateError } = await supabase.from("members").update({ photo_path: path }).eq("id", memberId);
+  const { data: updated, error: updateError } = await supabase.from("members").update({ photo_path: path }).eq("id", memberId).select("id");
   if (updateError) return { error: updateError.message };
+  if (!updated || updated.length === 0) {
+    // The file itself already made it into storage (storage policies are
+    // separate from this table's RLS) -- clean up the now-orphaned upload
+    // rather than leaving it unlinked.
+    await supabase.storage.from(photosBucket()).remove([path]);
+    return { error: "You don't have permission to make this change." };
+  }
 
   if (existing?.photo_path && existing.photo_path !== path) {
     await supabase.storage.from(photosBucket()).remove([existing.photo_path]);
@@ -195,8 +217,9 @@ export async function removeMemberPhotoAction(memberId: string, groupId: string,
   const { error: removeError } = await supabase.storage.from(photosBucket()).remove([photoPath]);
   if (removeError) return { error: removeError.message };
 
-  const { error } = await supabase.from("members").update({ photo_path: null }).eq("id", memberId);
+  const { data, error } = await supabase.from("members").update({ photo_path: null }).eq("id", memberId).select("id");
   if (error) return { error: error.message };
+  if (!data || data.length === 0) return { error: "You don't have permission to make this change." };
 
   revalidatePath(`/g/${groupId}/members`);
   revalidatePath(`/g/${groupId}/dashboard`);
