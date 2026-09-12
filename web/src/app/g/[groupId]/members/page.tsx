@@ -20,9 +20,16 @@ export default async function MembersPage({ params }: { params: Promise<{ groupI
   // Assigned Servant filter (MemberListInteractive already just renders
   // whatever `servants` it's given) now covers every servant in the whole
   // service instead of just this one cohort's.
-  const groupIds = groupId === ALL_COHORTS_GROUP_ID ? (await getCombinedGroups()).map((g) => g.id) : groupId;
+  //
+  // Owner-reported: the combined view is the slowest of these tabs --
+  // fetched here once, up front (needed to know which group_ids to query
+  // everything else by), and reused below rather than calling
+  // getCombinedGroups() a second time inside the Promise.all, which used to
+  // duplicate this same round trip for no reason.
+  const combinedGroups = groupId === ALL_COHORTS_GROUP_ID ? await getCombinedGroups() : [];
+  const groupIds = groupId === ALL_COHORTS_GROUP_ID ? combinedGroups.map((g) => g.id) : groupId;
 
-  const [members, universities, servants, settings, windowSettings, access, profile, combinedGroups] = await Promise.all([
+  const [members, universities, servants, settings, windowSettings, access, profile] = await Promise.all([
     getGroupMembers(groupIds),
     getUniversities(),
     getServantsForGroup(groupIds),
@@ -32,7 +39,6 @@ export default async function MembersPage({ params }: { params: Promise<{ groupI
     user
       ? supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle().then((r) => r.data)
       : Promise.resolve(null),
-    groupId === ALL_COHORTS_GROUP_ID ? getCombinedGroups() : Promise.resolve([]),
   ]);
 
   return (
