@@ -22,6 +22,7 @@ export function MemberDetailLink({
   servants,
   memberLabel,
   canDelete,
+  canEdit = true,
   currentUserName,
   className,
   children,
@@ -34,6 +35,11 @@ export function MemberDetailLink({
   servants: ServantOption[];
   memberLabel: string;
   canDelete: boolean;
+  /** Owner-reported (Read-Only bug follow-up): defaults to true for call
+   * sites (Dashboard's Birthdays/New Registrations) that haven't been
+   * threaded through with a per-member answer yet -- only the Members list
+   * currently computes this per-cohort. */
+  canEdit?: boolean;
   currentUserName: string;
   className?: string;
   children: React.ReactNode;
@@ -64,6 +70,7 @@ export function MemberDetailLink({
           servants={servants}
           memberLabel={memberLabel}
           canDelete={canDelete}
+          canEdit={canEdit}
           currentUserName={currentUserName}
           onClose={() => setDetail(null)}
           onSaved={() => router.refresh()}

@@ -21,6 +21,8 @@ export function MemberListInteractive({
   memberLabel,
   groupLabel,
   canDelete,
+  canEditAll,
+  editableGroupIds,
   currentUserId,
   currentUserName,
   windowWeeks,
@@ -34,6 +36,13 @@ export function MemberListInteractive({
   memberLabel: string;
   groupLabel: string;
   canDelete: boolean;
+  /** Owner-reported (Read-Only bug follow-up): whether Edit/photo controls
+   * show at all. `canEditAll` covers Admin/General Coordinator; otherwise a
+   * member is only editable if its own group_id appears in
+   * `editableGroupIds` -- someone can hold Read-Only at one cohort and a
+   * real role at another, so this is resolved per-member, not as one flag. */
+  canEditAll: boolean;
+  editableGroupIds: string[];
   currentUserId: string;
   currentUserName: string;
   windowWeeks: number | null;
@@ -270,6 +279,8 @@ export function MemberListInteractive({
         servants={servants}
         memberLabel={memberLabel}
         canDelete={canDelete}
+        canEditAll={canEditAll}
+        editableGroupIds={editableGroupIds}
         currentUserName={currentUserName}
       />
     </div>

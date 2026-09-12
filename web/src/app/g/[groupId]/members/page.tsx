@@ -41,6 +41,19 @@ export default async function MembersPage({ params }: { params: Promise<{ groupI
       : Promise.resolve(null),
   ]);
 
+  const canEditAll = access?.isAdmin || access?.isGeneralCoordinator || false;
+  // Owner-reported: the Edit button (and photo controls) showed for
+  // Read-Only servants too -- clicking Save/Add Photo now correctly gets
+  // rejected (migration 0057 + the actions.ts row-count check), but it's a
+  // confusing dead end to let someone start editing at all. A person can
+  // hold a real role (servant/sub_coordinator) at one cohort and Read-Only
+  // at another, so this has to be computed per-cohort, not as one flag --
+  // "editable" means holding any NON-read_only role row at that specific
+  // group (mirrors has_group_access() exactly, migration 0024/0057).
+  const editableGroupIds = (access?.roles ?? [])
+    .filter((r) => r.role !== "read_only" && r.group_id)
+    .map((r) => r.group_id as string);
+
   return (
     <div className="mt-4">
       <MemberListInteractive
@@ -51,7 +64,9 @@ export default async function MembersPage({ params }: { params: Promise<{ groupI
         servants={servants}
         memberLabel={settings.member_label}
         groupLabel={settings.group_label}
-        canDelete={access?.isAdmin || access?.isGeneralCoordinator || false}
+        canDelete={canEditAll}
+        canEditAll={canEditAll}
+        editableGroupIds={editableGroupIds}
         currentUserId={user?.id ?? ""}
         currentUserName={profile?.full_name ?? user?.email ?? "Unknown"}
         windowWeeks={windowSettings.youth_attendance_window_weeks}

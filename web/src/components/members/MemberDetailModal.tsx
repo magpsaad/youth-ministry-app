@@ -39,6 +39,7 @@ export function MemberDetailModal({
   servants,
   memberLabel,
   canDelete,
+  canEdit,
   currentUserName,
   onClose,
   onSaved,
@@ -51,6 +52,12 @@ export function MemberDetailModal({
   servants: ServantOption[];
   memberLabel: string;
   canDelete: boolean;
+  /** Owner-reported: a Read-Only servant could open Edit and every photo
+   * control here even though Save/upload were always going to be rejected
+   * server-side (migration 0057 + the row-count checks in actions.ts) --
+   * confusing dead end. Hides Edit and both photo buttons outright instead
+   * of just letting them fail. */
+  canEdit: boolean;
   currentUserName: string;
   onClose: () => void;
   onSaved: () => void;
@@ -252,8 +259,10 @@ export function MemberDetailModal({
             {/* Owner-reported (follow-up, then revised): Add Photo (no
                 photo yet) stays available any time -- only Replace and
                 Delete, which act on an existing photo, are gated behind
-                Edit. */}
-            {(!photoUrl || editing) && (
+                Edit. Both still require canEdit -- a Read-Only servant
+                shouldn't get an Add Photo button just because there's no
+                existing photo to protect. */}
+            {canEdit && (!photoUrl || editing) && (
               <button
                 type="button"
                 onClick={handleAddOrReplaceClick}
@@ -269,7 +278,7 @@ export function MemberDetailModal({
                 confirmation, at any time -- now only shown while editing
                 (matching every other destructive/data-changing control on
                 this modal), and handleRemovePhoto itself now confirms. */}
-            {photoUrl && editing && (
+            {canEdit && photoUrl && editing && (
               <button
                 type="button"
                 onClick={handleRemovePhoto}
@@ -418,12 +427,14 @@ export function MemberDetailModal({
         <div className="mt-5 flex flex-wrap gap-2 justify-between items-center border-t border-[#f0f0f0] pt-4">
           <div className="flex flex-wrap gap-2">
             {!editing ? (
-              <button
-                onClick={() => setEditing(true)}
-                className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
-              >
-                Edit
-              </button>
+              canEdit && (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="rounded-md bg-[#1e3a5f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+                >
+                  Edit
+                </button>
+              )
             ) : (
               <>
                 <button

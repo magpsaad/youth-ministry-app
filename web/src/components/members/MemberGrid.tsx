@@ -23,6 +23,8 @@ export function MemberGrid({
   servants,
   memberLabel,
   canDelete,
+  canEditAll,
+  editableGroupIds,
   currentUserName,
 }: {
   members: MemberListItem[];
@@ -33,8 +35,11 @@ export function MemberGrid({
   servants: ServantOption[];
   memberLabel: string;
   canDelete: boolean;
+  canEditAll: boolean;
+  editableGroupIds: string[];
   currentUserName: string;
 }) {
+  const editableGroupIdSet = new Set(editableGroupIds);
   const isCombined = groupId === ALL_COHORTS_GROUP_ID;
 
   if (members.length === 0) {
@@ -46,6 +51,7 @@ export function MemberGrid({
       {members.map((m) => {
         const proximity = m.university?.proximity ?? "Unknown";
         const photoUrl = memberPhotoUrl(m.photo_path);
+        const canEdit = canEditAll || editableGroupIdSet.has(m.group_id);
         return (
           <div
             key={m.id}
@@ -74,6 +80,7 @@ export function MemberGrid({
                   servants={servants}
                   memberLabel={memberLabel}
                   canDelete={canDelete}
+                  canEdit={canEdit}
                   currentUserName={currentUserName}
                   className="font-semibold text-[#1e3a5f] hover:underline text-left truncate block"
                 >
