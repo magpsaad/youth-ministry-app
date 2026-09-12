@@ -8,6 +8,13 @@ import { NextResponse, type NextRequest } from "next/server";
  * gated. */
 const GATE_EXEMPT_PREFIXES = ["/login", "/checkin", "/auth", "/register"];
 
+/** Fetched without a session (a browser checking for an installable PWA, or
+ * an app-store-style crawler) -- must never be redirected regardless of
+ * auth state. Distinct from GATE_EXEMPT_PREFIXES above, which is about what
+ * a signed-in-but-incomplete person can reach, not what an anonymous
+ * request can. */
+const PUBLIC_ASSET_PATHS = ["/manifest.webmanifest"];
+
 function isGateExempt(pathname: string): boolean {
   return GATE_EXEMPT_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
@@ -31,6 +38,16 @@ function isGateExempt(pathname: string): boolean {
  * this function's own Supabase client is scoped to request/response
  * cookies, not the cookies() API those rely on, so it stays read-only by
  * design rather than risk running that logic in a different context.
+ *
+ * Also enforces the signed-out gate here, not just at the page level.
+ * Every gated page already has its own `if (!user) redirect("/login")` --
+ * that isn't removed, it's now a backup -- but a signed-out request used to
+ * reach the page first regardless, so an anonymous direct hit to e.g.
+ * /g/[groupId]/members would let that page's own data query fire (and fail
+ * loudly with a Postgres "permission denied", RLS correctly blocking it,
+ * but noisy in the server logs) before the page's own redirect won out.
+ * Redirecting here instead means the page never runs at all for a
+ * signed-out request to a gated route.
  */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -63,6 +80,14 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
+  if (PUBLIC_ASSET_PATHS.includes(pathname)) {
+    return response;
+  }
+
+  if (!user && !isGateExempt(pathname)) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
   if (user && !isGateExempt(pathname)) {
     const [{ data: profile }, { count: roleCount }] = await Promise.all([
       supabase.from("profiles").select("phone, gender").eq("id", user.id).maybeSingle(),
