@@ -27,7 +27,8 @@ alter table app_settings add column program_label text not null default 'Field o
 alter table app_settings add column proximity_enabled boolean not null default true;
 alter table app_settings add column show_proximity_on_attendance boolean not null default true;
 
--- Was hard-coded "universities/affiliations"; the label is configurable now.
+-- Was "Changed the universities/affiliations list"; reworded to match the
+-- generic "School" default now that the field's label is configurable.
 update audit_config
-set description = 'Changed the affiliations list'
+set description = 'Changed the School list'
 where action_type = 'ADMIN_UNIVERSITIES_MAINTENANCE';

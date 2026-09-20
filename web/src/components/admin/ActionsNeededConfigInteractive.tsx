@@ -157,7 +157,7 @@ export function ActionsNeededConfigInteractive({
           />
         </label>
         <label className="text-xs text-[#666]">
-          Field of Focus Label (e.g. &ldquo;Program of Study&rdquo;, &ldquo;Field of work&rdquo;)
+          Field of Focus Label (e.g. &ldquo;Program of Study&rdquo;)
           <input
             value={appSettings.program_label}
             onChange={(e) => updateAppField("program_label", e.target.value)}
