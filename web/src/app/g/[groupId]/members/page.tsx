@@ -61,6 +61,9 @@ export default async function MembersPage({ params }: { params: Promise<{ groupI
         groupId={groupId}
         groups={combinedGroups}
         universities={universities}
+        universityLabel={settings.university_label}
+        programLabel={settings.program_label}
+        proximityEnabled={settings.proximity_enabled}
         servants={servants}
         memberLabel={settings.member_label}
         groupLabel={settings.group_label}

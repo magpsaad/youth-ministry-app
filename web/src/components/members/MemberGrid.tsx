@@ -20,6 +20,9 @@ export function MemberGrid({
   groups,
   groupLabel,
   universities,
+  universityLabel,
+  programLabel,
+  proximityEnabled,
   servants,
   memberLabel,
   canDelete,
@@ -32,6 +35,9 @@ export function MemberGrid({
   groups: GroupSummary[];
   groupLabel: string;
   universities: University[];
+  universityLabel: string;
+  programLabel: string;
+  proximityEnabled: boolean;
   servants: ServantOption[];
   memberLabel: string;
   canDelete: boolean;
@@ -77,6 +83,8 @@ export function MemberGrid({
                   groups={groups}
                   groupLabel={groupLabel}
                   universities={universities}
+                  universityLabel={universityLabel}
+                  programLabel={programLabel}
                   servants={servants}
                   memberLabel={memberLabel}
                   canDelete={canDelete}
@@ -99,15 +107,17 @@ export function MemberGrid({
               </div>
             </div>
             <div className="mt-2 flex items-center justify-between gap-2">
-              <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${PROXIMITY_BADGE[proximity]}`}>
-                {proximity}
-              </span>
+              {proximityEnabled && (
+                <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${PROXIMITY_BADGE[proximity]}`}>
+                  {proximity}
+                </span>
+              )}
               {isCombined && m.group && (
                 <span className="rounded-full bg-[#e2e8f0] text-[#1e3a5f] text-[11px] font-semibold px-2.5 py-0.5 truncate">
                   {m.group.name}
                 </span>
               )}
-              <span className="text-[11px] text-[#666] truncate">
+              <span className="ml-auto text-[11px] text-[#666] truncate">
                 {m.assigned_servant?.full_name ?? "Unassigned"}
               </span>
             </div>

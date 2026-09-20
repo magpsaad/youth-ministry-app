@@ -36,6 +36,8 @@ export function MemberDetailModal({
   groups,
   groupLabel,
   universities,
+  universityLabel,
+  programLabel,
   servants,
   memberLabel,
   canDelete,
@@ -49,6 +51,8 @@ export function MemberDetailModal({
   groups: GroupSummary[];
   groupLabel: string;
   universities: University[];
+  universityLabel: string;
+  programLabel: string;
   servants: ServantOption[];
   memberLabel: string;
   canDelete: boolean;
@@ -314,7 +318,7 @@ export function MemberDetailModal({
               className={inputClass(editing)}
             />
           </FieldRow>
-          <FieldRow label="University/College">
+          <FieldRow label={universityLabel}>
             <select
               value={form.university_id ?? ""}
               onChange={(e) => field("university_id", e.target.value || null)}
@@ -329,7 +333,7 @@ export function MemberDetailModal({
               ))}
             </select>
           </FieldRow>
-          <FieldRow label="Program of Study">
+          <FieldRow label={programLabel}>
             <input
               value={form.program_of_study ?? ""}
               onChange={(e) => field("program_of_study", e.target.value)}

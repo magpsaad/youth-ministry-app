@@ -41,6 +41,11 @@ create table app_settings (
 
   group_label             text not null default 'Group',      -- "Cohort" for this deployment
   member_label            text not null default 'Member',     -- "Youth" for this deployment
+  university_label        text not null default 'School',     -- "University/College" for this deployment (0059)
+  program_label           text not null default 'Field of Focus', -- "Program of Study" for this deployment (0059)
+
+  proximity_enabled       boolean not null default true,      -- false = everyone is Local, proximity UI hidden (0059)
+  show_proximity_on_attendance boolean not null default true, -- Attendance-tab Proximity column, while enabled (0059)
 
   group_name_template     text default '{cohort_year} Cohort - Yr {position_label}',
 
@@ -50,6 +55,12 @@ create table app_settings (
   timezone                text not null default 'America/New_York',
   service_weekday         smallint not null default 5          -- 1=Mon .. 7=Sun (5=Friday)
     check (service_weekday between 1 and 7),
+
+  -- added by later migrations (0026/0027, 0029); blank attendance-window = no cap
+  youth_attendance_window_weeks   integer default 52,
+  servant_attendance_window_weeks integer default 52,
+  birthday_window_days_before     integer not null default 7,
+  birthday_window_days_after      integer not null default 14,
 
   updated_at              timestamptz not null default now()
 );

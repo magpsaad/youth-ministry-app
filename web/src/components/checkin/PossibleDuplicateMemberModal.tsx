@@ -9,15 +9,21 @@ import {
   type NewMemberInput,
 } from "@/app/checkin/actions";
 
-const FIELD_LABELS = {
-  name: "name",
-  phone: "phone number",
-  email: "email address",
-  university: "university",
-  program: "program of study",
-  dob: "date of birth",
-  gender: "gender",
-} as const;
+type FieldKey = "name" | "phone" | "email" | "university" | "program" | "dob" | "gender";
+
+// Used mid-sentence ("same X, but a different Y"), hence lowercase; the
+// school/program wording is an admin-editable App Setting.
+function fieldLabels(universityLabel: string, programLabel: string): Record<FieldKey, string> {
+  return {
+    name: "name",
+    phone: "phone number",
+    email: "email address",
+    university: universityLabel.toLowerCase(),
+    program: programLabel.toLowerCase(),
+    dob: "date of birth",
+    gender: "gender",
+  };
+}
 
 function joinWithAnd(items: string[]): string {
   if (items.length === 0) return "";
@@ -31,8 +37,8 @@ function joinWithAnd(items: string[]): string {
  * field is safe to name because it's just an echo of what she typed
  * herself; a "different" field is named but its real stored value is
  * never disclosed. */
-function buildMessage(match: DuplicateMatch): string {
-  const checks: { key: keyof typeof FIELD_LABELS; matched: boolean | null }[] = [
+function buildMessage(match: DuplicateMatch, labels: Record<FieldKey, string>, groupLabel: string): string {
+  const checks: { key: FieldKey; matched: boolean | null }[] = [
     { key: "name", matched: match.nameMatches },
     { key: "phone", matched: match.phoneMatches },
     { key: "email", matched: match.emailMatches },
@@ -41,15 +47,15 @@ function buildMessage(match: DuplicateMatch): string {
     { key: "dob", matched: match.dobMatches },
     { key: "gender", matched: match.genderMatches },
   ];
-  const same = checks.filter((c) => c.matched === true).map((c) => FIELD_LABELS[c.key]);
-  const different = checks.filter((c) => c.matched === false).map((c) => FIELD_LABELS[c.key]);
+  const same = checks.filter((c) => c.matched === true).map((c) => labels[c.key]);
+  const different = checks.filter((c) => c.matched === false).map((c) => labels[c.key]);
 
   let message = "We found a record that might already be you";
   const parts: string[] = [];
   if (same.length > 0) parts.push(`same ${joinWithAnd(same)}`);
   if (different.length > 0) parts.push(`a different ${joinWithAnd(different)}`);
   if (parts.length > 0) message += `: ${parts.join(", but ")}`;
-  if (!match.sameGroup) message += `, registered under Cohort "${match.groupName}"`;
+  if (!match.sameGroup) message += `, registered under ${groupLabel} "${match.groupName}"`;
   message += ". Is that you?";
   return message;
 }
@@ -79,6 +85,9 @@ export function PossibleDuplicateMemberModal({
   token,
   match,
   universities,
+  universityLabel,
+  programLabel,
+  groupLabel,
   formInput,
   currentGroupName,
   onNotMe,
@@ -87,6 +96,9 @@ export function PossibleDuplicateMemberModal({
   token: string;
   match: DuplicateMatch;
   universities: University[];
+  universityLabel: string;
+  programLabel: string;
+  groupLabel: string;
   formInput: NewMemberInput;
   currentGroupName: string;
   onNotMe: () => void;
@@ -116,7 +128,9 @@ export function PossibleDuplicateMemberModal({
   if (step === "confirm") {
     return (
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-4 space-y-4">
-        <p className="text-sm text-[#333]">{buildMessage(match)}</p>
+        <p className="text-sm text-[#333]">
+          {buildMessage(match, fieldLabels(universityLabel, programLabel), groupLabel)}
+        </p>
         <div className="flex gap-2">
           <button
             type="button"
@@ -163,12 +177,12 @@ export function PossibleDuplicateMemberModal({
         )}
         {match.universityMatches === false && university && (
           <Checkbox checked={resolution.updateUniversity} onChange={() => toggle("updateUniversity")}>
-            Change my university/college to {university.name}
+            Change my {universityLabel.toLowerCase()} to {university.name}
           </Checkbox>
         )}
         {match.programMatches === false && formInput.program_of_study && (
           <Checkbox checked={resolution.updateProgram} onChange={() => toggle("updateProgram")}>
-            Change my program of study to the one I just entered
+            Change my {programLabel.toLowerCase()} to the one I just entered
           </Checkbox>
         )}
         {formInput.home_address && (

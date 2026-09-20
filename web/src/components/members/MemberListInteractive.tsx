@@ -17,6 +17,9 @@ export function MemberListInteractive({
   groupId,
   groups,
   universities,
+  universityLabel,
+  programLabel,
+  proximityEnabled,
   servants,
   memberLabel,
   groupLabel,
@@ -32,6 +35,9 @@ export function MemberListInteractive({
   groupId: string;
   groups: GroupSummary[];
   universities: University[];
+  universityLabel: string;
+  programLabel: string;
+  proximityEnabled: boolean;
   servants: ServantOption[];
   memberLabel: string;
   groupLabel: string;
@@ -91,7 +97,7 @@ export function MemberListInteractive({
     if (universityIds.length) {
       result = result.filter((m) => m.university && universityIds.includes(m.university.id));
     }
-    if (proximities.length) {
+    if (proximityEnabled && proximities.length) {
       result = result.filter((m) => proximities.includes(m.university?.proximity ?? "Unknown"));
     }
     if (servantIds.length) {
@@ -102,7 +108,7 @@ export function MemberListInteractive({
     }
 
     return result;
-  }, [members, q, excludeVisitors, hasPhoto, male, female, universityIds, proximities, servantIds, cohortIds, myAssignedOnly, hydrated, currentUserId]);
+  }, [members, q, excludeVisitors, hasPhoto, male, female, universityIds, proximityEnabled, proximities, servantIds, cohortIds, myAssignedOnly, hydrated, currentUserId]);
 
   function multiSelectValues(e: React.ChangeEvent<HTMLSelectElement>): string[] {
     return Array.from(e.target.selectedOptions).map((o) => o.value);
@@ -180,7 +186,7 @@ export function MemberListInteractive({
               </select>
             </div>
             <div>
-              <p className="text-sm font-semibold mb-1">University/College</p>
+              <p className="text-sm font-semibold mb-1">{universityLabel}</p>
               <select
                 multiple
                 size={5}
@@ -197,23 +203,25 @@ export function MemberListInteractive({
             </div>
           </div>
 
-          <div>
-            <p className="text-sm font-semibold mb-1">Proximity</p>
-            <div className="flex flex-wrap gap-4">
-              {PROXIMITIES.map((p) => (
-                <label key={p} className="flex items-center gap-1.5 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={proximities.includes(p)}
-                    onChange={(e) =>
-                      setProximities((prev) => (e.target.checked ? [...prev, p] : prev.filter((x) => x !== p)))
-                    }
-                  />
-                  {p}
-                </label>
-              ))}
+          {proximityEnabled && (
+            <div>
+              <p className="text-sm font-semibold mb-1">Proximity</p>
+              <div className="flex flex-wrap gap-4">
+                {PROXIMITIES.map((p) => (
+                  <label key={p} className="flex items-center gap-1.5 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={proximities.includes(p)}
+                      onChange={(e) =>
+                        setProximities((prev) => (e.target.checked ? [...prev, p] : prev.filter((x) => x !== p)))
+                      }
+                    />
+                    {p}
+                  </label>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <div>
             <p className="text-sm font-semibold mb-1">Other</p>
@@ -276,6 +284,9 @@ export function MemberListInteractive({
         groups={groups}
         groupLabel={groupLabel}
         universities={universities}
+        universityLabel={universityLabel}
+        programLabel={programLabel}
+        proximityEnabled={proximityEnabled}
         servants={servants}
         memberLabel={memberLabel}
         canDelete={canDelete}

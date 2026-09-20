@@ -86,6 +86,9 @@ export function DashboardInteractive({
   unassigned,
   actionsNeeded,
   actionsNeededConfig,
+  proximityEnabled,
+  universityLabel,
+  programLabel,
   newlyAssigned,
   followUpsDue,
   servants,
@@ -103,6 +106,9 @@ export function DashboardInteractive({
   unassigned: UnassignedMember[];
   actionsNeeded: ActionsNeededMember[];
   actionsNeededConfig: ActionsNeededConfigRow[];
+  proximityEnabled: boolean;
+  universityLabel: string;
+  programLabel: string;
   newlyAssigned: NewlyAssignedMember[];
   followUpsDue: FollowUpDueEntry[];
   servants: ServantOption[];
@@ -236,7 +242,7 @@ export function DashboardInteractive({
                       <MemberDetailLink
                         memberId={m.id}
                         groupId={groupId}
-                        universities={universities}
+                        universities={universities} universityLabel={universityLabel} programLabel={programLabel}
                         servants={servants}
                         memberLabel={memberLabel}
                         canDelete={canDelete}
@@ -295,7 +301,7 @@ export function DashboardInteractive({
                     <MemberDetailLink
                       memberId={m.id}
                       groupId={groupId}
-                      universities={universities}
+                      universities={universities} universityLabel={universityLabel} programLabel={programLabel}
                       servants={servants}
                       memberLabel={memberLabel}
                       canDelete={canDelete}
@@ -363,7 +369,7 @@ export function DashboardInteractive({
                             <MemberDetailLink
                               memberId={m.id}
                               groupId={groupId}
-                              universities={universities}
+                              universities={universities} universityLabel={universityLabel} programLabel={programLabel}
                               servants={servants}
                               memberLabel={memberLabel}
                               canDelete={canDelete}
@@ -411,7 +417,7 @@ export function DashboardInteractive({
                               <MemberDetailLink
                                 memberId={m.id}
                                 groupId={groupId}
-                                universities={universities}
+                                universities={universities} universityLabel={universityLabel} programLabel={programLabel}
                                 servants={servants}
                                 memberLabel={memberLabel}
                                 canDelete={canDelete}
@@ -476,7 +482,7 @@ export function DashboardInteractive({
                           <MemberDetailLink
                             memberId={f.member_id}
                             groupId={groupId}
-                            universities={universities}
+                            universities={universities} universityLabel={universityLabel} programLabel={programLabel}
                             servants={servants}
                             memberLabel={memberLabel}
                             canDelete={canDelete}
@@ -578,7 +584,7 @@ export function DashboardInteractive({
               <ul className="list-disc pl-5 text-sm text-[#333] space-y-2 mb-4">
                 <li>
                   <strong>Outreach Needed</strong> (amber) — a {memberLabel.toLowerCase()} currently on a
-                  consecutive-absence streak at or beyond their proximity&rsquo;s minimum, whose most recent outreach
+                  consecutive-absence streak at or beyond {proximityEnabled ? "their proximity’s" : "the"} minimum, whose most recent outreach
                   (or lack of any) is older than the outreach-staleness window below. Clears itself automatically the
                   moment they attend again or any servant logs a new outreach entry for them — there&rsquo;s no
                   manual dismiss.
@@ -593,11 +599,20 @@ export function DashboardInteractive({
                   Dismiss it once you&rsquo;ve followed up.
                 </li>
               </ul>
-              <p className="text-xs text-[#666] mb-1 font-semibold">Outreach Needed thresholds, by proximity:</p>
+              <p className="text-xs text-[#666] mb-1 font-semibold">
+                {proximityEnabled ? "Outreach Needed thresholds, by proximity:" : "Outreach Needed thresholds:"}
+              </p>
               <div className="rounded-md bg-[#f5f5f5] p-3 text-xs text-[#333] space-y-1">
                 {actionsNeededConfig.map((c) => (
                   <p key={c.proximity}>
-                    <strong>{c.proximity}:</strong> min. {c.min_presence_count} presence
+                    {proximityEnabled ? (
+                      <>
+                        <strong>{c.proximity}:</strong> min.
+                      </>
+                    ) : (
+                      <>Min.</>
+                    )}{" "}
+                    {c.min_presence_count} presence
                     {c.min_presence_count === 1 ? "" : "s"}, {c.min_absence_weeks} consecutive absence
                     {c.min_absence_weeks === 1 ? "" : "s"}, outreach stale after {c.min_outreach_weeks} week
                     {c.min_outreach_weeks === 1 ? "" : "s"}.

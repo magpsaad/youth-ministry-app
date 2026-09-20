@@ -40,6 +40,7 @@ export function AnalyticsInteractive({
   servants,
   unassignedCount,
   memberLabel,
+  proximityEnabled,
   currentUserId,
   combined = false,
   groups = [],
@@ -50,6 +51,7 @@ export function AnalyticsInteractive({
   servants: ServantOption[];
   unassignedCount: number;
   memberLabel: string;
+  proximityEnabled: boolean;
   currentUserId: string;
   combined?: boolean;
   /** Owner-requested: in the combined "all cohorts" view, Average
@@ -225,22 +227,24 @@ export function AnalyticsInteractive({
         </p>
       </section>
 
-      <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
-          <MapPinIcon className="h-5 w-5" /> Proximity
-        </h2>
-        <ProximityDonut
-          local={proximity.Local}
-          regional={proximity.Regional}
-          abroad={proximity.Abroad}
-          unknown={proximity.Unknown}
-          centerLabel={`${memberLabel}s`}
-        />
-        <p className="mt-3 text-xs text-[#666]">
-          {completeness.total} active {memberLabel.toLowerCase()}
-          {completeness.total === 1 ? "" : "s"} (visitors excluded{applyFilter ? ", filtered to your assigned list" : ""}).
-        </p>
-      </section>
+      {proximityEnabled && (
+        <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
+          <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
+            <MapPinIcon className="h-5 w-5" /> Proximity
+          </h2>
+          <ProximityDonut
+            local={proximity.Local}
+            regional={proximity.Regional}
+            abroad={proximity.Abroad}
+            unknown={proximity.Unknown}
+            centerLabel={`${memberLabel}s`}
+          />
+          <p className="mt-3 text-xs text-[#666]">
+            {completeness.total} active {memberLabel.toLowerCase()}
+            {completeness.total === 1 ? "" : "s"} (visitors excluded{applyFilter ? ", filtered to your assigned list" : ""}).
+          </p>
+        </section>
+      )}
 
       <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
         <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">

@@ -73,7 +73,12 @@ export default async function DashboardPage({ params }: { params: Promise<{ grou
       birthdayWindowDays={{ before: settings.birthday_window_days_before, after: settings.birthday_window_days_after }}
       unassigned={unassigned}
       actionsNeeded={actionsNeeded}
-      actionsNeededConfig={actionsNeededConfig}
+      actionsNeededConfig={
+        settings.proximity_enabled ? actionsNeededConfig : actionsNeededConfig.filter((c) => c.proximity === "Local")
+      }
+      proximityEnabled={settings.proximity_enabled}
+      universityLabel={settings.university_label}
+      programLabel={settings.program_label}
       newlyAssigned={newlyAssigned}
       followUpsDue={followUpsDue}
       servants={servants}

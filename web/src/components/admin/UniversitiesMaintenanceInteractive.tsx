@@ -6,7 +6,16 @@ import { addUniversityAction, updateUniversityAction, deleteUniversityAction } f
 
 const PROXIMITIES = ["Local", "Regional", "Abroad", "Unknown"] as const;
 
-export function UniversitiesMaintenanceInteractive({ initial }: { initial: University[] }) {
+export function UniversitiesMaintenanceInteractive({
+  initial,
+  label,
+  proximityEnabled,
+}: {
+  initial: University[];
+  label: string;
+  proximityEnabled: boolean;
+}) {
+  const labelLower = label.toLowerCase();
   const [rows, setRows] = useState(initial);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +69,7 @@ export function UniversitiesMaintenanceInteractive({ initial }: { initial: Unive
   }
 
   function handleDelete(id: string) {
-    if (!confirm("Delete this university/affiliation? This cannot be undone.")) return;
+    if (!confirm(`Delete this ${labelLower}? This cannot be undone.`)) return;
     setError(null);
     startTransition(async () => {
       const res = await deleteUniversityAction(id);
@@ -74,7 +83,7 @@ export function UniversitiesMaintenanceInteractive({ initial }: { initial: Unive
 
   return (
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
-      <h2 className="text-lg font-bold text-[#1e3a5f] mb-3">Universities / Affiliations</h2>
+      <h2 className="text-lg font-bold text-[#1e3a5f] mb-3">{label} List</h2>
       {error && <p className="mb-3 text-sm text-[#dc3545]">{error}</p>}
 
       <div className="divide-y divide-[#f0f0f0] mb-4">
@@ -88,17 +97,19 @@ export function UniversitiesMaintenanceInteractive({ initial }: { initial: Unive
                   onChange={(e) => setEditName(e.target.value)}
                   className="flex-1 rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
                 />
-                <select
-                  value={editProximity}
-                  onChange={(e) => setEditProximity(e.target.value)}
-                  className="rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
-                >
-                  {PROXIMITIES.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
+                {proximityEnabled && (
+                  <select
+                    value={editProximity}
+                    onChange={(e) => setEditProximity(e.target.value)}
+                    className="rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+                  >
+                    {PROXIMITIES.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 <button
                   type="button"
                   onClick={() => handleSaveEdit(u.id)}
@@ -114,7 +125,7 @@ export function UniversitiesMaintenanceInteractive({ initial }: { initial: Unive
             ) : (
               <>
                 <span className="flex-1 text-[#333]">{u.name}</span>
-                <span className="text-xs text-[#666] w-20">{u.proximity}</span>
+                {proximityEnabled && <span className="text-xs text-[#666] w-20">{u.proximity}</span>}
                 <button type="button" onClick={() => startEdit(u)} className="text-[#1e3a5f] text-xs font-semibold">
                   Edit
                 </button>
@@ -136,22 +147,24 @@ export function UniversitiesMaintenanceInteractive({ initial }: { initial: Unive
       <div className="border-t border-[#f0f0f0] pt-3 flex flex-wrap items-center gap-2">
         <input
           type="text"
-          placeholder="New university/affiliation name"
+          placeholder={`New ${labelLower} name`}
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           className="flex-1 min-w-[160px] rounded-md border border-[#ddd] px-3 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
         />
-        <select
-          value={newProximity}
-          onChange={(e) => setNewProximity(e.target.value)}
-          className="rounded-md border border-[#ddd] px-2 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
-        >
-          {PROXIMITIES.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
+        {proximityEnabled && (
+          <select
+            value={newProximity}
+            onChange={(e) => setNewProximity(e.target.value)}
+            className="rounded-md border border-[#ddd] px-2 py-2 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          >
+            {PROXIMITIES.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+        )}
         <button
           type="button"
           onClick={handleAdd}

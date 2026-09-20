@@ -29,12 +29,16 @@ export function MissingFieldsForm({
   memberId,
   missing,
   universities,
+  universityLabel,
+  programLabel,
   onDone,
 }: {
   token: string;
   memberId: string;
   missing: MissingMemberFields;
   universities: University[];
+  universityLabel: string;
+  programLabel: string;
   onDone: () => void;
 }) {
   const [form, setForm] = useState<MissingFieldsInput>(EMPTY);
@@ -82,7 +86,7 @@ export function MissingFieldsForm({
           </Field>
         )}
         {missing.university && (
-          <Field label="University/College">
+          <Field label={universityLabel}>
             <select value={form.university_id ?? ""} onChange={(e) => field("university_id", e.target.value || null)} className={inputClass}>
               <option value="">—</option>
               {universities.map((u) => (
@@ -94,7 +98,7 @@ export function MissingFieldsForm({
           </Field>
         )}
         {missing.program && (
-          <Field label="Program of Study">
+          <Field label={programLabel}>
             <input value={form.program_of_study ?? ""} onChange={(e) => field("program_of_study", e.target.value || null)} className={inputClass} />
           </Field>
         )}

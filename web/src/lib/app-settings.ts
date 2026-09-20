@@ -33,6 +33,17 @@ export type AppSettings = {
   same_day_cutoff_time: string;
   /** IANA timezone the cutoff time (and self-check-in gating) is evaluated in. */
   timezone: string;
+  /** Admin-editable labels for the school/affiliation field and the
+   * program/field-of-study field (e.g. "University/College" and "Program of
+   * Study" for SAY, "School" and "Field of Focus" as the generic defaults). */
+  university_label: string;
+  program_label: string;
+  /** When false every member is treated as Local (Actions Needed uses the
+   * Local thresholds only) and all proximity UI is hidden. */
+  proximity_enabled: boolean;
+  /** Only meaningful while proximity_enabled: whether the Attendance tab
+   * shows its Proximity column. */
+  show_proximity_on_attendance: boolean;
 };
 
 const FALLBACK: AppSettings = {
@@ -49,6 +60,10 @@ const FALLBACK: AppSettings = {
   service_weekday: 5,
   same_day_cutoff_time: "21:00:00",
   timezone: "America/New_York",
+  university_label: "School",
+  program_label: "Field of Focus",
+  proximity_enabled: true,
+  show_proximity_on_attendance: true,
 };
 
 /**
@@ -68,7 +83,7 @@ export async function getAppSettings(): Promise<AppSettings> {
     supabase
       .from("app_settings")
       .select(
-        "app_title_long, app_title_short, app_subtitle, logo_url, theme_color, group_label, member_label, app_version, birthday_window_days_before, birthday_window_days_after, service_weekday, same_day_cutoff_time, timezone",
+        "app_title_long, app_title_short, app_subtitle, logo_url, theme_color, group_label, member_label, app_version, birthday_window_days_before, birthday_window_days_after, service_weekday, same_day_cutoff_time, timezone, university_label, program_label, proximity_enabled, show_proximity_on_attendance",
       )
       .single(),
     supabase.from("app_releases").select("version").order("released_on", { ascending: false }).order("created_at", { ascending: false }).limit(1).maybeSingle(),

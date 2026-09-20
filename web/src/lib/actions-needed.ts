@@ -39,7 +39,7 @@ export async function getActionsNeededConfig(): Promise<ConfigRow[]> {
 export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMember[]> {
   const supabase = await createClient();
 
-  const [{ data: members }, { data: config }] = await Promise.all([
+  const [{ data: members }, { data: config }, { data: appSettings }] = await Promise.all([
     supabase
       .from("members")
       .select(
@@ -48,7 +48,9 @@ export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMe
       .eq("group_id", groupId)
       .eq("status", "active"),
     supabase.from("actions_needed_config").select("proximity, min_presence_count, min_absence_weeks, min_outreach_weeks"),
+    supabase.from("app_settings").select("proximity_enabled").single(),
   ]);
+  const proximityEnabled = appSettings?.proximity_enabled ?? true;
 
   const activeNonVisitors = (members ?? []).filter((m) => !m.is_visitor);
   if (activeNonVisitors.length === 0) return [];
@@ -122,8 +124,13 @@ export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMe
   const results: ActionsNeededMember[] = [];
 
   for (const m of activeNonVisitors) {
-    const proximity = ((m.university as unknown as { proximity?: string } | null)?.proximity ??
-      "Unknown") as ActionsNeededMember["proximity"];
+    // Proximity turned off in App Settings: everyone is Local, judged by the
+    // Local thresholds alone, whatever their school happens to be tagged.
+    const proximity = (
+      proximityEnabled
+        ? ((m.university as unknown as { proximity?: string } | null)?.proximity ?? "Unknown")
+        : "Local"
+    ) as ActionsNeededMember["proximity"];
     const cfg = configByProximity.get(proximity);
     if (!cfg) continue;
 

@@ -55,6 +55,9 @@ function validate(form: NewMemberInput): string | null {
 export function MemberIntakeForm({
   token,
   universities,
+  universityLabel,
+  programLabel,
+  groupLabel,
   memberLabel,
   currentGroupName,
   onBack,
@@ -62,6 +65,9 @@ export function MemberIntakeForm({
 }: {
   token: string;
   universities: University[];
+  universityLabel: string;
+  programLabel: string;
+  groupLabel: string;
   memberLabel: string;
   currentGroupName: string;
   onBack?: () => void;
@@ -117,6 +123,9 @@ export function MemberIntakeForm({
         token={token}
         match={duplicateMatch}
         universities={universities}
+        universityLabel={universityLabel}
+        programLabel={programLabel}
+        groupLabel={groupLabel}
         formInput={form}
         currentGroupName={currentGroupName}
         onNotMe={() => {
@@ -170,7 +179,7 @@ export function MemberIntakeForm({
           <option value="Female">Female</option>
         </select>
       </Field>
-      <Field label="University/College">
+      <Field label={universityLabel}>
         <select
           value={form.university_id ?? ""}
           onChange={(e) => field("university_id", e.target.value || null)}
@@ -184,7 +193,7 @@ export function MemberIntakeForm({
           ))}
         </select>
       </Field>
-      <Field label="Program of Study">
+      <Field label={programLabel}>
         <input
           value={form.program_of_study ?? ""}
           onChange={(e) => field("program_of_study", e.target.value || null)}

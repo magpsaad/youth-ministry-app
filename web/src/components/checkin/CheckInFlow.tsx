@@ -35,6 +35,9 @@ export function CheckInFlow({
   flowType,
   initialPeople,
   universities,
+  universityLabel,
+  programLabel,
+  groupLabel,
   memberLabel,
   groupName,
   serviceDayName,
@@ -45,6 +48,9 @@ export function CheckInFlow({
   flowType: "check_in_and_intake" | "intake_only";
   initialPeople: CheckInPerson[];
   universities: University[];
+  universityLabel: string;
+  programLabel: string;
+  groupLabel: string;
   memberLabel: string;
   /** The scanned QR's own group name -- "Servants" for the servant flow,
    * meaningless there since the duplicate-detection feature is member-
@@ -222,6 +228,8 @@ export function CheckInFlow({
             memberId={checkedInPerson.id}
             missing={missingFields}
             universities={universities}
+            universityLabel={universityLabel}
+            programLabel={programLabel}
             onDone={() => setShowMissingFields(false)}
           />
         )}
@@ -234,6 +242,9 @@ export function CheckInFlow({
       <MemberIntakeForm
         token={token}
         universities={universities}
+        universityLabel={universityLabel}
+        programLabel={programLabel}
+        groupLabel={groupLabel}
         memberLabel={memberLabel}
         currentGroupName={groupName}
         onBack={flowType === "check_in_and_intake" ? () => setView("list") : undefined}

@@ -19,6 +19,8 @@ export function MemberDetailLink({
   groups,
   groupLabel,
   universities,
+  universityLabel,
+  programLabel,
   servants,
   memberLabel,
   canDelete,
@@ -32,6 +34,8 @@ export function MemberDetailLink({
   groups?: GroupSummary[];
   groupLabel?: string;
   universities: University[];
+  universityLabel: string;
+  programLabel: string;
   servants: ServantOption[];
   memberLabel: string;
   canDelete: boolean;
@@ -65,8 +69,10 @@ export function MemberDetailLink({
           member={detail}
           groupId={groupId}
           groups={groups ?? []}
-          groupLabel={groupLabel ?? "Cohort"}
+          groupLabel={groupLabel ?? "Group"}
           universities={universities}
+          universityLabel={universityLabel}
+          programLabel={programLabel}
           servants={servants}
           memberLabel={memberLabel}
           canDelete={canDelete}

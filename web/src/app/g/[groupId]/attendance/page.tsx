@@ -21,6 +21,7 @@ export default async function AttendancePage({ params }: { params: Promise<{ gro
       groupId={groupId}
       bundle={bundle}
       memberLabel={settings.member_label}
+      showProximity={settings.proximity_enabled && settings.show_proximity_on_attendance}
       currentUserId={user?.id ?? ""}
     />
   );

@@ -38,11 +38,13 @@ export function AttendanceInteractive({
   groupId,
   bundle,
   memberLabel,
+  showProximity,
   currentUserId,
 }: {
   groupId: string;
   bundle: AttendanceBundle;
   memberLabel: string;
+  showProximity: boolean;
   currentUserId: string;
 }) {
   const { myAssignedOnly, hydrated } = useMyAssigned();
@@ -163,12 +165,14 @@ export function AttendanceInteractive({
                   {sortIndicator("name")}
                 </button>
               </th>
-              <th className="px-4 py-2">
-                <button type="button" onClick={() => handleSort("proximity")} className="font-semibold hover:underline">
-                  Proximity
-                  {sortIndicator("proximity")}
-                </button>
-              </th>
+              {showProximity && (
+                <th className="px-4 py-2">
+                  <button type="button" onClick={() => handleSort("proximity")} className="font-semibold hover:underline">
+                    Proximity
+                    {sortIndicator("proximity")}
+                  </button>
+                </th>
+              )}
               <th className="px-4 py-2">Attendance %</th>
               <th className="px-4 py-2 text-right">
                 <button type="button" onClick={() => handleSort("status")} className="font-semibold hover:underline">
@@ -191,11 +195,13 @@ export function AttendanceInteractive({
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-2.5">
-                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${PROXIMITY_BADGE[m.proximity]}`}>
-                      {m.proximity}
-                    </span>
-                  </td>
+                  {showProximity && (
+                    <td className="px-4 py-2.5">
+                      <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${PROXIMITY_BADGE[m.proximity]}`}>
+                        {m.proximity}
+                      </span>
+                    </td>
+                  )}
                   <td className="px-4 py-2.5">
                     {m.avgAttendancePercent === null ? (
                       <span className="text-[#666]">N/A</span>
@@ -230,7 +236,7 @@ export function AttendanceInteractive({
             })}
             {visible.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-[#666]">
+                <td colSpan={showProximity ? 4 : 3} className="px-4 py-6 text-center text-[#666]">
                   No {memberLabel.toLowerCase()}s to show.
                 </td>
               </tr>

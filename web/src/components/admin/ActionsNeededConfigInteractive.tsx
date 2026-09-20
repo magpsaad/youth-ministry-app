@@ -41,11 +41,25 @@ export function ActionsNeededConfigInteractive({
     setAppSettings((prev) => ({ ...prev, [field]: value }));
   }
 
+  // Proximity off: everyone is Local, so the Local row is the only set of
+  // thresholds that can ever apply.
+  const visibleRows = appSettings.proximity_enabled ? rows : rows.filter((r) => r.proximity === "Local");
+
   function handleSaveAppSettings() {
     setAppSettingsError(null);
     setAppSettingsSaved(false);
+    const universityLabel = appSettings.university_label.trim();
+    const programLabel = appSettings.program_label.trim();
+    if (!universityLabel || !programLabel) {
+      setAppSettingsError("The school and field-of-focus labels can't be blank.");
+      return;
+    }
     startTransition(async () => {
-      const res = await updateAppSettingsAction(appSettings);
+      const res = await updateAppSettingsAction({
+        ...appSettings,
+        university_label: universityLabel,
+        program_label: programLabel,
+      });
       if (res.error) {
         setAppSettingsError(res.error);
         return;
@@ -131,6 +145,22 @@ export function ActionsNeededConfigInteractive({
           <input
             value={appSettings.member_label}
             onChange={(e) => updateAppField("member_label", e.target.value)}
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          />
+        </label>
+        <label className="text-xs text-[#666]">
+          School Label (e.g. &ldquo;University/College&rdquo;, &ldquo;School&rdquo;)
+          <input
+            value={appSettings.university_label}
+            onChange={(e) => updateAppField("university_label", e.target.value)}
+            className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
+          />
+        </label>
+        <label className="text-xs text-[#666]">
+          Field of Focus Label (e.g. &ldquo;Program of Study&rdquo;, &ldquo;Field of work&rdquo;)
+          <input
+            value={appSettings.program_label}
+            onChange={(e) => updateAppField("program_label", e.target.value)}
             className="mt-1 w-full rounded-md border border-[#ddd] px-2 py-1.5 text-sm focus:border-[#1e3a5f] focus:outline-none"
           />
         </label>
@@ -296,9 +326,51 @@ export function ActionsNeededConfigInteractive({
     </div>
 
     <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
+      <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Proximity</h2>
+      <p className="text-sm text-[#666] mb-3">
+        Tags each {appSettings.university_label.toLowerCase()} as Local, Regional or Abroad, so people can be shown,
+        filtered and judged by different Actions Needed thresholds. Turn it off for a group where everyone is local:
+        every {appSettings.member_label.toLowerCase()} is then treated as Local, only one set of thresholds applies, and
+        all proximity badges, filters, columns and charts are hidden.
+      </p>
+      <div className="space-y-2 mb-3">
+        <label className="flex items-center gap-2 text-sm text-[#333]">
+          <input
+            type="checkbox"
+            checked={appSettings.proximity_enabled}
+            onChange={(e) => updateAppField("proximity_enabled", e.target.checked)}
+          />
+          Use proximity (Local / Regional / Abroad)
+        </label>
+        <label
+          className={`flex items-center gap-2 text-sm ${appSettings.proximity_enabled ? "text-[#333]" : "text-[#999]"}`}
+        >
+          <input
+            type="checkbox"
+            checked={appSettings.proximity_enabled && appSettings.show_proximity_on_attendance}
+            disabled={!appSettings.proximity_enabled}
+            onChange={(e) => updateAppField("show_proximity_on_attendance", e.target.checked)}
+          />
+          Show the Proximity column on the Attendance tab
+        </label>
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSaveAppSettings}
+          disabled={pending}
+          className="rounded-md bg-[#1e3a5f] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#152a45] disabled:opacity-60"
+        >
+          Save
+        </button>
+        {appSettingsSaved && <span className="text-xs text-[#155724]">Saved.</span>}
+      </div>
+    </div>
+
+    <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
       <h2 className="text-lg font-bold text-[#1e3a5f] mb-1">Actions Needed Thresholds</h2>
       <p className="text-sm text-[#666] mb-2">
-        Per-proximity thresholds for the Dashboard&rsquo;s &ldquo;Outreach Needed&rdquo; cards. A member is flagged
+        {appSettings.proximity_enabled ? "Per-proximity thresholds" : "Thresholds"} for the Dashboard&rsquo;s &ldquo;Outreach Needed&rdquo; cards. A member is flagged
         once, as of today, their current run of consecutive absences has reached the minimum below, and their most
         recent outreach (or lack of any) is older than the outreach-staleness window.
       </p>
@@ -309,9 +381,11 @@ export function ActionsNeededConfigInteractive({
       {error && <p className="mb-3 text-sm text-[#dc3545]">{error}</p>}
 
       <div className="space-y-4">
-        {rows.map((row) => (
+        {visibleRows.map((row) => (
           <div key={row.proximity} className="border border-[#f0f0f0] rounded-lg p-4">
-            <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">{row.proximity}</h3>
+            <h3 className="text-sm font-bold text-[#1e3a5f] mb-3">
+              {appSettings.proximity_enabled ? row.proximity : `All ${appSettings.member_label.toLowerCase()}s`}
+            </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
               <label className="text-xs text-[#666]">
                 Min. presence count
