@@ -53,6 +53,17 @@ function formatIsoDate(iso: string) {
   return new Date(year, month - 1, day).toLocaleDateString();
 }
 
+/** "Sep 19", or "Sep 19, 2025" when it isn't this year. Components parsed by
+ * hand for the same UTC-shift reason as formatBirthdayDate above. */
+function formatJoinDate(iso: string) {
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    ...(year !== new Date().getFullYear() ? { year: "numeric" } : {}),
+  });
+}
+
 function windowPhrase(days: number) {
   if (days === 0) return "today";
   if (days % 7 === 0) {
@@ -315,6 +326,11 @@ export function DashboardInteractive({
                       {m.university?.name ?? "—"}
                       {m.program_of_study ? ` · ${m.program_of_study}` : ""}
                     </p>
+                    {m.joinedOn && (
+                      <p className="text-[11px] text-[#666] truncate">
+                        {m.full_name} joined {formatJoinDate(m.joinedOn)}
+                      </p>
+                    )}
                     {/* Owner-reported: the phone number was wrapping onto
                         extra lines on a narrow screen, squeezed by the
                         Assign button next to it -- truncate (with the

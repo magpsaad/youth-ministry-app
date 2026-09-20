@@ -52,6 +52,7 @@ export function AttendanceInteractive({
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDesc, setSortDesc] = useState(false);
+  const [excludeVisitors, setExcludeVisitors] = useState(false);
   const [historyMember, setHistoryMember] = useState<{ id: string; full_name: string } | null>(null);
   const [, startTransition] = useTransition();
 
@@ -112,8 +113,9 @@ export function AttendanceInteractive({
   }
 
   const visible = useMemo(() => {
-    const filtered =
+    let filtered =
       hydrated && myAssignedOnly ? bundle.members.filter((m) => m.assigned_servant_id === currentUserId) : bundle.members;
+    if (excludeVisitors) filtered = filtered.filter((m) => !m.is_visitor);
     const sorted = [...filtered].sort((a, b) => {
       let cmp = 0;
       if (sortKey === "name") cmp = a.full_name.localeCompare(b.full_name);
@@ -123,7 +125,7 @@ export function AttendanceInteractive({
     });
     return sorted;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bundle.members, hydrated, myAssignedOnly, currentUserId, sortKey, sortDesc, date, attendanceByMember]);
+  }, [bundle.members, hydrated, myAssignedOnly, excludeVisitors, currentUserId, sortKey, sortDesc, date, attendanceByMember]);
 
   function sortIndicator(key: SortKey) {
     return sortKey === key ? (sortDesc ? " ▼" : " ▲") : "";
@@ -153,6 +155,10 @@ export function AttendanceInteractive({
             </option>
           ))}
         </select>
+        <label className="ml-auto flex items-center gap-1.5 text-sm text-[#333]">
+          <input type="checkbox" checked={excludeVisitors} onChange={(e) => setExcludeVisitors(e.target.checked)} />
+          Exclude visitors
+        </label>
       </div>
 
       <div className="rounded-xl bg-white shadow-[0_4px_20px_rgba(0,0,0,0.06)] overflow-hidden overflow-x-auto">

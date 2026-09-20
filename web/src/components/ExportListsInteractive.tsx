@@ -61,25 +61,49 @@ export function ExportListsInteractive({
   async function handleDownloadPdf() {
     const { jsPDF } = await import("jspdf");
     const doc = new jsPDF({ unit: "pt", format: "letter" });
+    const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
+    const marginX = 48;
     const marginTop = 56;
     const marginBottom = 48;
-    const lineHeight = 18;
+    const lineHeight = 16;
+
+    // Owner-requested: three columns per page so a long list fits on fewer
+    // sheets. Names run down each column in order (the same way the on-screen
+    // list and Print flow), then continue in the next column and page.
+    const columnCount = 3;
+    const columnGap = 18;
+    const columnWidth = (pageWidth - marginX * 2 - columnGap * (columnCount - 1)) / columnCount;
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    doc.text(listTitle, 48, marginTop);
+    doc.text(listTitle, marginX, marginTop);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
 
-    let y = marginTop + 28;
+    const limitY = pageHeight - marginBottom;
+    let columnTop = marginTop + 28; // first page leaves room for the title
+    let column = 0;
+    let y = columnTop;
     for (const name of names) {
-      if (y > pageHeight - marginBottom) {
-        doc.addPage();
-        y = marginTop;
+      // A name too long for one column wraps onto extra lines instead of
+      // running into the next column.
+      const lines: string[] = doc.splitTextToSize(name, columnWidth);
+      const height = lines.length * lineHeight;
+      if (y + height > limitY) {
+        column += 1;
+        if (column === columnCount) {
+          doc.addPage();
+          column = 0;
+          columnTop = marginTop;
+        }
+        y = columnTop;
       }
-      doc.text(name, 48, y);
-      y += lineHeight;
+      const x = marginX + column * (columnWidth + columnGap);
+      for (const line of lines) {
+        doc.text(line, x, y);
+        y += lineHeight;
+      }
     }
     doc.save(`${listTitle}.pdf`);
   }

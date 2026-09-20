@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AppLogo } from "@/components/AppLogo";
-import { HomeIcon } from "@/components/icons";
+import { HomeLink } from "@/components/HomeLink";
 import { RefreshButton } from "@/components/RefreshButton";
 import { useMyAssigned } from "@/components/MyAssignedContext";
 import { SignOutButton } from "@/components/SignOutButton";
@@ -68,15 +68,7 @@ export function GroupNavShell({
         </div>
 
         <div className="absolute top-2.5 left-4 flex flex-col items-start gap-1">
-          <Link
-            href="/"
-            title="Home"
-            aria-label="Home"
-            className="inline-flex items-center gap-1 text-white/70 hover:text-white transition-colors"
-          >
-            <HomeIcon className="h-8 w-8" />
-            <span className="text-xs font-medium">Home</span>
-          </Link>
+          <HomeLink />
           <RefreshButton />
         </div>
       </header>

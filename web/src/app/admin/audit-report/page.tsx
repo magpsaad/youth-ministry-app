@@ -5,7 +5,7 @@ import { getAccessSummary } from "@/lib/roles";
 import { getAppSettings } from "@/lib/app-settings";
 import { getAuditReportDataAction, getAuditReportUsersAction } from "@/app/admin/audit-report/actions";
 import { AppLogo } from "@/components/AppLogo";
-import { HomeIcon } from "@/components/icons";
+import { HomeLink } from "@/components/HomeLink";
 import { RefreshButton } from "@/components/RefreshButton";
 import { SignOutButton } from "@/components/SignOutButton";
 import { AuditReportInteractive } from "@/components/admin/AuditReportInteractive";
@@ -34,15 +34,7 @@ export default async function AuditReportPage() {
     <div className="min-h-full bg-[#f5f5f5]">
       <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative">
         <div className="absolute top-2.5 left-4 flex flex-col items-start gap-1">
-          <Link
-            href="/"
-            title="Home"
-            aria-label="Home"
-            className="inline-flex items-center gap-1 text-white/70 hover:text-white transition-colors"
-          >
-            <HomeIcon className="h-8 w-8" />
-            <span className="text-xs font-medium">Home</span>
-          </Link>
+          <HomeLink />
           <RefreshButton />
         </div>
         <div className="absolute top-2.5 right-4 flex flex-col items-end gap-1">

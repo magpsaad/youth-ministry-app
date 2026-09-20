@@ -27,10 +27,10 @@ export function ServiceCalendarButton() {
     });
   }
 
-  function handleRefresh() {
-    startTransition(async () => {
-      setEvents(await getCalendarEventsAction());
-    });
+  // Returns the promise so the modal's Refresh button can hold its spinner
+  // until the events are back.
+  async function handleRefresh() {
+    setEvents(await getCalendarEventsAction());
   }
 
   return (

@@ -1,7 +1,8 @@
 "use client";
 
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { RefreshIcon } from "@/components/icons";
+import { RefreshIcon, SpinnerIcon } from "@/components/icons";
 
 /**
  * Owner-requested: sits below the Home link in every page header. Cheap by
@@ -13,22 +14,49 @@ import { RefreshIcon } from "@/components/icons";
  * on-demand, per-click action a person has to actually press, not
  * something that polls or runs automatically.
  *
+ * Owner-reported: nothing visibly happened between the click and the fresh
+ * data arriving, so people clicked again and again. The refresh now runs
+ * inside a transition -- the icon becomes a spinner and further clicks are
+ * ignored until the data is back.
+ *
  * Pass `onRefresh` for a screen that already has its own reload callback
  * (e.g. ServiceCalendarModal, which isn't a real route and reloads its
- * data via a prop) instead of the router-based default.
+ * data via a prop) instead of the router-based default. If it returns a
+ * promise, the spinner lasts until that resolves.
  */
-export function RefreshButton({ onRefresh, className }: { onRefresh?: () => void; className?: string }) {
+export function RefreshButton({
+  onRefresh,
+  className,
+}: {
+  onRefresh?: () => void | Promise<void>;
+  className?: string;
+}) {
   const router = useRouter();
+  const [pending, startTransition] = useTransition();
+
+  function handleClick() {
+    if (pending) return;
+    if (onRefresh) {
+      startTransition(async () => {
+        await onRefresh();
+      });
+    } else {
+      startTransition(() => {
+        router.refresh();
+      });
+    }
+  }
 
   return (
     <button
       type="button"
-      onClick={() => (onRefresh ? onRefresh() : router.refresh())}
+      onClick={handleClick}
+      aria-busy={pending}
       title="Refresh"
       aria-label="Refresh"
       className={className ?? "inline-flex items-center gap-1 text-white/70 hover:text-white transition-colors"}
     >
-      <RefreshIcon className="h-8 w-8" />
+      {pending ? <SpinnerIcon className="h-8 w-8" /> : <RefreshIcon className="h-8 w-8" />}
       <span className="text-xs font-medium">Refresh</span>
     </button>
   );

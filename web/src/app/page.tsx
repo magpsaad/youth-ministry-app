@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAppSettings } from "@/lib/app-settings";
+import { GearIcon } from "@/components/icons";
 import { getAccessibleGroups, filterSelectableGroups } from "@/lib/groups";
 import { getAccessSummary } from "@/lib/roles";
 import { getPendingServantsCount } from "@/lib/pending-servants";
@@ -226,8 +227,9 @@ export default async function LandingPage() {
               </Link>
               <Link
                 href="/admin/actions-needed-config"
-                className="rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+                className="flex items-center justify-center gap-2 rounded-md bg-[#1e3a5f] px-4 py-3 text-sm font-semibold text-white text-center hover:bg-[#152a45] shadow-[0_2px_4px_rgba(0,0,0,0.15)] transition-all hover:-translate-y-0.5 hover:shadow-[0_4px_8px_rgba(0,0,0,0.2)] active:translate-y-0 active:shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
               >
+                <GearIcon className="h-4 w-4" />
                 App Settings
               </Link>
               <Link

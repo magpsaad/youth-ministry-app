@@ -33,6 +33,10 @@ export type UnassignedMember = {
   program_of_study: string | null;
   university: { name: string } | null;
   gender: string | null;
+  /** YYYY-MM-DD: the member's join date (first attendance), or -- for someone
+   * who registered but hasn't attended yet, so has no join date -- the day
+   * they registered, in the app's timezone. */
+  joinedOn: string | null;
 };
 
 /** REQUIREMENTS.md §6.3/§7.1 -- members recently assigned a servant who
@@ -194,15 +198,31 @@ export async function getUpcomingBirthdays(groupId: string): Promise<BirthdayMem
 /** REQUIREMENTS.md §6.3 -- members with no assigned servant yet. */
 export async function getUnassignedMembers(groupId: string): Promise<UnassignedMember[]> {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("members")
-    .select("id, full_name, photo_path, phone, program_of_study, gender, university:universities(name)")
-    .eq("group_id", groupId)
-    .eq("status", "active")
-    .is("assigned_servant_id", null)
-    .order("created_at", { ascending: false });
+  const [{ data }, settings] = await Promise.all([
+    supabase
+      .from("members")
+      .select("id, full_name, photo_path, phone, program_of_study, gender, join_date, created_at, university:universities(name)")
+      .eq("group_id", groupId)
+      .eq("status", "active")
+      .is("assigned_servant_id", null)
+      .order("created_at", { ascending: false }),
+    getAppSettings(),
+  ]);
 
-  return (data ?? []) as unknown as UnassignedMember[];
+  const registeredOn = new Intl.DateTimeFormat("en-CA", {
+    timeZone: settings.timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  return ((data ?? []) as unknown as (Omit<UnassignedMember, "joinedOn"> & {
+    join_date: string | null;
+    created_at: string | null;
+  })[]).map(({ join_date, created_at, ...m }) => ({
+    ...m,
+    joinedOn: join_date ?? (created_at ? registeredOn.format(new Date(created_at)) : null),
+  }));
 }
 
 /** REQUIREMENTS.md §6.3/§7.1 -- members with `is_new_assignment = true`,
