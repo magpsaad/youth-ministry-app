@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { AttendanceWindowSettings } from "@/lib/attendance-window";
 
@@ -76,8 +77,14 @@ const FALLBACK: AppSettings = {
  * most recent `released_on` date -- not the app_settings.app_version
  * column directly. That column is left in place purely as a last-resort
  * fallback if app_releases is ever empty (shouldn't happen; it's seeded).
+ *
+ * React.cache()-memoized per request (same pattern as getCurrentUser): the
+ * root layout's metadata/viewport, the group layout, the page itself and
+ * lib helpers all need these same settings in one render, and each used to
+ * run its own two queries. Callers share one object, so treat the result as
+ * read-only. Scope is a single request, so an admin's save is never stale.
  */
-export async function getAppSettings(): Promise<AppSettings> {
+export const getAppSettings = cache(async (): Promise<AppSettings> => {
   const supabase = await createClient();
   const [{ data }, { data: latestRelease }] = await Promise.all([
     supabase
@@ -91,7 +98,7 @@ export async function getAppSettings(): Promise<AppSettings> {
 
   const base = data ?? FALLBACK;
   return { ...base, app_version: latestRelease?.version ?? base.app_version };
-}
+});
 
 const ATTENDANCE_WINDOW_FALLBACK: AttendanceWindowSettings = {
   youth_attendance_window_weeks: 52,

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { fetchAllRows } from "@/lib/pagination";
+import { getAppSettings } from "@/lib/app-settings";
 
 export type ActionsNeededMember = {
   id: string;
@@ -39,7 +40,7 @@ export async function getActionsNeededConfig(): Promise<ConfigRow[]> {
 export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMember[]> {
   const supabase = await createClient();
 
-  const [{ data: members }, { data: config }, { data: appSettings }] = await Promise.all([
+  const [{ data: members }, { data: config }, appSettings] = await Promise.all([
     supabase
       .from("members")
       .select(
@@ -48,9 +49,9 @@ export async function getActionsNeeded(groupId: string): Promise<ActionsNeededMe
       .eq("group_id", groupId)
       .eq("status", "active"),
     supabase.from("actions_needed_config").select("proximity, min_presence_count, min_absence_weeks, min_outreach_weeks"),
-    supabase.from("app_settings").select("proximity_enabled").single(),
+    getAppSettings(),
   ]);
-  const proximityEnabled = appSettings?.proximity_enabled ?? true;
+  const proximityEnabled = appSettings.proximity_enabled;
 
   const activeNonVisitors = (members ?? []).filter((m) => !m.is_visitor);
   if (activeNonVisitors.length === 0) return [];
