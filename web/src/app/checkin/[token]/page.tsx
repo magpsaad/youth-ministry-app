@@ -42,17 +42,14 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
   return (
     <div className="min-h-full bg-[#f5f5f5]">
       <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-6 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative">
-        {/* Owner-requested: Home and Refresh on every check-in page (member,
-            intake-only and servant alike). Sign-out stays servant-only --
-            servants are logged-in app users, while anonymous youth
-            self-check-in has no session to sign out of. */}
+        {/* Owner-requested: Home, Refresh and Exit on every check-in page
+            (member, intake-only and servant alike), matching every other
+            page in the app. */}
         <div className="absolute top-2.5 left-4 flex flex-col items-start gap-1">
           <HomeLink />
           <RefreshButton />
         </div>
-        {flow.isServant && (
-          <SignOutButton className="absolute top-2.5 right-4 text-white/70 hover:text-white transition-colors" />
-        )}
+        <SignOutButton className="absolute top-2.5 right-4 text-white/70 hover:text-white transition-colors" />
         <div className="flex justify-center">
           <AppLogo logoUrl={settings.logo_url} title={settings.app_title_short} size={56} />
         </div>

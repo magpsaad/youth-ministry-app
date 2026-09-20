@@ -309,28 +309,28 @@ export function DashboardInteractive({
                 <div key={m.id} className="rounded-lg bg-[#e3f2fd] border-l-4 border-[#1976d2] p-3 flex items-center gap-3">
                   <Avatar photoUrl={photoUrl} fullName={m.full_name} />
                   <div className="min-w-0 flex-1">
-                    <MemberDetailLink
-                      memberId={m.id}
-                      groupId={groupId}
-                      universities={universities} universityLabel={universityLabel} programLabel={programLabel}
-                      servants={servants}
-                      memberLabel={memberLabel}
-                      canDelete={canDelete}
-                      canEdit={canEdit}
-                      currentUserName={currentUserName}
-                      className="font-semibold text-[#1e3a5f] hover:underline text-left truncate block"
-                    >
-                      {m.full_name}
-                    </MemberDetailLink>
+                    <div className="flex items-baseline gap-1.5 flex-wrap">
+                      <MemberDetailLink
+                        memberId={m.id}
+                        groupId={groupId}
+                        universities={universities} universityLabel={universityLabel} programLabel={programLabel}
+                        servants={servants}
+                        memberLabel={memberLabel}
+                        canDelete={canDelete}
+                        canEdit={canEdit}
+                        currentUserName={currentUserName}
+                        className="font-semibold text-[#1e3a5f] hover:underline text-left truncate"
+                      >
+                        {m.full_name}
+                      </MemberDetailLink>
+                      {m.joinedOn && (
+                        <span className="text-[10px] text-[#666]">joined {formatJoinDate(m.joinedOn)}</span>
+                      )}
+                    </div>
                     <p className="text-xs text-[#666] truncate">
                       {m.university?.name ?? "—"}
                       {m.program_of_study ? ` · ${m.program_of_study}` : ""}
                     </p>
-                    {m.joinedOn && (
-                      <p className="text-[11px] text-[#666] truncate">
-                        {m.full_name} joined {formatJoinDate(m.joinedOn)}
-                      </p>
-                    )}
                     {/* Owner-reported: the phone number was wrapping onto
                         extra lines on a narrow screen, squeezed by the
                         Assign button next to it -- truncate (with the
