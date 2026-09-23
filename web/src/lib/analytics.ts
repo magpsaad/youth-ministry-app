@@ -9,6 +9,7 @@ export type MemberAnalyticsRow = {
   join_date: string | null;
   group_id: string;
   proximity: "Local" | "Regional" | "Abroad" | "Unknown";
+  gender: string | null;
   hasPhone: boolean;
   hasEmail: boolean;
   hasDob: boolean;
@@ -43,7 +44,7 @@ export async function getAnalyticsRawData(groupId: string | string[]): Promise<A
     let q = supabase
       .from("members")
       .select(
-        "id, assigned_servant_id, is_visitor, join_date, group_id, phone, email, date_of_birth, father_of_confession, photo_path, university:universities(proximity)",
+        "id, assigned_servant_id, is_visitor, join_date, group_id, gender, phone, email, date_of_birth, father_of_confession, photo_path, university:universities(proximity)",
       )
       .eq("status", "active")
       .order("id")
@@ -59,6 +60,7 @@ export async function getAnalyticsRawData(groupId: string | string[]): Promise<A
     join_date: m.join_date,
     group_id: m.group_id,
     proximity: ((m.university as unknown as { proximity?: string } | null)?.proximity ?? "Unknown") as MemberAnalyticsRow["proximity"],
+    gender: m.gender,
     hasPhone: !!m.phone,
     hasEmail: !!m.email,
     hasDob: !!m.date_of_birth,

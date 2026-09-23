@@ -94,6 +94,13 @@ export function AnalyticsInteractive({
     };
   }, [filteredMembers]);
 
+  const genderSplit = useMemo(() => {
+    const { female, male } = groupByGender(filteredMembers, (m) => m.gender);
+    const total = female.length + male.length;
+    const pct = (count: number) => (total > 0 ? Math.round((count / total) * 100) : 0);
+    return { maleCount: male.length, malePct: pct(male.length), femaleCount: female.length, femalePct: pct(female.length) };
+  }, [filteredMembers]);
+
   const proximity = useMemo(() => {
     const counts = { Local: 0, Regional: 0, Abroad: 0, Unknown: 0 };
     for (const m of filteredMembers) counts[m.proximity] += 1;
@@ -213,12 +220,27 @@ export function AnalyticsInteractive({
           <ClipboardCheckIcon className="h-5 w-5" /> Data Completeness
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <StatCard label="Assigned to Servants" value={completeness.pctAssignedServant} />
-          <StatCard label="Has Phone" value={completeness.pctPhone} />
-          <StatCard label="Has Email" value={completeness.pctEmail} />
-          <StatCard label="Has Date of Birth" value={completeness.pctDob} />
-          <StatCard label="Has Father of Confession" value={completeness.pctFatherOfConfession} />
-          <StatCard label="Has Photo" value={completeness.pctPhoto} />
+          <StatCard label="Assigned to Servants" value={`${completeness.pctAssignedServant}%`} />
+          <StatCard label="Has Phone" value={`${completeness.pctPhone}%`} />
+          <StatCard label="Has Email" value={`${completeness.pctEmail}%`} />
+          <StatCard label="Has Date of Birth" value={`${completeness.pctDob}%`} />
+          <StatCard label="Has Father of Confession" value={`${completeness.pctFatherOfConfession}%`} />
+          <StatCard label="Has Photo" value={`${completeness.pctPhoto}%`} />
+        </div>
+        <p className="mt-3 text-xs text-[#666]">
+          Based on {completeness.total} active {memberLabel.toLowerCase()}
+          {completeness.total === 1 ? "" : "s"} (visitors excluded{applyFilter ? ", filtered to your assigned list" : ""}
+          ).
+        </p>
+      </section>
+
+      <section className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] p-5">
+        <h2 className="flex items-center gap-2 text-lg font-bold text-[#1e3a5f] mb-4">
+          <UsersIcon className="h-5 w-5" /> Gender Split
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <StatCard label="Male" value={`${genderSplit.maleCount} (${genderSplit.malePct}%)`} />
+          <StatCard label="Female" value={`${genderSplit.femaleCount} (${genderSplit.femalePct}%)`} />
         </div>
         <p className="mt-3 text-xs text-[#666]">
           Based on {completeness.total} active {memberLabel.toLowerCase()}
@@ -431,11 +453,11 @@ function ServantCohortTable({ label, servants, memberLabel }: { label: string; s
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function StatCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] border-t-4 border-[#1e3a5f] p-4">
       <h3 className="text-[11px] uppercase tracking-wide text-[#666] font-semibold">{label}</h3>
-      <p className="mt-1 text-3xl font-bold text-[#1e3a5f]">{value}%</p>
+      <p className="mt-1 text-3xl font-bold text-[#1e3a5f]">{value}</p>
     </div>
   );
 }
