@@ -24,18 +24,23 @@ import { Skeleton, StatCardSkeleton, CardSkeleton, RowSkeleton } from "@/compone
 export default function GroupShellLoading() {
   return (
     <div className="min-h-full flex flex-col bg-[#f5f5f5]">
-      <div className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)]">
-        <div className="mx-auto h-8 w-8 rounded-full bg-white/20 animate-pulse" />
-        <div className="mx-auto mt-2 h-6 w-32 rounded-md bg-white/20 animate-pulse" />
-        <div className="mx-auto mt-2 h-3.5 w-40 rounded-md bg-white/15 animate-pulse" />
-      </div>
+      {/* Sticky-header shape matches GroupNavShell's real one -- see the
+          comment there -- so the handoff from skeleton to real shell has no
+          visible jump once the layout's data resolves. */}
+      <div className="sticky top-[var(--qa-banner-h)] z-40">
+        <div className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] px-5 py-5 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)]">
+          <div className="mx-auto h-8 w-8 rounded-full bg-white/20 animate-pulse" />
+          <div className="mx-auto mt-2 h-6 w-32 rounded-md bg-white/20 animate-pulse" />
+          <div className="mx-auto mt-2 h-3.5 w-40 rounded-md bg-white/15 animate-pulse" />
+        </div>
 
-      <div className="flex bg-white border-b-2 border-[#ddd]">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="flex-1 py-3.5 flex items-center justify-center">
-            <Skeleton className="h-3.5 w-14" />
-          </div>
-        ))}
+        <div className="flex bg-white border-b-2 border-[#ddd]">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex-1 py-3.5 flex items-center justify-center">
+              <Skeleton className="h-3.5 w-14" />
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="max-w-5xl w-full mx-auto px-4 py-3 flex items-center justify-between">

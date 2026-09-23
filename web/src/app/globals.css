@@ -13,6 +13,16 @@
 
   --background: #f5f5f5;
   --foreground: #333333;
+
+  /* Owner-requested: sticky page headers app-wide. Every sticky header
+     positions itself at `top: var(--qa-banner-h)` instead of `top: 0` so it
+     sits directly beneath the QA environment banner rather than under/over
+     it -- sibling `position: sticky` elements don't auto-stack, the second
+     needs an explicit offset equal to the first's rendered height. Defaults
+     to 0px here (prod, or before QaEnvBanner's JS has measured it); on qa,
+     QaEnvBanner.tsx overwrites this on <html> with the banner's real height,
+     which can vary (it wraps to two lines on a narrow phone). */
+  --qa-banner-h: 0px;
 }
 
 @theme inline {

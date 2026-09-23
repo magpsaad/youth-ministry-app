@@ -41,7 +41,7 @@ export default async function CheckInPage({ params }: { params: Promise<{ token:
 
   return (
     <div className="min-h-full bg-[#f5f5f5]">
-      <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-6 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative">
+      <header className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a7b] text-white px-5 py-6 text-center shadow-[0_2px_10px_rgba(0,0,0,0.1)] relative sticky top-[var(--qa-banner-h)] z-40">
         {/* Owner-requested: Home, Refresh and Exit on every check-in page
             (member, intake-only and servant alike), matching every other
             page in the app. */}

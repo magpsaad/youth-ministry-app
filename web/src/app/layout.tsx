@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
 import { getAppSettings } from "@/lib/app-settings";
-import { AlertTriangleIcon } from "@/components/icons";
+import { QaEnvBanner } from "@/components/QaEnvBanner";
 import "./globals.css";
 
 const inter = Inter({
@@ -56,16 +56,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
          * alone) -- a plain identical-looking header gave nobody a way to
          * notice they'd landed on the wrong one. Bright orange + explicit
          * wording, owner's exact spec. Env-gated (`NEXT_PUBLIC_APP_ENV`),
-         * so it only ever renders on the QA deployment, never prod -- and
-         * `sticky` so it stays visible on scroll, not just at the top. */}
-        {process.env.NEXT_PUBLIC_APP_ENV === "qa" && (
-          <div className="sticky top-0 z-50 flex items-center justify-center gap-2 bg-[#ff6a00] px-4 py-2.5 text-center shadow-[0_2px_8px_rgba(0,0,0,0.3)]">
-            <AlertTriangleIcon className="h-5 w-5 shrink-0 text-white" />
-            <p className="text-sm sm:text-lg font-extrabold uppercase tracking-wide text-white">
-              QA Testing Environment — Not the Real App
-            </p>
-          </div>
-        )}
+         * so it only ever renders on the QA deployment, never prod. Sticky,
+         * and (see QaEnvBanner.tsx) publishes its own height so every page
+         * header below can stick directly beneath it. */}
+        {process.env.NEXT_PUBLIC_APP_ENV === "qa" && <QaEnvBanner />}
         {/* REQUIREMENTS.md §8.1 -- 2.5D buttons' press-down feel on touch (2nd
          * round). The first fix (a no-op touchstart listener, the standard
          * workaround for iOS Safari's :active-doesn't-fire-on-tap quirk)
