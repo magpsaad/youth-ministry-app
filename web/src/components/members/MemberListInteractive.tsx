@@ -29,6 +29,7 @@ export function MemberListInteractive({
   currentUserId,
   currentUserName,
   windowWeeks,
+  serviceWeekdayDates,
   dayName,
 }: {
   members: MemberListItem[];
@@ -52,6 +53,7 @@ export function MemberListInteractive({
   currentUserId: string;
   currentUserName: string;
   windowWeeks: number | null;
+  serviceWeekdayDates: string[];
   dayName: string;
 }) {
   const isCombined = groupId === ALL_COHORTS_GROUP_ID;
@@ -287,6 +289,8 @@ export function MemberListInteractive({
         universityLabel={universityLabel}
         programLabel={programLabel}
         proximityEnabled={proximityEnabled}
+        windowWeeks={windowWeeks}
+        serviceWeekdayDates={serviceWeekdayDates}
         servants={servants}
         memberLabel={memberLabel}
         canDelete={canDelete}

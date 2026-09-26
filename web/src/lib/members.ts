@@ -30,6 +30,16 @@ export type MemberDetail = MemberListItem & {
   servant_comments: string | null;
 };
 
+export type GroupMembersResult = {
+  members: MemberListItem[];
+  /** Ascending service-weekday dates with any attendance in the loaded
+   * cohort(s) -- the exact set each member's average-attendance % above was
+   * divided over. Handed to the client so a card's click-to-view attendance
+   * history (owner-requested) lists precisely the dates behind that number,
+   * needing only that one member's own present-dates fetched on demand. */
+  serviceWeekdayDates: string[];
+};
+
 /** Client-side filter shape -- REQUIREMENTS.md §6.4's filter panel now
  * filters live in the browser (item 21/24d) rather than round-tripping to
  * the server per keystroke/checkbox, so this type is consumed by the
@@ -66,7 +76,7 @@ const LIST_SELECT =
  * combined view (REQUIREMENTS.md §6.1 addendum) -- every active member
  * across those cohorts, combined into one list.
  */
-export async function getGroupMembers(groupId: string | string[]): Promise<MemberListItem[]> {
+export async function getGroupMembers(groupId: string | string[]): Promise<GroupMembersResult> {
   const supabase = await createClient();
 
   // Owner-reported: the "all cohorts combined" Youth List showed exactly
@@ -86,7 +96,7 @@ export async function getGroupMembers(groupId: string | string[]): Promise<Membe
   ]);
 
   const members = data as unknown as MemberListItem[];
-  if (members.length === 0) return [];
+  if (members.length === 0) return { members: [], serviceWeekdayDates: [] };
 
   // Filtered by the same group_id(s)/active-status as the members query
   // above, via a join -- NOT `.in("member_id", memberIds)` with every id
@@ -119,7 +129,7 @@ export async function getGroupMembers(groupId: string | string[]): Promise<Membe
     presentByMember.get(a.member_id)!.add(a.service_date);
   }
 
-  return members.map((m) => {
+  const membersWithAttendance = members.map((m) => {
     const since = resolveAttendanceSince(m.join_date, windowSettings.youth_attendance_window_weeks);
     if (!since) return { ...m, avgAttendancePercent: null };
 
@@ -131,6 +141,8 @@ export async function getGroupMembers(groupId: string | string[]): Promise<Membe
 
     return { ...m, avgAttendancePercent };
   });
+
+  return { members: membersWithAttendance, serviceWeekdayDates: trackedDates };
 }
 
 export type MemberBasic = {

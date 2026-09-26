@@ -15,10 +15,15 @@ function formatDate(iso: string): string {
  * of data (see lib/attendance.ts / lib/servant-attendance.ts). */
 export function AttendanceHistoryModal({
   fullName,
+  title,
   dates,
   onClose,
 }: {
   fullName: string;
+  /** Optional replacement for the plain-text name heading -- the youth
+   * screens pass a link back to that youth's record (owner-requested); the
+   * Servant Attendance screen leaves it out and shows the plain name. */
+  title?: React.ReactNode;
   dates: { date: string; present: boolean }[];
   onClose: () => void;
 }) {
@@ -31,7 +36,7 @@ export function AttendanceHistoryModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b-2 border-[#f0f0f0] pb-3 mb-3">
-          <h2 className="text-lg font-bold text-[#1e3a5f]">{fullName}</h2>
+          <h2 className="text-lg font-bold text-[#1e3a5f]">{title ?? fullName}</h2>
           <button onClick={onClose} className="text-[#999] hover:text-[#333] text-xl leading-none">
             ×
           </button>

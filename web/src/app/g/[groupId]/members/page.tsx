@@ -29,7 +29,7 @@ export default async function MembersPage({ params }: { params: Promise<{ groupI
   const combinedGroups = groupId === ALL_COHORTS_GROUP_ID ? await getCombinedGroups() : [];
   const groupIds = groupId === ALL_COHORTS_GROUP_ID ? combinedGroups.map((g) => g.id) : groupId;
 
-  const [members, universities, servants, settings, windowSettings, access, profile] = await Promise.all([
+  const [{ members, serviceWeekdayDates }, universities, servants, settings, windowSettings, access, profile] = await Promise.all([
     getGroupMembers(groupIds),
     getUniversities(),
     getServantsForGroup(groupIds),
@@ -73,6 +73,7 @@ export default async function MembersPage({ params }: { params: Promise<{ groupI
         currentUserId={user?.id ?? ""}
         currentUserName={profile?.full_name ?? user?.email ?? "Unknown"}
         windowWeeks={windowSettings.youth_attendance_window_weeks}
+        serviceWeekdayDates={serviceWeekdayDates}
         dayName={weekdayName(windowSettings.service_weekday)}
       />
     </div>

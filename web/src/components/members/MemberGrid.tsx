@@ -3,6 +3,7 @@ import type { University } from "@/lib/universities";
 import type { ServantOption } from "@/lib/servants";
 import type { GroupSummary } from "@/lib/groups";
 import { MemberDetailLink } from "./MemberDetailLink";
+import { MemberAttendanceLink } from "@/components/attendance/MemberAttendanceLink";
 import { PhoneLink } from "@/components/PhoneLink";
 import { memberPhotoUrl } from "@/lib/storage";
 import { ALL_COHORTS_GROUP_ID } from "@/lib/allCohorts";
@@ -23,6 +24,8 @@ export function MemberGrid({
   universityLabel,
   programLabel,
   proximityEnabled,
+  windowWeeks,
+  serviceWeekdayDates,
   servants,
   memberLabel,
   canDelete,
@@ -38,6 +41,8 @@ export function MemberGrid({
   universityLabel: string;
   programLabel: string;
   proximityEnabled: boolean;
+  windowWeeks: number | null;
+  serviceWeekdayDates: string[];
   servants: ServantOption[];
   memberLabel: string;
   canDelete: boolean;
@@ -122,7 +127,40 @@ export function MemberGrid({
               </span>
             </div>
             <p className="mt-1 text-[11px] text-[#666]">
-              Attendance: {m.avgAttendancePercent === null ? "N/A" : `${m.avgAttendancePercent}%`}
+              Attendance:{" "}
+              {m.avgAttendancePercent === null ? (
+                "N/A"
+              ) : (
+                <MemberAttendanceLink
+                  memberId={m.id}
+                  fullName={m.full_name}
+                  joinDate={m.join_date}
+                  serviceWeekdayDates={serviceWeekdayDates}
+                  windowWeeks={windowWeeks}
+                  title={
+                    <MemberDetailLink
+                      memberId={m.id}
+                      groupId={groupId}
+                      groups={groups}
+                      groupLabel={groupLabel}
+                      universities={universities}
+                      universityLabel={universityLabel}
+                      programLabel={programLabel}
+                      servants={servants}
+                      memberLabel={memberLabel}
+                      canDelete={canDelete}
+                      canEdit={canEdit}
+                      currentUserName={currentUserName}
+                      className="hover:underline text-left"
+                    >
+                      {m.full_name}
+                    </MemberDetailLink>
+                  }
+                  className="font-semibold text-[#1e3a5f] hover:underline"
+                >
+                  {m.avgAttendancePercent}%
+                </MemberAttendanceLink>
+              )}
             </p>
           </div>
         );

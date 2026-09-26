@@ -2,10 +2,33 @@
 
 import { useMemo, useState, useTransition } from "react";
 import type { AttendanceBundle } from "@/lib/attendance";
+import type { University } from "@/lib/universities";
+import type { ServantOption } from "@/lib/servants";
+import type { GroupSummary } from "@/lib/groups";
 import { resolveAttendanceSince } from "@/lib/attendance-window";
 import { useMyAssigned } from "@/components/MyAssignedContext";
+import { MemberDetailLink } from "@/components/members/MemberDetailLink";
 import { setAttendanceAction } from "@/app/g/[groupId]/attendance/actions";
 import { AttendanceHistoryModal } from "./AttendanceHistoryModal";
+
+/** What the Member Detail modal needs, so the attendance-history popup's
+ * name can link back to the youth's record (owner-requested) -- the same
+ * inputs the Member List hands its cards, with edit rights resolved per
+ * cohort (`canEditAll` for Admin/General Coordinator, else only cohorts
+ * listed in `editableGroupIds`; someone can be Read-Only at one cohort and
+ * have a real role at another). */
+export type AttendanceMemberRecordContext = {
+  groups: GroupSummary[];
+  groupLabel: string;
+  universities: University[];
+  universityLabel: string;
+  programLabel: string;
+  servants: ServantOption[];
+  canDelete: boolean;
+  canEditAll: boolean;
+  editableGroupIds: string[];
+  currentUserName: string;
+};
 
 const PROXIMITY_BADGE: Record<string, string> = {
   Local: "bg-[#d1ecf1] text-[#0c5460]",
@@ -40,12 +63,14 @@ export function AttendanceInteractive({
   memberLabel,
   showProximity,
   currentUserId,
+  memberRecord,
 }: {
   groupId: string;
   bundle: AttendanceBundle;
   memberLabel: string;
   showProximity: boolean;
   currentUserId: string;
+  memberRecord: AttendanceMemberRecordContext;
 }) {
   const { myAssignedOnly, hydrated } = useMyAssigned();
   const [attendanceByMember, setAttendanceByMember] = useState(bundle.attendanceByMember);
@@ -254,6 +279,30 @@ export function AttendanceInteractive({
       {historyMember && (
         <AttendanceHistoryModal
           fullName={historyMember.full_name}
+          title={
+            <MemberDetailLink
+              memberId={historyMember.id}
+              groupId={groupId}
+              groups={memberRecord.groups}
+              groupLabel={memberRecord.groupLabel}
+              universities={memberRecord.universities}
+              universityLabel={memberRecord.universityLabel}
+              programLabel={memberRecord.programLabel}
+              servants={memberRecord.servants}
+              memberLabel={memberLabel}
+              canDelete={memberRecord.canDelete}
+              canEdit={
+                memberRecord.canEditAll ||
+                memberRecord.editableGroupIds.includes(
+                  bundle.members.find((m) => m.id === historyMember.id)?.group_id ?? "",
+                )
+              }
+              currentUserName={memberRecord.currentUserName}
+              className="hover:underline text-left"
+            >
+              {historyMember.full_name}
+            </MemberDetailLink>
+          }
           dates={historyFor(historyMember.id, bundle.members.find((m) => m.id === historyMember.id)?.join_date ?? null)}
           onClose={() => setHistoryMember(null)}
         />

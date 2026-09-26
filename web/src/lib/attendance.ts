@@ -4,6 +4,7 @@ import { fetchAllRows } from "@/lib/pagination";
 
 export type AttendanceMemberBase = {
   id: string;
+  group_id: string;
   full_name: string;
   is_visitor: boolean;
   assigned_servant_id: string | null;
@@ -76,7 +77,7 @@ export async function getAttendanceBundle(groupId: string | string[]): Promise<A
     fetchAllRows((from, to) => {
       let q = supabase
         .from("members")
-        .select("id, full_name, is_visitor, assigned_servant_id, join_date, university:universities(proximity)")
+        .select("id, group_id, full_name, is_visitor, assigned_servant_id, join_date, university:universities(proximity)")
         .eq("status", "active")
         .order("full_name")
         .order("id")
@@ -93,6 +94,7 @@ export async function getAttendanceBundle(groupId: string | string[]): Promise<A
 
   const members: AttendanceMemberBase[] = (memberRows ?? []).map((m) => ({
     id: m.id,
+    group_id: m.group_id,
     full_name: m.full_name,
     is_visitor: m.is_visitor,
     assigned_servant_id: m.assigned_servant_id,
